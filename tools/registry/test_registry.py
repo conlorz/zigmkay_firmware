@@ -72,6 +72,11 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(b'original', self.output.read_bytes())
         self.assertFalse(list(self.root.glob('.generated.zig-*')))
 
+    def test_invalid_entry_shape_has_actionable_diagnostic(self):
+        for entry in (None, 1, "garbage", {"name": "a"}):
+            with self.subTest(entry=entry), self.assertRaisesRegex(ValueError, 'entry requires name, source'):
+                self.load([entry])
+
     def test_empty_catalog(self):
         with self.assertRaisesRegex(ValueError, 'nonempty list'):
             self.load([])

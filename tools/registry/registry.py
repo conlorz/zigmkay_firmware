@@ -16,7 +16,7 @@ def load(catalog, root):
     seen = set()
     root = root.resolve()
     for entry in entries:
-        if set(entry) != {'name', 'source', 'split', 'encoder', 'companion'}:
+        if not isinstance(entry, dict) or set(entry) != {'name', 'source', 'split', 'encoder', 'companion'}:
             raise ValueError('entry requires name, source, split, encoder, companion')
         name, source = entry['name'], entry['source']
         if not isinstance(name, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', name):
