@@ -1,0 +1,12 @@
+.{
+    .name = .zigmkay_integration,
+    .version = "0.1.0",
+    .fingerprint = 0xcb9fa52fb2e20478,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .zigmkay = .{ .path = "zigmkay" },
+        .layout_model = .{ .path = "layout-model" },
+        .zkeycodes = .{ .path = "zkeycodes" },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests" },
+}

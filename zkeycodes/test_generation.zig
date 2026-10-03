@@ -4,7 +4,7 @@ const keycodes = @import("base-keycodes");
 const us = @import("test-us");
 const german = @import("test-german");
 
-const core = @import("zigmkay").core;
+const core = @import("layout-model");
 const helpers = @import("keycode-helpers");
 
 test "basic keycode hex values" {

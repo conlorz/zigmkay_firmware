@@ -3,15 +3,15 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const zigmkay = b.dependency("zigmkay", .{}).module("zigmkay");
+    const model = b.dependency("layout_model", .{}).module("layout-model");
     const helpers = b.addModule("keycode-helpers", .{
         .root_source_file = b.path("src/core.zig"),
-        .imports = &.{.{ .name = "zigmkay", .module = zigmkay }},
+        .imports = &.{.{ .name = "layout-model", .module = model }},
     });
     const basic = b.createModule(.{
         .root_source_file = b.path("keycodes/keycodes.zig"),
         .imports = &.{
-            .{ .name = "zigmkay", .module = zigmkay },
+            .{ .name = "layout-model", .module = model },
             .{ .name = "keycode-helpers", .module = helpers },
         },
     });
@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .imports = &.{
-            .{ .name = "zigmkay", .module = zigmkay },
+            .{ .name = "layout-model", .module = model },
             .{ .name = "keycode-helpers", .module = helpers },
             .{ .name = "base-keycodes", .module = basic },
         },
@@ -75,9 +75,9 @@ pub fn build(b: *std.Build) void {
     update.addBytesToSource(exports.items, "keycodes/all.zig");
     b.step("convert-all", "Explicitly regenerate committed keycodes").dependOn(&update.step);
 
-    const generated_basic = fixture(b, exe, zigmkay, helpers, null, "keycodes_0.0.1_basic.hjson", "keycodes.zig");
-    const us = fixture(b, exe, zigmkay, helpers, generated_basic, "keycodes_us_international_0.0.1.hjson", "us_international.zig");
-    const german = fixture(b, exe, zigmkay, helpers, generated_basic, "keycodes_german_mac_iso_0.0.1.hjson", "german_mac_iso.zig");
+    const generated_basic = fixture(b, exe, model, helpers, null, "keycodes_0.0.1_basic.hjson", "keycodes.zig");
+    const us = fixture(b, exe, model, helpers, generated_basic, "keycodes_us_international_0.0.1.hjson", "us_international.zig");
+    const german = fixture(b, exe, model, helpers, generated_basic, "keycodes_german_mac_iso_0.0.1.hjson", "german_mac_iso.zig");
     const test_step = b.step("test", "Run keycode generation and label tests");
     for ([_]*std.Build.Module{ mod, exe.root_module }) |module|
         test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = module })).step);
@@ -87,7 +87,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .imports = &.{
-                .{ .name = "zigmkay", .module = zigmkay },
+                .{ .name = "layout-model", .module = model },
                 .{ .name = "keycode-helpers", .module = helpers },
                 .{ .name = "base-keycodes", .module = generated_basic },
                 .{ .name = "test-us", .module = us },
@@ -104,11 +104,11 @@ fn generate(b: *std.Build, exe: *std.Build.Step.Compile, input: std.Build.LazyPa
     return run.addOutputFileArg(name);
 }
 
-fn fixture(b: *std.Build, exe: *std.Build.Step.Compile, zigmkay: *std.Build.Module, helpers: *std.Build.Module, basic: ?*std.Build.Module, input: []const u8, name: []const u8) *std.Build.Module {
+fn fixture(b: *std.Build, exe: *std.Build.Step.Compile, model: *std.Build.Module, helpers: *std.Build.Module, basic: ?*std.Build.Module, input: []const u8, name: []const u8) *std.Build.Module {
     const module = b.createModule(.{
         .root_source_file = generate(b, exe, b.path(b.fmt("test_data/{s}", .{input})), name),
     });
-    module.addImport("zigmkay", zigmkay);
+    module.addImport("layout-model", model);
     module.addImport("keycode-helpers", helpers);
     if (basic) |base| module.addImport("base-keycodes", base);
     return module;

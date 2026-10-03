@@ -1,0 +1,7 @@
+.{
+    .name = .layout_model,
+    .version = "0.1.0",
+    .fingerprint = 0x5ea91a139877bf25,
+    .minimum_zig_version = "0.15.2",
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}

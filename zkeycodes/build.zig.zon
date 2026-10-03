@@ -4,8 +4,8 @@
     .fingerprint = 0xd829e8133e5db3ac,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
-        .zigmkay = .{
-            .path = "../zigmkay",
+        .layout_model = .{
+            .path = "../layout-model",
         },
     },
     .paths = .{

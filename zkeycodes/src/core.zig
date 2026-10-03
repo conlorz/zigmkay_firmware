@@ -1,5 +1,4 @@
-const zigmkay = @import("zigmkay");
-const core = zigmkay.core;
+const core = @import("layout-model");
 /// helper to add Left Control modifier to a core.KeyCodeFire.
 pub fn L_CTL(fire: core.KeyCodeFire) core.KeyCodeFire {
     var copy = fire;

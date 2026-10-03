@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
             .src_path = .{ .owner = b, .sub_path = "src/root.zig" },
         },
     });
+    zigmkay_mod.addImport("layout-model", b.dependency("layout_model", .{}).module("layout-model"));
     const test_run_step = b.step("test", "Run unit tests");
     build_utils.add_test_steps(b, zigmkay_mod, test_run_step, "tests");
 }
