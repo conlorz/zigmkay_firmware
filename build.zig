@@ -5,6 +5,30 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run portable and firmware core tests");
     test_step.dependOn(&firmware.builder.top_level_steps.get("test").?.step);
     const model = b.dependency("layout_model", .{});
+    const protocol = b.dependency("device_protocol", .{}).module("device-protocol");
+    const companion = b.dependency("companion_model", .{}).module("companion-model");
+    const codec_test = b.addTest(.{ .root_module = b.createModule(.{
+        .root_source_file = b.path("tests/test_device_protocol.zig"),
+        .target = b.graph.host,
+        .imports = &.{
+            .{ .name = "layout-model", .module = model.module("layout-model") },
+            .{ .name = "device-protocol", .module = protocol },
+            .{ .name = "companion-model", .module = companion },
+        },
+    }) });
+    test_step.dependOn(&b.addRunArtifact(codec_test).step);
+    const portable = b.addObject(.{
+        .name = "protocol-check",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/protocol_portable.zig"),
+            .target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .freestanding }),
+            .imports = &.{
+                .{ .name = "device-protocol", .module = protocol },
+                .{ .name = "companion-model", .module = companion },
+            },
+        }),
+    });
+    test_step.dependOn(&portable.step);
     const keymap = b.addModule("lk7-keymap", .{
         .root_source_file = b.path("keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"),
         .imports = &.{

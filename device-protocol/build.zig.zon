@@ -1,0 +1,10 @@
+.{
+    .name = .device_protocol,
+    .version = "0.1.0",
+    .fingerprint = 0x46f4e56c611ae173,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .layout_model = .{ .path = "../layout-model" },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "src" },
+}

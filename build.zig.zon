@@ -7,6 +7,8 @@
         .zigmkay = .{ .path = "zigmkay" },
         .layout_model = .{ .path = "layout-model" },
         .zkeycodes = .{ .path = "zkeycodes" },
+        .device_protocol = .{ .path = "device-protocol" },
+        .companion_model = .{ .path = "companion-model" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests" },
+    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model" },
 }
