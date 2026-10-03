@@ -196,8 +196,15 @@ pub const DiffError = error{ CurrentIsEarlierThanInput, CurrentIsLaterThanInput 
 pub const LayerActivations = struct {
     layers: [32]bool = [_]bool{false} ** 32,
     top_most_active_layer: LayerIndex = 0,
+    /// Actual keymap bound; standalone layer state defaults to the representable range.
+    layer_count: u5 = 16,
+    rejected_activations: u32 = 0,
     const Self = @This();
     pub fn activate(self: *Self, layer_index: LayerIndex) void {
+        if (layer_index >= self.layer_count) {
+            self.rejected_activations +%= 1;
+            return;
+        }
         if (layer_index == 0)
             return;
         self.layers[layer_index] = true;
@@ -230,6 +237,7 @@ pub const LayerActivations = struct {
     }
 
     pub fn is_layer_active(self: *const Self, layer_index: LayerIndex) bool {
+        if (layer_index >= self.layer_count) return false;
         if (layer_index == 0)
             return true;
         return self.layers[layer_index];

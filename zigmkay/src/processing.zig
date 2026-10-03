@@ -17,7 +17,7 @@ pub fn CreateProcessorType(
         encoder_event_changes: *core.EncoderEventQueue,
         output_usb_commands: *core.OutputCommandQueue,
 
-        layers_activations: core.LayerActivations = .{},
+        layers_activations: core.LayerActivations = .{ .layer_count = keymap_dimensions.layer_count },
         stats: stats_collector.StatsCollector = .{},
         release_map: [keymap_dimensions.key_count]ReleaseMapEntry = [_]ReleaseMapEntry{ReleaseMapEntry.None} ** keymap_dimensions.key_count,
         current_autofire: ?core.AutoFireDef = null,

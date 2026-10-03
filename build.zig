@@ -26,6 +26,16 @@ pub fn build(b: *std.Build) void {
         },
     }) });
     test_step.dependOn(&b.addRunArtifact(layout_test).step);
+    const gaming_test = b.addTest(.{ .root_module = b.createModule(.{
+        .root_source_file = b.path("tests/test_lk7_gaming_layer.zig"),
+        .target = b.graph.host,
+        .imports = &.{
+            .{ .name = "zigmkay", .module = firmware.module("zigmkay") },
+            .{ .name = "lk7-keymap", .module = keymap },
+        },
+    }) });
+    test_step.dependOn(&b.addRunArtifact(gaming_test).step);
+
     const types_test = b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("tests/test_shared_types.zig"),
         .target = b.graph.host,
