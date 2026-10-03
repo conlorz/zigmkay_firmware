@@ -1,7 +1,0 @@
-# ---> Zig
-.zig-cache/
-.zig-global-cache/
-zig-out/
-build/
-build-*/
-docgen_tmp/

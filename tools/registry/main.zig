@@ -30,6 +30,18 @@ fn compare(gpa: std.mem.Allocator, io: std.Io, path: []const u8, data: []const u
     defer gpa.free(old);
     if (!std.mem.eql(u8, old, data)) return error.StaleRegistry;
 }
+fn verifySources(gpa: std.mem.Allocator, io: std.Io, root: std.Io.Dir, entries: []const Entry) !void {
+    const real_root = try root.realPathFileAlloc(io, ".", gpa);
+    defer gpa.free(real_root);
+    for (entries) |e| {
+        const actual = try root.realPathFileAlloc(io, e.source, gpa);
+        defer gpa.free(actual);
+        if (!std.mem.startsWith(u8, actual, real_root) or actual.len <= real_root.len or actual[real_root.len] != std.fs.path.sep) return error.SourceEscapesPackage;
+        const file = try root.openFile(io, e.source, .{});
+        defer file.close(io);
+        if ((try file.stat(io)).kind != .file) return error.SourceIsNotFile;
+    }
+}
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
@@ -39,14 +51,7 @@ pub fn main(init: std.process.Init) !void {
     try validate(entries);
     var root = try std.Io.Dir.cwd().openDir(init.io, args[2], .{});
     defer root.close(init.io);
-    const real_root = try root.realPathFileAlloc(init.io, ".", gpa);
-    for (entries) |e| {
-        const actual = try root.realPathFileAlloc(init.io, e.source, gpa);
-        if (!std.mem.startsWith(u8, actual, real_root) or actual.len <= real_root.len or actual[real_root.len] != std.fs.path.sep) return error.SourceEscapesPackage;
-        const file = try root.openFile(init.io, e.source, .{});
-        defer file.close(init.io);
-        if ((try file.stat(init.io)).kind != .file) return error.SourceIsNotFile;
-    }
+    try verifySources(gpa, init.io, root, entries);
     const data = try render(gpa, entries);
     if (args.len == 5 and std.mem.eql(u8, args[4], "--check")) return compare(gpa, init.io, args[3], data);
     if (args.len == 6 and std.mem.eql(u8, args[4], "--compare")) return compare(gpa, init.io, args[5], data);
@@ -98,7 +103,7 @@ test "render is deterministic regardless of catalog order" {
     try std.testing.expectEqualStrings(first, second);
 }
 test "registry checks never create or change committed files" {
-    var tmp = std.testing.tmpDir(.{});
+    var tmp = std.testing.tmpDir(.{ .iterate = true });
     defer tmp.cleanup();
     const path = try tmp.dir.realPathFileAlloc(std.testing.io, ".", std.testing.allocator);
     defer std.testing.allocator.free(path);
@@ -112,4 +117,27 @@ test "registry checks never create or change committed files" {
     try atomic.file.writeStreamingAll(std.testing.io, "partial");
     atomic.deinit(std.testing.io);
     try compare(std.testing.allocator, std.testing.io, file, "old");
+    var iter = tmp.dir.iterate();
+    const entry = (try iter.next(std.testing.io)).?;
+    try std.testing.expectEqualStrings("registry.zig", entry.name);
+    try std.testing.expectEqual(null, try iter.next(std.testing.io));
+}
+
+test "catalog sources must exist and symbolic links stay inside the package" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDir(io, "boards", .default_dir);
+    var root = try tmp.dir.openDir(io, "boards", .{});
+    defer root.close(io);
+    const entry = Entry{ .name = "lk7", .source = "board.zig", .split = false, .encoder = false, .companion = true };
+    try std.testing.expectError(error.FileNotFound, verifySources(gpa, io, root, &.{entry}));
+    try root.writeFile(io, .{ .sub_path = "actual.zig", .data = "" });
+    try root.symLink(io, "actual.zig", "board.zig", .{});
+    try verifySources(gpa, io, root, &.{entry});
+    try root.deleteFile(io, "board.zig");
+    try tmp.dir.writeFile(io, .{ .sub_path = "outside.zig", .data = "" });
+    try root.symLink(io, "../outside.zig", "board.zig", .{});
+    try std.testing.expectError(error.SourceEscapesPackage, verifySources(gpa, io, root, &.{entry}));
 }
