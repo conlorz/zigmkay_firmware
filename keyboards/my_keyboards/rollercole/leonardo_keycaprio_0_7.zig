@@ -1,3 +1,13 @@
+const model = @import("layout-model");
+pub const physical_layout = @import("lk7_physical_layout.zig");
+comptime {
+    @setEvalBranchQuota(20_000);
+    model.physical_layout.validateKeys(&physical_layout.keys, rollercole_shared_keymap.dimensions) catch |err|
+        @compileError("Invalid LK7 physical layout: " ++ @errorName(err));
+    model.physical_layout.validateLogical(rollercole_shared_keymap.dimensions, &rollercole_shared_keymap.keymap, &rollercole_shared_keymap.combos) catch |err|
+        @compileError("Invalid LK7 keymap: " ++ @errorName(err));
+}
+
 const std = @import("std");
 
 const microzig = @import("microzig");

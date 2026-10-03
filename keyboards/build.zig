@@ -56,6 +56,7 @@ pub fn build(b: *std.Build) void {
 
     firmware.add_app_import("zigmkay", zigmkay_mod, .{ .depend_on_microzig = true });
     firmware.add_app_import("zkeycodes", zkeycodes_mod, .{ .depend_on_microzig = true });
+    firmware.add_app_import("layout-model", b.dependency("layout_model", .{}).module("layout-model"), .{});
     mb.install_firmware(firmware, .{});
 
     const flash_dep = b.dependency("zig_flash", .{});

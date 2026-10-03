@@ -1,0 +1,127 @@
+Compiler: /Users/clorz/.zvm/0.15.2/zig (0.15.2)
+SDK: /tmp/zigmkay-macos-sdk
+Checking .: test
+
+Build Summary: 72/72 steps succeeded; 170/170 tests passed
+test success
++- test success
+|  +- run test 11 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 1 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 20 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 8 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 9 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 2 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 5 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 57ms MaxRSS:31M
+|  +- run test 4 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 59ms MaxRSS:31M
+|  +- run test 1 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 3 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 3 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test success 1ms MaxRSS:1M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 1 passed 1ms MaxRSS:1M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 7 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 4 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 4 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 3 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 57ms MaxRSS:31M
+|  +- run test 2 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 8 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 7 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 58ms MaxRSS:31M
+|  +- run test 13 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 4 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 57ms MaxRSS:31M
+|  +- run test 10 passed 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 58ms MaxRSS:31M
+|  +- run test 8 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 59ms MaxRSS:31M
+|  +- run test 2 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 11 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 3 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 58ms MaxRSS:31M
+|  +- run test 1 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 2 passed 1ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 8 passed 1ms MaxRSS:2M
+|     +- compile test Debug native cached 55ms MaxRSS:31M
++- run test 3 passed 1ms MaxRSS:2M
+|  +- compile test Debug native cached 56ms MaxRSS:31M
++- run test 1 passed 1ms MaxRSS:1M
+|  +- compile test Debug native cached 71ms MaxRSS:31M
++- test success
+|  +- run test 1 passed 2ms MaxRSS:1M
+|     +- compile test Debug native cached 55ms MaxRSS:31M
++- check-portable success
+   +- compile obj layout-model-check Debug native success 176ms MaxRSS:95M
+   +- compile obj layout-model-check Debug wasm32-freestanding success 89ms MaxRSS:77M
+
+Checking zkeycodes: test
+
+Build Summary: 13/13 steps succeeded; 22/22 tests passed
+test success
++- run test success 1ms MaxRSS:1M
+|  +- compile test Debug native cached 47ms MaxRSS:31M
++- run test success 1ms MaxRSS:1M
+|  +- compile test Debug native cached 47ms MaxRSS:31M
++- run test 10 passed 2ms MaxRSS:2M
+|  +- compile test Debug native cached 47ms MaxRSS:31M
+|     +- run exe zkeycodes (keycodes.zig) cached
+|     |  +- compile exe zkeycodes Debug native cached 47ms MaxRSS:31M
+|     +- run exe zkeycodes (us_international.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german_mac_iso.zig) cached
+|        +- compile exe zkeycodes Debug native (reused)
++- run test 12 passed 1ms MaxRSS:2M
+   +- compile test Debug native cached 47ms MaxRSS:31M
+      +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+      +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+      +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
+
+Checking keyboards: -Dkeyboard=lk7
+
+Build Summary: 20/20 steps succeeded
+install success
++- install generated to zigmkay_firmware.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 1ms MaxRSS:1M
+|     +- compile exe elf2uf2 ReleaseSafe native cached 48ms MaxRSS:31M
+|     +- compile exe zigmkay_firmware ReleaseSafe thumb-freestanding-eabi success 552ms MaxRSS:150M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native cached 49ms MaxRSS:31M
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native cached 48ms MaxRSS:31M
+|        |     +- WriteFile libxml/xmlversion.h cached
+|        |     +- compile lib xml2 ReleaseSafe native cached 50ms MaxRSS:30M
+|        |     +- compile lib xml2 ReleaseSafe native (reused)
+|        |     +- WriteFile  cached
+|        |     +- compile lib sqlite ReleaseSafe native cached 58ms MaxRSS:30M
+|        |     +- WriteFile sqlite3.h cached
+|        |     +- compile lib sqlite3 ReleaseSafe native cached 57ms MaxRSS:30M
+|        |     +- compile lib sqlite ReleaseSafe native (reused)
+|        |     +- compile lib sqlite3 ReleaseSafe native (reused)
+|        +- objcopy generated cached
+|           +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi cached 40ms MaxRSS:31M
++- install zig_flash cached
+   +- compile exe zig_flash ReleaseSafe native cached 46ms MaxRSS:31M
+
