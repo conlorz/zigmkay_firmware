@@ -64,7 +64,7 @@ test "toPlatformMods: no modifiers returns 0" {
 test "Modifiers roundtrip: all 256 byte values" {
     var i: u8 = 0;
     while (i < 256) : (i += 1) {
-        const mods = zkeycodes.core.Modifiers.fromByte(i);
+        const mods = zkeycodes.model.Modifiers.fromByte(i);
         try testing.expectEqual(i, mods.toByte());
     }
 }

@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 const root = @import("root.zig");
-const KeyCodeFire = root.zkeycodes.core.KeyCodeFire;
+const KeyCodeFire = root.KeyCodeFire;
 const isLayoutDependent = root.isLayoutDependent;
 
 const OsKeyMap = switch (builtin.target.os.tag) {

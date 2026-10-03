@@ -24,9 +24,7 @@ const ScanCode = zkeycodes.layouts.keycodes.kc.basic;
 /// zkeycodes.Modifiers uses left/right split for ctrl/shift/alt/gui.
 /// This function collapses them: if either left OR right modifier is set,
 /// the corresponding platform bit is set.
-pub fn toPlatformMods(mods: ?zkeycodes.core.Modifiers) u8 {
-    if (mods == null) return 0;
-    const m = mods.?;
+pub fn toPlatformMods(m: zkeycodes.model.Modifiers) u8 {
     var result: u8 = 0;
     if (m.left_shift or m.right_shift) result |= 1 << 0;
     if (m.left_ctrl or m.right_ctrl) result |= 1 << 1;
@@ -38,7 +36,7 @@ pub fn toPlatformMods(mods: ?zkeycodes.core.Modifiers) u8 {
 // ─── macOS Carbon virtual key codes ──────────────────────────────────────────
 
 pub fn hidToMacVk(code: u8) ?u16 {
-    const sc = std.meta.intToEnum(ScanCode, code) catch return null;
+    const sc = std.enums.fromInt(ScanCode, code) orelse return null;
     return switch (sc) {
         .KC_A => 0x00, // kVK_ANSI_A
         .KC_S => 0x01, // kVK_ANSI_S
@@ -149,7 +147,7 @@ pub fn hidToMacVk(code: u8) ?u16 {
 // ─── Windows Virtual Key codes ───────────────────────────────────────────────
 
 pub fn hidToWinVk(code: u8) ?u8 {
-    const sc = std.meta.intToEnum(ScanCode, code) catch return null;
+    const sc = std.enums.fromInt(ScanCode, code) orelse return null;
     return switch (sc) {
         .KC_A => 'A',
         .KC_B => 'B',
@@ -267,7 +265,7 @@ pub fn hidToWinVk(code: u8) ?u8 {
 // ─── xkbcommon keycodes (evdev + 8, for use with xkb_keymap_new_from_names) ──
 
 pub fn hidToXkbKeycode(code: u8) ?u16 {
-    const sc = std.meta.intToEnum(ScanCode, code) catch return null;
+    const sc = std.enums.fromInt(ScanCode, code) orelse return null;
     const evdev: u16 = switch (sc) {
         .KC_A => 30,
         .KC_B => 48,

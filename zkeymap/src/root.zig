@@ -1,7 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 pub const zkeycodes = @import("zkeycodes");
-pub const KeyCodeFire = zkeycodes.core.KeyCodeFire;
+pub const KeyCodeFire = zkeycodes.model.KeyCodeFire;
 const keycodes = zkeycodes.layouts.keycodes;
 pub const ScanCode = keycodes.kc.basic;
 const zkcGetLabel = keycodes.getLabel;

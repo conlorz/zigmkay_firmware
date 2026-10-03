@@ -28,10 +28,10 @@ pub fn main() !void {
     };
 
     var buf: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try eventsToText(&km, events, fbs.writer());
+    var fbs = std.Io.Writer.fixed(&buf);
+    try eventsToText(&km, events, &fbs);
 
-    std.debug.print("{s}\n", .{fbs.getWritten()}); // "Hi!"
+    std.debug.print("{s}\n", .{fbs.buffered()}); // "Hi!"
 }
 
 pub const std_options: std.Options = .{
@@ -50,10 +50,10 @@ test "readme sample: events produce Hi! (US QWERTY assumed)" {
     };
 
     var buf: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try eventsToText(&km, events, fbs.writer());
+    var fbs = std.Io.Writer.fixed(&buf);
+    try eventsToText(&km, events, &fbs);
 
-    try std.testing.expectEqualStrings("Hi!", fbs.getWritten());
+    try std.testing.expectEqualStrings("Hi!", fbs.buffered());
 }
 
 test "eventsToText: label keys are skipped in writer output" {
@@ -70,10 +70,10 @@ test "eventsToText: label keys are skipped in writer output" {
     };
 
     var buf: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try eventsToText(&km, events, fbs.writer());
+    var fbs = std.Io.Writer.fixed(&buf);
+    try eventsToText(&km, events, &fbs);
 
-    try std.testing.expectEqualStrings("abc", fbs.getWritten());
+    try std.testing.expectEqualStrings("abc", fbs.buffered());
 }
 
 test "eventsToText: three text events produce three bytes (any layout)" {
@@ -88,10 +88,10 @@ test "eventsToText: three text events produce three bytes (any layout)" {
     };
 
     var buf: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try eventsToText(&km, events, fbs.writer());
+    var fbs = std.Io.Writer.fixed(&buf);
+    try eventsToText(&km, events, &fbs);
 
-    try std.testing.expect(fbs.getWritten().len == 3);
+    try std.testing.expect(fbs.buffered().len == 3);
 }
 
 test "eventsToText: label keys do not contribute bytes to the writer" {
@@ -108,8 +108,8 @@ test "eventsToText: label keys do not contribute bytes to the writer" {
     };
 
     var buf: [64]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    try eventsToText(&km, events, fbs.writer());
+    var fbs = std.Io.Writer.fixed(&buf);
+    try eventsToText(&km, events, &fbs);
 
-    try std.testing.expect(fbs.getWritten().len == 3);
+    try std.testing.expect(fbs.buffered().len == 3);
 }

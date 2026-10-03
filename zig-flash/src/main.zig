@@ -1,111 +1,60 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const assert = std.debug.assert;
 
-pub fn main() !void {
-    const gpa = std.heap.smp_allocator;
-    const cwd = std.fs.cwd();
-
-    var input_path: []const u8 = "zig-out/firmware/firmware.uf2";
-    var mount_point_or_label: []const u8 = "RPI-RP2";
-
-    const args = try std.process.argsAlloc(gpa);
-    defer std.process.argsFree(gpa, args);
-    for (args, 0..) |arg, idx| {
-        switch (idx) {
-            0 => {},
-            1 => input_path = arg,
-            2 => mount_point_or_label = arg,
-            else => help(),
-        }
-    }
-
-    try cwd.access(input_path, .{}); // input_path must exist!
-
-    const resolved_mount_point: []const u8 = if (std.fs.path.isAbsolute(mount_point_or_label))
-        try waitForDriveByAbsolutePath(gpa, mount_point_or_label)
-    else
-        try waitForDriveByLabel(gpa, mount_point_or_label);
-    defer gpa.free(resolved_mount_point);
-
-    const target_path = try std.fs.path.join(gpa, &.{ resolved_mount_point, "firmware.uf2" });
-    defer gpa.free(target_path);
-
-    std.log.info("USB drive detected...", .{});
-    std.Thread.sleep(500 * std.time.ns_per_ms);
-
-    std.log.info("Copying firmware...", .{});
-    try cwd.copyFile(input_path, cwd, target_path, .{});
-    std.log.info("Firmware copied to {s}", .{target_path});
+fn validLabel(label: []const u8) bool {
+    if (label.len == 0 or std.mem.eql(u8, label, ".") or std.mem.eql(u8, label, "..")) return false;
+    for (label) |c| if (!std.ascii.isAlphanumeric(c) and c != '-' and c != '_' and c != ' ') return false;
+    return true;
 }
-
-/// Waits for a drive with the given absolute path to be connected
-fn waitForDriveByAbsolutePath(gpa: std.mem.Allocator, mount_point: []const u8) ![]const u8 {
-    assert(std.fs.path.isAbsolute(mount_point)); // mount_point must be absolute!
-    std.log.info("Waiting for USB drive to appear at {s}...", .{mount_point});
+fn mountedPath(gpa: std.mem.Allocator, os: std.Target.Os.Tag, user: ?[]const u8, label: []const u8) ![]u8 {
+    if (!validLabel(label)) return error.InvalidVolumeLabel;
+    return switch (os) {
+        .macos => std.fs.path.join(gpa, &.{ "/Volumes", label }),
+        .linux => std.fs.path.join(gpa, &.{ "/run/media", user orelse return error.MissingUser, label }),
+        else => error.AbsoluteMountPathRequired,
+    };
+}
+fn waitForDrive(io: std.Io, path: []const u8) !void {
     while (true) {
-        std.fs.accessAbsolute(mount_point, .{}) catch {
-            std.Thread.sleep(200 * std.time.ns_per_ms);
-            continue;
+        var dir = std.Io.Dir.cwd().openDir(io, path, .{}) catch |err| switch (err) {
+            error.FileNotFound => {
+                try std.Io.sleep(io, .fromMilliseconds(200), .awake);
+                continue;
+            },
+            else => return err,
         };
-        std.log.info("Found drive: {s}", .{mount_point});
-        return gpa.dupe(u8, mount_point);
+        dir.close(io);
+        return;
     }
 }
-
-/// Waits for a drive with the given label to be connected, and returns its path
-fn waitForDriveByLabel(gpa: std.mem.Allocator, target_label: []const u8) ![]const u8 {
-    switch (builtin.os.tag) {
-        .windows => {
-            std.log.info("Waiting for drive with label '{s}' to be connected...", .{target_label});
-            while (true) {
-                const ps_cmd = try std.fmt.allocPrint(gpa, "(Get-Volume -FileSystemLabel '{s}' | Select-Object -ExpandProperty DriveLetter) + ':'", .{target_label});
-                defer gpa.free(ps_cmd);
-
-                const result = try std.process.Child.run(.{
-                    .allocator = gpa,
-                    .argv = &[_][]const u8{ "powershell", "-NoProfile", "-Command", ps_cmd },
-                });
-                defer gpa.free(result.stdout);
-                defer gpa.free(result.stderr);
-
-                if (result.term == .Exited and result.term.Exited == 0) {
-                    const drive = std.mem.trim(u8, result.stdout, " \r\n");
-                    if (drive.len >= 2 and drive[1] == ':') {
-                        const final_path = try gpa.dupe(u8, drive[0..2]);
-
-                        std.log.info("Found drive: {s}", .{final_path});
-                        return final_path;
-                    }
-                }
-                std.Thread.sleep(200 * std.time.ns_per_ms);
-            }
-        },
-        .macos => {
-            const abs_path = try std.fs.path.join(gpa, &.{ "/Volumes", target_label });
-            return try waitForDriveByAbsolutePath(gpa, abs_path);
-        },
-        .linux => {
-            const user = std.process.getEnvVarOwned(gpa, "USER") catch |err| {
-                std.log.err("Failed to get USER environment variable: {any}\n", .{err});
-                return err;
-            };
-            defer gpa.free(user);
-            const abs_path = try std.fs.path.join(gpa, &.{ "/run/media", user, target_label });
-            return try waitForDriveByAbsolutePath(gpa, abs_path);
-        },
-        else => {
-            std.log.err("unsupported on operating system {s}", .{builtin.os.tag});
-            help();
-        },
+pub fn main(init: std.process.Init) !void {
+    const gpa = init.arena.allocator();
+    const args = try init.minimal.args.toSlice(gpa);
+    if (args.len == 2 and std.mem.eql(u8, args[1], "--help")) {
+        std.debug.print("Usage: zig_flash <firmware.uf2> [absolute mount path or volume label]\nDefault label: RPI-RP2. Windows requires an absolute mount path.\n", .{});
+        return;
     }
+    // No implicit input: running the binary without arguments cannot start waiting for hardware.
+    if (args.len < 2 or args.len > 3) return error.Usage;
+    const source = args[1];
+    try std.Io.Dir.cwd().access(init.io, source, .{});
+    const mount = if (args.len == 3) args[2] else "RPI-RP2";
+    const path = if (std.fs.path.isAbsolute(mount)) mount else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
+    std.log.info("Waiting for volume at {s}", .{path});
+    try waitForDrive(init.io, path);
+    try std.Io.sleep(init.io, .fromMilliseconds(500), .awake);
+    const destination = try std.fs.path.join(gpa, &.{ path, "firmware.uf2" });
+    try std.Io.Dir.cwd().copyFile(source, std.Io.Dir.cwd(), destination, init.io, .{});
+    std.log.info("Firmware copied to {s}", .{destination});
 }
-
-fn help() noreturn {
-    std.debug.print(
-        \\Usage: zig_flash [input_path] [mount_point]
-        \\input_path: Path to the UF2 file to flash (default: zig-out/firmware/firmware.uf2)
-        \\mount_point_or_label: Path or label of the USB drive or absolute path (default: "RPI-RP2")
-    , .{});
-    std.process.exit(0);
+test "volume labels cannot escape mount roots" {
+    for ([_][]const u8{ "", ".", "..", "../RPI-RP2", "x/y", "x\\y", "a'b" }) |label| try std.testing.expectError(error.InvalidVolumeLabel, mountedPath(std.testing.allocator, .macos, null, label));
+    const mac = try mountedPath(std.testing.allocator, .macos, null, "RPI-RP2");
+    defer std.testing.allocator.free(mac);
+    try std.testing.expectEqualStrings("/Volumes/RPI-RP2", mac);
+    const linux = try mountedPath(std.testing.allocator, .linux, "alice", "RPI-RP2");
+    defer std.testing.allocator.free(linux);
+    try std.testing.expectEqualStrings("/run/media/alice/RPI-RP2", linux);
+    try std.testing.expectError(error.MissingUser, mountedPath(std.testing.allocator, .linux, null, "RPI-RP2"));
+    try std.testing.expectError(error.AbsoluteMountPathRequired, mountedPath(std.testing.allocator, .windows, null, "RPI-RP2"));
 }
