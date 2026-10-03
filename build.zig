@@ -105,17 +105,15 @@ pub fn build(b: *std.Build) void {
         .protocol = protocol,
         .keycodes = keycodes.module,
     }, selection, optimize);
-    const registry_tests = b.addSystemCommand(&.{ "python3", "-B" });
-    registry_tests.addFileArg(b.path("tools/registry/test_registry.py"));
-    test_step.dependOn(&registry_tests.step);
-    const generate_registry = b.addSystemCommand(&.{ "python3", "-B" });
-    generate_registry.addFileArg(b.path("tools/registry/registry.py"));
-    generate_registry.addFileArg(keyboards.path("boards.json"));
+    const registry_module = b.createModule(.{ .root_source_file = b.path("tools/registry/main.zig"), .target = b.graph.host });
+    const registry_exe = b.addExecutable(.{ .name = "keyboard-registry", .root_module = registry_module });
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = registry_module })).step);
+    const generate_registry = b.addRunArtifact(registry_exe);
+    generate_registry.addFileArg(keyboards.path("boards.zon"));
     generate_registry.addDirectoryArg(keyboards.path("."));
     const generated_registry = generate_registry.addOutputFileArg("keyboard_registry.zig");
-    const check_registry = b.addSystemCommand(&.{ "python3", "-B" });
-    check_registry.addFileArg(b.path("tools/registry/registry.py"));
-    check_registry.addFileArg(keyboards.path("boards.json"));
+    const check_registry = b.addRunArtifact(registry_exe);
+    check_registry.addFileArg(keyboards.path("boards.zon"));
     check_registry.addDirectoryArg(keyboards.path("."));
     check_registry.addFileArg(generated_registry);
     check_registry.addArg("--compare");
@@ -137,6 +135,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     const companion_step = b.step("companion", "Build the selected offline headless companion");
+    b.step("companion-headless", "Build the selected offline replay executable").dependOn(companion_step);
     if (@import("keyboards").api.selectionError(b, selection)) |message| {
         companion_step.dependOn(&b.addFail(message).step);
     } else if (!@import("keyboards").api.find(selection.?).?.companion) {
@@ -144,19 +143,13 @@ pub fn build(b: *std.Build) void {
     } else {
         companion_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
     }
-    const adapter_checks = b.addSystemCommand(&.{ "python3", "-B" });
-    adapter_checks.addFileArg(b.path("tools/test_adapters.py"));
+    const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{ .root_source_file = b.path("tools/process_checks.zig"), .target = b.graph.host }) });
+    const adapter_checks = b.addRunArtifact(process_checks);
     adapter_checks.addArtifactArg(headless);
     adapter_checks.addFileArg(b.path("tests/fixtures/lk7_trace.bin"));
     adapter_checks.addArtifactArg(keycodes.generator);
-    adapter_checks.addFileArg(b.path("zkeycodes/tools/check_generated.py"));
+    adapter_checks.addArg(b.graph.zig_exe);
+    adapter_checks.addDirectoryArg(b.path("."));
+    _ = adapter_checks.addOutputDirectoryArg("scratch");
     test_step.dependOn(&adapter_checks.step);
-    const build_checks = b.addSystemCommand(&.{ "python3", "-B" });
-    build_checks.addFileArg(b.path("tools/test_build_boundaries.py"));
-    build_checks.addArg(b.graph.zig_exe);
-    build_checks.addDirectoryArg(b.path("."));
-    test_step.dependOn(&build_checks.step);
-    const wrapper_checks = b.addSystemCommand(&.{ "python3", "-B" });
-    wrapper_checks.addFileArg(b.path("tools/test_check_local.py"));
-    test_step.dependOn(&wrapper_checks.step);
 }

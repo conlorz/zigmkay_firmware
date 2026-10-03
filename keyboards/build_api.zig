@@ -49,12 +49,7 @@ pub fn commands(b: *std.Build, root: std.Build.LazyPath, microzig_dep: *std.Buil
     const chosen = b.step("firmware", "Compile and install the explicitly selected board");
     const all = b.step("firmware-all", "Compile and install every catalog entry");
     b.step("flash", "Reserved for later hardware transport").dependOn(&b.addFail("flash is not implemented in phase 2").step);
-    const list = b.addSystemCommand(&.{ "python3", "-c" });
-    var listing: std.ArrayList(u8) = .empty;
-    for (registry.entries) |entry| listing.appendSlice(b.allocator, b.fmt("{s}: companion={s}, split={s}, encoder={s}\n", .{ entry.name, if (entry.companion) "lk7 offline" else "unsupported", if (entry.split) "yes" else "no", if (entry.encoder) "yes" else "no" })) catch @panic("Out of memory");
-    // Python receives the data as an argument, never interpolated into code.
-    list.addArg("import sys; print(sys.argv[1], end='')");
-    list.addArg(listing.items);
+    const list = b.addRunArtifact(b.addExecutable(.{ .name = "list-keyboards", .root_module = b.createModule(.{ .root_source_file = root.path(b, "list.zig"), .target = b.graph.host }) }));
     b.step("list-keyboards", "List sorted IDs and companion support").dependOn(&list.step);
     if (selectionError(b, selected)) |message| chosen.dependOn(&b.addFail(message).step);
     const mb = MicroBuild.init(b, microzig_dep) orelse return;

@@ -13,6 +13,5 @@ pub fn build(b: *std.Build) void {
         .keycodes = b.dependency("zkeycodes", .{}).module("zkeycodes"),
     }, selected, optimize);
     // Standalone firmware retains explicit selection, without defaulting to a board.
-    const help = b.addSystemCommand(&.{ "python3", "-c", "print('Use zig build firmware -Dkeyboard=<id>, firmware-all, or list-keyboards')" });
-    b.default_step = &help.step;
+    b.default_step = &b.top_level_steps.get("list-keyboards").?.step;
 }
