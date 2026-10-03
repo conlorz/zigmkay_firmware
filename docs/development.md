@@ -1,0 +1,38 @@
+# Local development
+
+This is a local fork, developed on `local/integration` from
+`c5580be52119bb028588a3cc8329fe4fdecfbd27`. The other worktrees are references.
+Code, comments, tests, diagnostics, and commit messages use English. Commits
+stay local. The milestone is described in [the plan](first-implementation-plan.md).
+
+## Compiler and SDK
+
+The comparison compiler is Zig 0.15.2, installed locally at
+`/Users/clorz/.zvm/0.15.2/zig`. Zig 0.16.0 is installed at
+`/Users/clorz/.zvm/0.16.0/zig` and is evaluated on a separate probe branch.
+
+The installed SDK did not link Zig 0.15.2's build runner: unresolved libc symbols
+are recorded in `evidence/baseline/installed-sdk-core.log`. For baseline checks
+explicitly select the study's private SDK view and xcrun shim:
+
+```sh
+ZIG_BIN=/Users/clorz/.zvm/0.15.2/zig \
+ZIG_SYSROOT=/tmp/zigmkay-macos-sdk \
+ZIG_XCRUN_DIR=/tmp/zigmkay-sdk-tools \
+./tools/check-local --firmware
+```
+
+These temporary paths are a local workaround, not a portable prerequisite.
+`ZIG_BIN`, `ZIG_SYSROOT`, and `ZIG_XCRUN_DIR` are independently configurable;
+without SDK/shim overrides the compiler uses its installed SDK selection.
+`--firmware` compiles LK7. No check invokes the flash step or searches for devices.
+
+## Baseline dependency revisions
+
+- MicroZig: `bd650e87a808385d3f05d365d128c58956b91bfe`.
+- zig-flash: `da54a2e130e1ed4aaa8cb1fb0854e532ed497cb7` (compile dependency only).
+- zigmkay and zkeycodes: local sibling packages in this repository.
+- Baseline core: 165 tests; root aggregation executes the same core corpus.
+
+Baseline logs and the reference UF2 digest are in `docs/evidence/baseline`.
+Hardware behavior is not inferred from successful compilation.

@@ -1,0 +1,26 @@
+
+Build Summary: 20/20 steps succeeded
+install success
++- install generated to zigmkay_firmware.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 1s MaxRSS:1M
+|     +- compile exe elf2uf2 ReleaseSafe native success 4s MaxRSS:287M
+|     +- compile exe zigmkay_firmware ReleaseSafe thumb-freestanding-eabi success 558ms MaxRSS:159M
+|        +- run exe generate_linker_script (linker.ld) success 258ms MaxRSS:2M
+|        |  +- compile exe generate_linker_script Debug native success 847ms MaxRSS:251M
+|        +- options success
+|        +- run exe regz (chips) success 765ms MaxRSS:41M
+|        |  +- compile exe regz ReleaseSafe native success 12s MaxRSS:793M
+|        |     +- WriteFile libxml/xmlversion.h success
+|        |     +- compile lib xml2 ReleaseSafe native success 2s MaxRSS:215M
+|        |     +- compile lib xml2 ReleaseSafe native (reused)
+|        |     +- WriteFile  success
+|        |     +- compile lib sqlite ReleaseSafe native success 13s MaxRSS:949M
+|        |     +- WriteFile sqlite3.h success
+|        |     +- compile lib sqlite3 ReleaseSafe native success 15s MaxRSS:958M
+|        |     +- compile lib sqlite ReleaseSafe native (reused)
+|        |     +- compile lib sqlite3 ReleaseSafe native (reused)
+|        +- objcopy generated success 44ms MaxRSS:1M
+|           +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi success 157ms MaxRSS:35M
++- install zig_flash success
+   +- compile exe zig_flash ReleaseSafe native success 4s MaxRSS:263M
+

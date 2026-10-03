@@ -1,0 +1,10 @@
+{
+  "compiler": "0.15.2",
+  "base_commit": "c5580be52119bb028588a3cc8329fe4fdecfbd27",
+  "sdk": "/tmp/zigmkay-macos-sdk",
+  "artifact": "docs/evidence/baseline/reference.uf2",
+  "bytes": 66560,
+  "sha256": "49187dac87211af8867094e350b4881266604095c7d095f920fdb0c8c04facf1",
+  "core_test_summary": "Build Summary: 61/61 steps succeeded; 165/165 tests passed",
+  "root_test_summary": "Build Summary: 61/61 steps succeeded; 165/165 tests passed"
+}

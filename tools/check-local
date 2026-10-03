@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Run local host checks without accessing keyboard hardware."""
+import argparse
+import hashlib
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def sources():
+    paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).split(b"\0")
+    return {p: hashlib.sha256((ROOT / os.fsdecode(p)).read_bytes()).hexdigest()
+            for p in paths if p and (ROOT / os.fsdecode(p)).is_file()}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--firmware", action="store_true", help="Also compile LK7; never flash")
+    args = parser.parse_args()
+    compiler = os.environ.get("ZIG_BIN") or shutil.which("zig")
+    if not compiler or not Path(compiler).is_file():
+        parser.error("Set ZIG_BIN to an installed Zig compiler")
+    compiler = str(Path(compiler).resolve())
+    env = dict(os.environ)
+    shim = env.get("ZIG_XCRUN_DIR")
+    if shim:
+        if not (Path(shim) / "xcrun").is_file():
+            parser.error("ZIG_XCRUN_DIR must contain xcrun")
+        env["PATH"] = shim + os.pathsep + env.get("PATH", "")
+    sdk = env.get("ZIG_SYSROOT")
+    if sdk and not Path(sdk).is_dir():
+        parser.error("ZIG_SYSROOT must be an existing SDK directory")
+    version = subprocess.check_output([compiler, "version"], text=True).strip()
+    print(f"Compiler: {compiler} ({version})", flush=True)
+    print(f"SDK: {sdk or 'compiler default'}", flush=True)
+    common = [compiler, "build", "-j4", "--summary", "all"]
+    if sdk:
+        common += ["--sysroot", sdk]
+    before = sources()
+    checks = [(ROOT, ["test"]), (ROOT / "zkeycodes", ["test"])]
+    if args.firmware:
+        checks.append((ROOT / "keyboards", ["-Dkeyboard=lk7"]))
+    result = 0
+    for directory, flags in checks:
+        print(f"Checking {directory.relative_to(ROOT)}: {' '.join(flags)}", flush=True)
+        result = subprocess.run(common + flags, cwd=directory, env=env).returncode
+        if result:
+            break
+    if sources() != before:
+        print("Error: checks changed tracked source files", file=sys.stderr)
+        return 1
+    return result
+
+
+if __name__ == "__main__":
+    sys.exit(main())
