@@ -21,9 +21,9 @@ const Runner = struct {
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
-    if (args.len != 7) return error.Usage;
+    if (args.len != 9) return error.Usage;
     const r = Runner{ .gpa = gpa, .io = init.io, .root = args[5] };
-    const scratch = args[6];
+    const scratch = args[8];
     try std.Io.Dir.cwd().createDirPath(init.io, scratch);
     defer std.Io.Dir.cwd().deleteTree(init.io, scratch) catch {};
     var dir = try std.Io.Dir.cwd().openDir(init.io, scratch, .{});
@@ -72,6 +72,8 @@ pub fn main(init: std.process.Init) !void {
         try std.testing.expectError(error.FileNotFound, dir.access(init.io, "output.zig", .{}));
     }
     _ = try r.run(&.{args[3]}, false, "Usage:");
+    _ = try r.run(&.{ args[6], args[7], args[5], args[7], scratch }, false, "Expected Zig 0.16.0, got 0.15.2");
+    try std.testing.expectError(error.FileNotFound, dir.access(init.io, "hardware-tool-executed", .{}));
     for ([_][]const u8{ "firmware", "companion", "companion-headless" }) |step| {
         _ = try r.run(&.{ args[4], "build", "-j4", step }, false, "Missing -Dkeyboard");
         _ = try r.run(&.{ args[4], "build", "-j4", step, "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");

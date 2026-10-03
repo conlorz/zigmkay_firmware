@@ -15,6 +15,9 @@
         .zkeycodes = .{ .path = "zkeycodes" },
         .device_protocol = .{ .path = "device-protocol" },
         .companion_model = .{ .path = "companion-model" },
+        .zkeymap = .{ .path = "zkeymap" },
+        .zig_flash = .{ .path = "zig-flash" },
+        .gui = .{ .path = "zigmkay-companion" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model", "tools", "apps", ".zigversion" },
+    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model", "zkeymap", "zig-flash", "zigmkay-companion", "tools", "apps", ".zigversion", "README.md", "AGENTS.md" },
 }

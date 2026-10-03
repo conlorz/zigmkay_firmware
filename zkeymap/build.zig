@@ -5,6 +5,11 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, keycodes: *std.Build.Mod
     addPlatformSources(b, root, module, target);
     const tests = b.step("zkeymap-test", "Run native keyboard label and mapping tests");
     tests.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = module })).step);
+    const hid = b.createModule(.{ .root_source_file = root.path(b, "src/hid_to_platform.zig"), .imports = &.{.{ .name = "zkeycodes", .module = keycodes }} });
+    const tables = b.createModule(.{ .root_source_file = root.path(b, "src/hid_to_platform.test.zig"), .target = b.graph.host, .imports = &.{ .{ .name = "zkeycodes", .module = keycodes }, .{ .name = "hid_to_platform", .module = hid } } });
+    tests.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = tables })).step);
+    const example = b.createModule(.{ .root_source_file = root.path(b, "example/main.zig"), .target = b.graph.host, .imports = &.{.{ .name = "zkeymap", .module = module }} });
+    tests.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = example })).step);
     return .{ .module = module, .tests = tests };
 }
 pub fn build(b: *std.Build) void {

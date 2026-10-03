@@ -27,11 +27,37 @@ fn waitForDrive(io: std.Io, path: []const u8) !void {
         return;
     }
 }
+fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8) ![]u8 {
+    if (!validLabel(label)) return error.InvalidVolumeLabel;
+    const win = struct {
+        extern "kernel32" fn GetLogicalDrives() callconv(.winapi) u32;
+        extern "kernel32" fn GetVolumeInformationW([*:0]const u16, [*]u16, u32, ?*u32, ?*u32, ?*u32, ?[*]u16, u32) callconv(.winapi) i32;
+    };
+    while (true) {
+        const drives = win.GetLogicalDrives();
+        for (0..26) |index| {
+            if (drives & (@as(u32, 1) << @intCast(index)) == 0) continue;
+            const letter: u8 = 'A' + @as(u8, @intCast(index));
+            const root = [_:0]u16{ letter, ':', '\\' };
+            var name: [261]u16 = undefined;
+            if (win.GetVolumeInformationW(&root, &name, name.len, null, null, null, null, 0) == 0) continue;
+            const length = std.mem.indexOfScalar(u16, &name, 0) orelse continue;
+            if (length != label.len) continue;
+            var matches = true;
+            for (label, 0..) |c, i| if (name[i] != c) {
+                matches = false;
+                break;
+            };
+            if (matches) return gpa.dupe(u8, &.{ letter, ':', '\\' });
+        }
+        try std.Io.sleep(io, .fromMilliseconds(200), .awake);
+    }
+}
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
     if (args.len == 2 and std.mem.eql(u8, args[1], "--help")) {
-        std.debug.print("Usage: zig_flash <firmware.uf2> [absolute mount path or volume label]\nDefault label: RPI-RP2. Windows requires an absolute mount path.\n", .{});
+        std.debug.print("Usage: zig_flash <firmware.uf2> [absolute mount path or volume label]\nDefault label: RPI-RP2.\n", .{});
         return;
     }
     // No implicit input: running the binary without arguments cannot start waiting for hardware.
@@ -39,7 +65,7 @@ pub fn main(init: std.process.Init) !void {
     const source = args[1];
     try std.Io.Dir.cwd().access(init.io, source, .{});
     const mount = if (args.len == 3) args[2] else "RPI-RP2";
-    const path = if (std.fs.path.isAbsolute(mount)) mount else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
+    const path = if (std.fs.path.isAbsolute(mount)) mount else if (builtin.os.tag == .windows) try waitForWindowsLabel(gpa, init.io, mount) else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
     std.log.info("Waiting for volume at {s}", .{path});
     try waitForDrive(init.io, path);
     try std.Io.sleep(init.io, .fromMilliseconds(500), .awake);

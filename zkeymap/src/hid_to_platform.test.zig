@@ -4,8 +4,8 @@ const zkeycodes = @import("zkeycodes");
 const hid = @import("hid_to_platform");
 const ScanCode = zkeycodes.layouts.keycodes.kc.basic;
 
-test "toPlatformMods: null returns 0" {
-    try testing.expectEqual(@as(u8, 0), hid.toPlatformMods(null));
+test "toPlatformMods: empty value returns 0" {
+    try testing.expectEqual(@as(u8, 0), hid.toPlatformMods(.{}));
 }
 
 test "toPlatformMods: left_shift sets bit 0" {
@@ -62,10 +62,10 @@ test "toPlatformMods: no modifiers returns 0" {
 }
 
 test "Modifiers roundtrip: all 256 byte values" {
-    var i: u8 = 0;
+    var i: u16 = 0;
     while (i < 256) : (i += 1) {
-        const mods = zkeycodes.model.Modifiers.fromByte(i);
-        try testing.expectEqual(i, mods.toByte());
+        const mods = zkeycodes.model.Modifiers.fromByte(@intCast(i));
+        try testing.expectEqual(@as(u8, @intCast(i)), mods.toByte());
     }
 }
 

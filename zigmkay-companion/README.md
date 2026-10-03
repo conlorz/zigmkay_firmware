@@ -1,45 +1,13 @@
-# zigmkay-companion
+# Desktop companion
 
-Desktop overlay for the Leonardo Keycaprio v0.7 (`lk7`), showing its active
-layer and physical key presses over the firmware's RawHID interface.
-The companion and firmware use the same local 34-key keymap and firmware core.
+The Zig 0.16.0 DVUI/SDL3 companion uses the shared LK7 keymap, telemetry codec,
+and state reducer. DVUI and icons are pinned dependencies; zkeymap is local.
 
-## Build and run
+From the monorepo root, `zig build companion -Dkeyboard=lk7` builds the GUI.
+Run `zig-out/bin/zigmkay_companion` for offline mode, add `--replay <file>` to
+replay consecutive 32-byte reports, or `--smoke` to render three frames and exit.
+Only `--live` enumerates the keyboard's vendor telemetry HID interface.
+All event reduction and UI changes occur on the UI thread.
 
-Use Zig 0.15.2 (`zvm install 0.15.2`). The `tools/zig` wrapper selects this
-version and handles the macOS SDK compatibility issue without modifying Apple
-SDKs. From this repository:
-
-```sh
-cd keyboards
-../tools/zig build -Dkeyboard=lk7
-../tools/zig build flash -Dkeyboard=lk7
-```
-
-For flashing, the RP2040 must be in BOOTSEL mode, mounted as `RPI-RP2`.
-The existing keymap includes bootloader combos at key indices 0+4, 5+9,
-and 24+25 on the base layer.
-
-Build and launch the companion separately:
-
-```sh
-cd zigmkay-companion
-../tools/zig build
-../tools/zig build run
-```
-
-The overlay starts visible. ESC closes the application. The lk7 keymap does
-not currently assign an overlay toggle key; the firmware supports the reserved
-`core.CUSTOM_ID_COMPANION_TOGGLE` custom action for a future assignment.
-
-## Validation
-
-```sh
-cd zigmkay
-../tools/zig build test
-cd ../zigmkay-companion
-../tools/zig build test
-```
-
-The desktop UI uses DVUI's SDL3 backend and displays the shared keymap through
-zkeymap. Dependencies are pinned in `build.zig.zon`.
+This package also supports standalone `zig build`, `zig build test`, and
+`zig build run -- --smoke`. Live hardware operation has not been validated.

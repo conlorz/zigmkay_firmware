@@ -14,11 +14,11 @@ pub const EncoderComponent = struct {
 
     pub fn handleSignal(self: *EncoderComponent, direction: u8) void {
         self.last_direction = direction;
-        self.last_activity = std.time.milliTimestamp();
+        self.last_activity = @as(i64, @intCast(@divTrunc(dvui.frameTimeNS(), std.time.ns_per_ms)));
     }
 
     pub fn draw(self: *const EncoderComponent, current_layer: usize, label_cache: *const cache.LabelCache, physical_mods: Modifiers, center_x: f32, y: f32, size: f32, scale: f32) !void {
-        const active = (std.time.milliTimestamp() - self.last_activity < 150);
+        const active = (@as(i64, @intCast(@divTrunc(dvui.frameTimeNS(), std.time.ns_per_ms))) - self.last_activity < 150);
         const radius = size / 2.0;
         const x = center_x - radius;
 
@@ -38,17 +38,17 @@ pub const EncoderComponent = struct {
             .id_extra = 5000,
             .rect = .{ .x = x, .y = y, .w = size, .h = size },
             .background = true,
-            .color_fill = bg_color,
-            .color_border = border_color,
+            .color_fill = .{ .color = bg_color },
+            .color_border = .{ .color = border_color },
             .border = dvui.Rect.all(1.5 * scale),
-            .corner_radius = dvui.Rect.all(radius),
+            .corners = .all(radius),
         });
         defer b.deinit();
 
         if (content.icon) |icon_bytes| {
             dvui.icon(@src(), content.icon_name, icon_bytes, .{}, .{
                 .id_extra = 5001,
-                .color_text = text_color,
+                .color_text = .{ .color = text_color },
                 .gravity_x = 0.5,
                 .gravity_y = 0.5,
                 .min_size_content = .{ .w = size * 0.5, .h = size * 0.5 },
@@ -56,7 +56,7 @@ pub const EncoderComponent = struct {
         } else if (content.label) |l| {
             dvui.label(@src(), "{s}", .{l}, .{
                 .id_extra = 5001,
-                .color_text = text_color,
+                .color_text = .{ .color = text_color },
                 .font = dvui.Font.theme(.body).larger(2),
                 .gravity_x = 0.5,
                 .gravity_y = 0.5,

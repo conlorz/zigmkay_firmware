@@ -14,9 +14,14 @@ pub fn build(b: *std.Build) void {
     const companion = @import("companion_model").publish(b, companion_dep.path("."), model.module, protocol);
     const firmware = @import("zigmkay").publish(b, core_dep.path("."), model.module, protocol);
     const keycodes = @import("zkeycodes").publish(b, keycodes_dep.path("."), model.module, .Debug);
+    const native_map = @import("zkeymap").publish(b, b.dependency("zkeymap", .{}).path("."), keycodes.module, b.graph.host);
+    const flash_tool = @import("zig_flash").publish(b, b.dependency("zig_flash", .{}).path("."));
+    b.step("flash-tool", "Compile the flasher without running it").dependOn(&b.addInstallArtifact(flash_tool.exe, .{}).step);
     const test_step = b.step("test", "Run portable and firmware core tests");
     test_step.dependOn(firmware.tests);
     test_step.dependOn(keycodes.tests);
+    test_step.dependOn(native_map.tests);
+    test_step.dependOn(flash_tool.tests);
     const check_generated = b.step("check-generated", "Check committed generated sources");
     check_generated.dependOn(keycodes.check);
     b.default_step = test_step;
@@ -134,14 +139,20 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    const companion_step = b.step("companion", "Build the selected offline headless companion");
-    b.step("companion-headless", "Build the selected offline replay executable").dependOn(companion_step);
+    const gui_dep = b.dependency("gui", .{});
+    const gui = @import("gui").publish(b, gui_dep.path("."), gui_dep.builder, .{ .keymap = keymap, .core = firmware.module, .keycodes = keycodes.module, .keymap_native = native_map.module, .protocol = protocol, .companion = companion });
+    test_step.dependOn(gui.tests);
+    const companion_step = b.step("companion", "Build the selected desktop companion");
+    const headless_step = b.step("companion-headless", "Build the selected offline replay executable");
     if (@import("keyboards").api.selectionError(b, selection)) |message| {
         companion_step.dependOn(&b.addFail(message).step);
+        headless_step.dependOn(&b.addFail(message).step);
     } else if (!@import("keyboards").api.find(selection.?).?.companion) {
         companion_step.dependOn(&b.addFail(b.fmt("Unsupported companion board '{s}'; supported companion IDs: lk7", .{selection.?})).step);
+        headless_step.dependOn(&b.addFail(b.fmt("Unsupported companion board '{s}'; supported companion IDs: lk7", .{selection.?})).step);
     } else {
-        companion_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
+        companion_step.dependOn(&b.addInstallArtifact(gui.exe, .{}).step);
+        headless_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
     }
     const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{ .root_source_file = b.path("tools/process_checks.zig"), .target = b.graph.host }) });
     const adapter_checks = b.addRunArtifact(process_checks);
@@ -150,6 +161,23 @@ pub fn build(b: *std.Build) void {
     adapter_checks.addArtifactArg(keycodes.generator);
     adapter_checks.addArg(b.graph.zig_exe);
     adapter_checks.addDirectoryArg(b.path("."));
+    const checker_module = b.createModule(.{ .root_source_file = b.path("tools/check_local.zig"), .target = b.graph.host });
+    checker_module.addAnonymousImport("board-catalog", .{ .root_source_file = b.path("keyboards/boards.zon") });
+    const checker = b.addExecutable(.{ .name = "check-local", .root_module = checker_module });
+    const sentinel = b.addExecutable(.{ .name = "offline-sentinel", .root_module = b.createModule(.{ .root_source_file = b.path("tools/sentinel.zig"), .target = b.graph.host }) });
+    adapter_checks.addArtifactArg(checker);
+    adapter_checks.addArtifactArg(sentinel);
     _ = adapter_checks.addOutputDirectoryArg("scratch");
     test_step.dependOn(&adapter_checks.step);
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = b.path("tools/source_inventory.zig"), .target = b.graph.host }) })).step);
+    for ([_][]const u8{ "check", "check-full" }) |name| {
+        const run = b.addRunArtifact(checker);
+        run.has_side_effects = true;
+        run.addArg(b.graph.zig_exe);
+        run.addDirectoryArg(b.path("."));
+        run.addArtifactArg(sentinel);
+        _ = run.addOutputDirectoryArg("scratch");
+        if (std.mem.eql(u8, name, "check-full")) run.addArg("--full");
+        b.step(name, "Run pinned Zig checks and verify source and hardware boundaries").dependOn(&run.step);
+    }
 }

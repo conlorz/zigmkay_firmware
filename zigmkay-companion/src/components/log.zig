@@ -5,7 +5,7 @@ const zkeymap = @import("zkeymap");
 
 const core = keymap.core;
 const Modifiers = core.Modifiers;
-const LogMessage = core.LogMessage;
+const LogMessage = @import("device-protocol").KeyEvent;
 const key_component = @import("key.zig");
 
 // Ring buffer entry
@@ -24,13 +24,8 @@ pub const LogComponent = struct {
     head: usize = 0,
     last_event_timestamp: i64 = 0,
 
-    /// Decodes rawHID packet array, logs structural variables, and fires internal event loop payload.
-    /// Payload input is a 2-byte structure generated directly by core.zig LogMessage bitcasting.
-    pub fn handleSignal(self: *LogComponent, payload: [4]u8) core.LogMessage {
-        const log_msg = core.LogMessage.fromBytes(payload);
-
-        // Compute delta timestamp since last handled push
-        const now = std.time.milliTimestamp();
+    /// Record an already validated protocol event on the UI thread.
+    pub fn record(self: *LogComponent, log_msg: LogMessage, now: i64) void {
         var delta: i64 = 0;
         if (self.last_event_timestamp != 0) {
             delta = now - self.last_event_timestamp;
@@ -43,8 +38,6 @@ pub const LogComponent = struct {
             .msg = log_msg,
         };
         self.head = (self.head + 1) % self.events.len;
-
-        return log_msg;
     }
 
     /// Renders the event ring buffer list UI inside the application loop.
@@ -56,17 +49,17 @@ pub const LogComponent = struct {
         var log_box = dvui.box(@src(), .{}, .{
             .rect = .{ .x = center_x - ui_w / 2.0, .y = safe_log_y, .w = ui_w, .h = safe_log_h },
             .background = true,
-            .color_fill = .{ .r = 20, .g = 20, .b = 20, .a = 240 },
-            .color_border = .{ .r = 80, .g = 80, .b = 80, .a = 255 },
+            .color_fill = .{ .color = .{ .r = 20, .g = 20, .b = 20, .a = 240 } },
+            .color_border = .{ .color = .{ .r = 80, .g = 80, .b = 80, .a = 255 } },
             .border = dvui.Rect.all(1.0 * scale),
-            .corner_radius = dvui.Rect.all(4.0 * scale),
+            .corners = .all(4.0 * scale),
         });
         defer log_box.deinit();
 
         var log_col = dvui.box(@src(), .{}, .{ .expand = .both });
         defer log_col.deinit();
 
-        dvui.label(@src(), "Recent Events (Log)", .{}, .{ .color_text = .{ .r = 200, .g = 200, .b = 200, .a = 255 } });
+        dvui.label(@src(), "Recent Events (Log)", .{}, .{ .color_text = .{ .color = .{ .r = 200, .g = 200, .b = 200, .a = 255 } } });
 
         // Calculate maximum elements per column depending on safe height
         const row_h = 24.0 * scale;
@@ -132,8 +125,8 @@ pub const LogComponent = struct {
                     var mod_str_buf: [64]u8 = undefined;
                     var mod_str: []const u8 = "";
                     if (@as(u8, @bitCast(mods)) != 0) {
-                        var fbs = std.io.fixedBufferStream(&mod_str_buf);
-                        const w = fbs.writer();
+                        var fbs = std.Io.Writer.fixed(&mod_str_buf);
+                        const w = &fbs;
                         _ = w.writeAll(" [") catch {};
                         if (mods.left_ctrl) _ = w.writeAll("CtrlL ") catch {};
                         if (mods.right_ctrl) _ = w.writeAll("CtrlR ") catch {};
@@ -144,13 +137,13 @@ pub const LogComponent = struct {
                         if (mods.left_gui) _ = w.writeAll("GuiL ") catch {};
                         if (mods.right_gui) _ = w.writeAll("GuiR ") catch {};
 
-                        const len = fbs.getPos() catch 0;
+                        const len = fbs.end;
                         if (len > 2 and mod_str_buf[len - 1] == ' ') {
                             mod_str_buf[len - 1] = ']';
                             mod_str = mod_str_buf[0..len];
                         } else {
                             _ = w.writeAll("]") catch {};
-                            mod_str = fbs.getWritten();
+                            mod_str = fbs.buffered();
                         }
                     }
 
@@ -164,12 +157,12 @@ pub const LogComponent = struct {
                     const arrow_str = if (ev.msg.pressed) "[+]" else "[-]";
 
                     const layer_color = if (ev.msg.layer < key_component.layer_colors.len) key_component.layer_colors[ev.msg.layer] else dvui.Color.white;
-                    var row_box = dvui.box(@src(), .{ .dir = .horizontal }, .{ .id_extra = j, .color_border = layer_color, .border = dvui.Rect.all(1.0 * scale), .corner_radius = dvui.Rect.all(2.0 * scale), .margin = dvui.Rect.all(1.0 * scale) });
+                    var row_box = dvui.box(@src(), .{ .dir = .horizontal }, .{ .id_extra = j, .color_border = .{ .color = layer_color }, .border = dvui.Rect.all(1.0 * scale), .corners = .all(2.0 * scale), .margin = dvui.Rect.all(1.0 * scale) });
                     defer row_box.deinit();
 
-                    dvui.label(@src(), "{s}", .{txt1}, .{ .color_text = .{ .r = 150, .g = 150, .b = 150, .a = 255 }, .font = dvui.Font.theme(.mono) });
-                    dvui.label(@src(), "{s}", .{arrow_str}, .{ .color_text = arrow_color, .font = dvui.Font.theme(.mono) });
-                    dvui.label(@src(), "{s}", .{txt2}, .{ .color_text = .{ .r = 150, .g = 150, .b = 150, .a = 255 }, .font = dvui.Font.theme(.mono) });
+                    dvui.label(@src(), "{s}", .{txt1}, .{ .color_text = .{ .color = .{ .r = 150, .g = 150, .b = 150, .a = 255 } }, .font = dvui.Font.theme(.mono) });
+                    dvui.label(@src(), "{s}", .{arrow_str}, .{ .color_text = .{ .color = arrow_color }, .font = dvui.Font.theme(.mono) });
+                    dvui.label(@src(), "{s}", .{txt2}, .{ .color_text = .{ .color = .{ .r = 150, .g = 150, .b = 150, .a = 255 } }, .font = dvui.Font.theme(.mono) });
                 }
             }
         }

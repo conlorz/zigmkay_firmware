@@ -97,8 +97,8 @@ pub fn drawLayerGrid(active_layer: usize, total_layers: usize, size: f32, scale:
                 .h = cell_size,
             },
             .background = true,
-            .color_fill = color,
-            .corner_radius = dvui.Rect.all(2 * scale),
+            .color_fill = .{ .color = color },
+            .corners = .all(2 * scale),
         });
         cell.deinit();
     }
@@ -120,10 +120,10 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
         .id_extra = index,
         .rect = rect,
         .background = true,
-        .color_fill = bg_color,
-        .color_border = border_color,
+        .color_fill = .{ .color = bg_color },
+        .color_border = .{ .color = border_color },
         .border = dvui.Rect.all(1.5 * scale),
-        .corner_radius = dvui.Rect.all(8 * scale),
+        .corners = .all(8 * scale),
     });
     defer b.deinit();
 
@@ -131,7 +131,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
     if (content.icon) |icon_bytes| {
         dvui.icon(@src(), content.icon_name, icon_bytes, .{}, .{
             .id_extra = index,
-            .color_text = text_color,
+            .color_text = .{ .color = text_color },
             .gravity_x = 0.5,
             .gravity_y = 0.5,
             .min_size_content = .{ .w = size * 0.4, .h = size * 0.4 },
@@ -140,7 +140,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
         if (std.unicode.utf8ValidateSlice(l)) {
             dvui.label(@src(), "{s}", .{l}, .{
                 .id_extra = index,
-                .color_text = text_color,
+                .color_text = .{ .color = text_color },
                 .font = dvui.Font.theme(.body).larger(if (l.len <= 2) 12 else 6),
                 .gravity_x = 0.5,
                 .gravity_y = 0.5,
@@ -156,7 +156,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
 
         dvui.icon(@src(), "layer_ind", dvui.entypo.layers, .{}, .{
             .id_extra = index + 1000,
-            .color_text = color,
+            .color_text = .{ .color = color },
             .rect = .{ .x = size - icon_size - padding, .y = padding, .w = icon_size, .h = icon_size },
         });
     }
@@ -174,7 +174,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
             const gui_icon_size = item_h * 0.8;
             dvui.icon(@src(), "gui_ind", icons.tvg.lucide.command, .{}, .{
                 .id_extra = index + 6000,
-                .color_text = mod_color,
+                .color_text = .{ .color = mod_color },
                 // Center icon horizontally in col_w and vertically in its slot
                 .rect = .{
                     .x = padding_x + (col_w - gui_icon_size) / 2.0,
@@ -189,7 +189,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
         if (m.left_ctrl or m.right_ctrl) {
             dvui.label(@src(), "ctrl", .{}, .{
                 .id_extra = index + 3000,
-                .color_text = mod_color,
+                .color_text = .{ .color = mod_color },
                 .font = font,
                 // Use a significantly taller rect for the label itself to prevent clipping,
                 // but keep the offset_y increment standard.
@@ -203,7 +203,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
         if (m.left_alt or m.right_alt) {
             dvui.label(@src(), "alt", .{}, .{
                 .id_extra = index + 4000,
-                .color_text = mod_color,
+                .color_text = .{ .color = mod_color },
                 .font = font,
                 .rect = .{ .x = padding_x, .y = offset_y, .w = col_w, .h = item_h * 1.5 },
                 .gravity_x = 0.5,
@@ -215,7 +215,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
         if (m.left_shift or m.right_shift) {
             dvui.label(@src(), "shft", .{}, .{
                 .id_extra = index + 5000,
-                .color_text = mod_color,
+                .color_text = .{ .color = mod_color },
                 .font = font,
                 .rect = .{ .x = padding_x, .y = offset_y, .w = col_w, .h = item_h * 1.5 },
                 .gravity_x = 0.5,
@@ -280,9 +280,9 @@ test "getLabel: hold_only with modifiers shows modifier" {
     const def = core.KeyDef{ .hold_only = .{
         .hold_modifiers = .{ .left_shift = true, .right_shift = true },
     } };
-    try testing.expect(def.hold_only.hold_modifiers != null);
-    try testing.expect(def.hold_only.hold_modifiers.?.left_shift);
-    try testing.expect(def.hold_only.hold_modifiers.?.right_shift);
+    try testing.expect(def.hold_only.hold_modifiers.has_any());
+    try testing.expect(def.hold_only.hold_modifiers.left_shift);
+    try testing.expect(def.hold_only.hold_modifiers.right_shift);
 }
 
 test "getLabel: tap_with_autofire has correct structure" {

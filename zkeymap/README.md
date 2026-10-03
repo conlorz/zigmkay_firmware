@@ -11,7 +11,7 @@ Converts USB HID scan codes to UTF-8 using the active OS keyboard layout. Handle
 | Linux | xkbcommon | done |
 | Other | no-op | — |
 
-Linux: install and link `libxkbcommon` on build host and target. **Zig 0.15.2+**.
+Linux: install and link `libxkbcommon` on build host and target. **Zig 0.16.0**.
 
 ## Installation
 

@@ -89,7 +89,7 @@ pub const LabelCache = struct {
 };
 
 fn scanCodeFromInt(code: u8) !zkeymap.ScanCode {
-    return @enumFromInt(code);
+    return std.enums.fromInt(zkeymap.ScanCode, code) orelse error.InvalidScanCode;
 }
 
 /// Computes the visual content for a key based on its definition and modifier state.
@@ -104,9 +104,8 @@ fn scanCodeFromInt(code: u8) !zkeymap.ScanCode {
 /// for temporary string formatting. The returned CachedKeyContent.label
 /// may point into this buffer or to arena-allocated memory.
 pub fn textKey(key: core.KeyCodeFire, physical_mods: Modifiers) zkeymap.KeyCodeFire {
-    const TextModifiers = @typeInfo(@FieldType(zkeymap.KeyCodeFire, "tap_modifiers")).optional.child;
     const mods = key.tap_modifiers.add(physical_mods);
-    return .{ .tap_keycode = key.tap_keycode, .tap_modifiers = @as(TextModifiers, @bitCast(mods.toByte())), .dead = key.dead };
+    return .{ .tap_keycode = key.tap_keycode, .tap_modifiers = mods, .dead = key.dead };
 }
 
 pub fn computeKeyContent(km: *zkeymap.KeyMap, maybe_def: ?core.KeyDef, physical_mods: Modifiers, label_buf: *[64]u8) CachedKeyContent {
@@ -191,7 +190,7 @@ pub fn computeKeyContent(km: *zkeymap.KeyMap, maybe_def: ?core.KeyDef, physical_
         .KC_UP => return content.withIcon(icons.tvg.lucide.@"arrow-up", "up"),
         .KC_DOWN => return content.withIcon(icons.tvg.lucide.@"arrow-down", "down"),
         .KC_TAB => return content.withIcon(icons.tvg.lucide.@"arrow-right-left", "tab"),
-        .KC_SPACE => return content.withIcon(icons.tvg.lucide.space, "space"),
+        .KC_SPACE => return content.withIcon(icons.tvg.lucide.space, "space").withLabel(" "),
         .KC_PAGE_DOWN => return content.withIcon(icons.tvg.lucide.@"arrow-down-to-line", "page_down"),
         .KC_PAGE_UP => return content.withIcon(icons.tvg.lucide.@"arrow-up-to-line", "page_up"),
         .KC_HOME => return content.withIcon(icons.tvg.lucide.@"arrow-left-to-line", "home"),
@@ -255,6 +254,7 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: *zkeymap.KeyMap) !Label
     const layer_count = keymap.keymap.len;
     const key_count = keymap.key_count;
     var cache = try LabelCache.init(allocator, layer_count, key_count);
+    errdefer cache.deinit();
 
     for (0..layer_count) |layer| {
         for (0..key_count) |key_idx| {
@@ -353,7 +353,7 @@ test "computeKeyContent: KC_PRINT_SCREEN returns label from zkeycodes" {
 
     try testing.expect(content.label != null);
     if (content.label) |label| {
-        try testing.expectEqualStrings("PScr", label);
+        try testing.expectEqualStrings("PSCR", label);
     }
 }
 
@@ -373,7 +373,7 @@ test "computeKeyContent: KC_ESCAPE returns label from zkeycodes" {
 
     try testing.expect(content.label != null);
     if (content.label) |label| {
-        try testing.expectEqualStrings("Esc", label);
+        try testing.expectEqualStrings("ESC", label);
     }
 }
 
@@ -420,7 +420,7 @@ test "LabelCache: lookup returns valid pointer for KC_A" {
     var cache = try buildLabelCache(testing.allocator, &km);
     defer cache.deinit();
 
-    const content = cache.lookup(0, 0, .{}.toByte());
+    const content = cache.lookup(0, 0, .{});
 
     try testing.expect(content.label != null);
     if (content.label) |label| {

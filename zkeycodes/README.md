@@ -37,7 +37,7 @@ zkeycodes/
 
 ## Building
 
-Requires Zig 0.15.2 or later.
+Requires Zig 0.16.0.
 
 ```sh
 zig build          # builds the generator executable
