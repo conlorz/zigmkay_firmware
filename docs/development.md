@@ -51,3 +51,6 @@ The bounded 0.16 dependency probe is on `local/probe-016` in the sibling
 `firmware-integration-016` worktree. It passed core/model tests, minimal RP2040,
 LK7, native SDL3 DVUI, and DVUI-Wasm. It does not yet migrate all host tools or
 include the final integration trace. Phase 2 should use the successful 0.16 pins.
+
+The next implementation is specified in [phase-2-plan.md](phase-2-plan.md),
+including exact starting revisions, worktree setup, target catalog, and acceptance checks.

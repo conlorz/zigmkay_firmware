@@ -3,7 +3,8 @@
 This local branch contains the tested LK7 integration foundation. See
 [local development](docs/development.md), [milestone results](docs/milestone-1.md),
 and the [protocol specification](docs/device-protocol.md). Development commits
-stay local. The upstream overview follows; its keymap-only contribution guidance
+stay local. The next agent can start from the [phase 2 handoff plan](docs/phase-2-plan.md).
+The upstream overview follows; its keymap-only contribution guidance
 does not limit implementation work in this local fork.
 
 # Welcome
