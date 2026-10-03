@@ -5,3 +5,4 @@
 **/zig-x86_64-linux-*/
 **/zls-x86_64-linux-*/
 **/zig-pkg/
+.slim/deepwork/
