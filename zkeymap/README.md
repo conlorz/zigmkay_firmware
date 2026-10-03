@@ -12,7 +12,7 @@ zig build example
 The public module exposes `KeyMap`, `KeyCodeFire`, `ScanCode`, and `TextResult`.
 Initialize a `KeyMap`, call `keyToText`, then deinitialize it. `TextResult.slice()`
 returns UTF-8 text; for fixed-label keys, use `isLabel()` and `getLabel()`.
-`tap_modifiers` is a nonoptional shared `Modifiers` value, defaulting to `.{}.`
+`tap_modifiers` is a nonoptional shared `Modifiers` value, empty by default.
 See [the runnable example](example/main.zig).
 
 Existing C interoperability bridges are retained for Carbon on macOS,

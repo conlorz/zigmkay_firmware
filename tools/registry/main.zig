@@ -54,7 +54,10 @@ pub fn main(init: std.process.Init) !void {
     try verifySources(gpa, init.io, root, entries);
     const data = try render(gpa, entries);
     if (args.len == 5 and std.mem.eql(u8, args[4], "--check")) return compare(gpa, init.io, args[3], data);
-    if (args.len == 6 and std.mem.eql(u8, args[4], "--compare")) return compare(gpa, init.io, args[5], data);
+    if (args.len == 6 and std.mem.eql(u8, args[4], "--compare")) {
+        const generated = try std.Io.Dir.cwd().readFileAlloc(init.io, args[3], gpa, .limited(1024 * 1024));
+        return compare(gpa, init.io, args[5], generated);
+    }
     if (args.len != 4) return error.Usage;
     if (std.fs.path.dirname(args[3])) |parent| try std.Io.Dir.cwd().createDirPath(init.io, parent);
     var atomic = try std.Io.Dir.cwd().createFileAtomic(init.io, args[3], .{});
