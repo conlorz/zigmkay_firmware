@@ -1,9 +1,23 @@
 # Local integration fork
 
-This local branch contains the tested LK7 integration foundation. See
-[local development](docs/development.md), [milestone results](docs/milestone-1.md),
-and the [protocol specification](docs/device-protocol.md). Development commits
-stay local. The next agent can start from the [phase 2 handoff plan](docs/phase-2-plan.md).
+This local branch delivers the Zig 0.16 build graph, ten board firmware targets,
+and the LK7 offline headless companion. See [local development](docs/development.md),
+[milestone 2 results](docs/milestone-2.md), the [phase 1 baseline](docs/milestone-1.md),
+and the [protocol specification](docs/device-protocol.md). Development commits stay local.
+
+```sh
+zig build test
+zig build check-generated
+zig build list-keyboards
+zig build firmware -Dkeyboard=lk7
+zig build firmware-all
+zig build companion -Dkeyboard=lk7
+zig-out/bin/zigmkay-companion-headless-lk7 tests/fixtures/lk7_trace.bin
+```
+
+Use Zig 0.16.0 (`.zigversion`) and Python 3.9 or newer. Default builds run host
+checks; firmware/companion requests require explicit board selection. No ordinary
+build accesses hardware. The [phase 2 plan](docs/phase-2-plan.md) records the scope.
 The upstream overview follows; its keymap-only contribution guidance
 does not limit implementation work in this local fork.
 
@@ -11,7 +25,7 @@ does not limit implementation work in this local fork.
 ZigMkay is a keyboard firmware made in zig. You also configure your own keymaps in zig. 
 
 ## Getting started
-1. Install zig on your machine. Ensure you can run "zig version" and that it spits out 0.15.2. These is a shell.nix which will show all needed dependencies over time.
+1. Install zig on your machine. Ensure you can run "zig version" and that it spits out 0.16.0. These is a shell.nix which will show all needed dependencies over time.
 
 2. Clone this repo
 

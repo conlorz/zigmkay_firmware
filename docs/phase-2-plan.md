@@ -1,6 +1,6 @@
 # Phase 2 handoff: Zig 0.16 root build and board registry
 
-Status: ready for implementation; no phase 2 code has been applied. This plan is based on the local sources inspected on 2026-10-03. It is intended to let a new agent start without the earlier conversation.
+Status: completed locally on `local/phase-2`. See [milestone-2.md](milestone-2.md) and `docs/evidence/phase-2/` for the validation results. The original handoff instructions below describe the starting state inspected on 2026-10-03.
 
 ## Objective and scope
 

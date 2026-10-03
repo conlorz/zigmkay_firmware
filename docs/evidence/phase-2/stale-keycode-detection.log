@@ -1,0 +1,162 @@
+stale generated file: farsi.zig; stale generated file: keycodes.zig; run zig build convert-all explicitly
+check-generated
++- keycodes-check-generated
+   +- run python3 failure
+error: process exited with error code 1
+failed command: python3 /Users/clorz/Documents/zigmkay/firmware-phase-2/zkeycodes/tools/check_generated.py /Users/clorz/Documents/zigmkay/firmware-phase-2/zkeycodes/keycodes keycodes.zig ./.zig-cache/o/00eead02f541bfbed85a14bdd8a3c0b2/keycodes.zig belgian.zig ./.zig-cache/o/30d54723749121d7c0c14035df9248b0/belgian.zig bepo.zig ./.zig-cache/o/f41ca2c04d2140829cac63bae3cd2978/bepo.zig brazilian_abnt2.zig ./.zig-cache/o/216b2d5133f5c39091e2a35cfdc05934/brazilian_abnt2.zig canadian_french.zig ./.zig-cache/o/b15fc63acee62e0208e53b4cf82f919c/canadian_french.zig canadian_multilingual.zig ./.zig-cache/o/f4b90a1058d276596986777558ff42f4/canadian_multilingual.zig colemak.zig ./.zig-cache/o/a65f51efbb376a4aba258694b65cb93e/colemak.zig croatian.zig ./.zig-cache/o/7456d7d4c4b5bc62f48bb5e7b51a2ad0/croatian.zig czech.zig ./.zig-cache/o/3bd2b01728918d9a68ba774976037a8a/czech.zig czech_mac_ansi.zig ./.zig-cache/o/5001148d158d158a499f8ceb80482ace/czech_mac_ansi.zig czech_mac_iso.zig ./.zig-cache/o/09a2b75ca257057d1928f1f0e3ebc6b2/czech_mac_iso.zig danish.zig ./.zig-cache/o/a3f8b10cc6760106daccb29a70afccb8/danish.zig dvorak.zig ./.zig-cache/o/6b147700b88a956195b3e8fa2f36bab7/dvorak.zig dvorak_fr.zig ./.zig-cache/o/4aa0b2247e674a2f5781e440cf7a79ea/dvorak_fr.zig dvorak_programmer.zig ./.zig-cache/o/4e9dcb6e71831bfb717d2b4d85c7281e/dvorak_programmer.zig estonian.zig ./.zig-cache/o/816c7e4e1371f179091b31db0981e25c/estonian.zig eurkey.zig ./.zig-cache/o/8c309a3a6296b088e7866244c879e1b0/eurkey.zig farsi.zig ./.zig-cache/o/e37568b29295c14465dce5653ab6e675/farsi.zig finnish.zig ./.zig-cache/o/2821b0301b16e71bc834076dd24d0de0/finnish.zig french.zig ./.zig-cache/o/4c6ad9123e377041afaf128332c6a3dd/french.zig french_afnor.zig ./.zig-cache/o/6eee2d17a0441cbf881f31b225c09f2e/french_afnor.zig french_mac_iso.zig ./.zig-cache/o/8389d2a0b3c0a4b9536910bc071bc75b/french_mac_iso.zig german.zig ./.zig-cache/o/ef67eed102c6ace63635ee10e62347f1/german.zig german_mac_iso.zig ./.zig-cache/o/0fa08747e0ec109a852f3b86a0e0b8ed/german_mac_iso.zig greek.zig ./.zig-cache/o/8fde902bc95200ab8245227bc88ec996/greek.zig hebrew.zig ./.zig-cache/o/025231cff714d1baf87996e6b5841987/hebrew.zig hungarian.zig ./.zig-cache/o/28ff4dece6d8ae18f48b290f9dcd1eb6/hungarian.zig icelandic.zig ./.zig-cache/o/7692dbee8447698cf735c2cc68bccefc/icelandic.zig irish.zig ./.zig-cache/o/9bbcdddeab59e530b298966fb5aa468c/irish.zig italian.zig ./.zig-cache/o/faff6828bc8bba3918bc212d6399fe85/italian.zig italian_mac_ansi.zig ./.zig-cache/o/babb4a1c71360fa5c2e69296ff679c52/italian_mac_ansi.zig italian_mac_iso.zig ./.zig-cache/o/cf97c91df60df61250f5b72e3c09254f/italian_mac_iso.zig japanese.zig ./.zig-cache/o/2f2b44961ae53d08786047e1a60252bf/japanese.zig korean.zig ./.zig-cache/o/a643be073097c0c7ee16069264132b20/korean.zig latvian.zig ./.zig-cache/o/1ebc7255ed7591f23e7dd57fa29dedd0/latvian.zig lithuanian_azerty.zig ./.zig-cache/o/0af1b6427c76636be30cc6e183c73045/lithuanian_azerty.zig lithuanian_qwerty.zig ./.zig-cache/o/b62fd7e47da30f7a80c3510b3f265df4/lithuanian_qwerty.zig neo2.zig ./.zig-cache/o/46f80fee950689fb29c7eeb07bc1603d/neo2.zig nordic.zig ./.zig-cache/o/8422b4fe8b404ebf9521badde0274cc2/nordic.zig norman.zig ./.zig-cache/o/2c67750a7450261daeea1dff70570fc5/norman.zig norwegian.zig ./.zig-cache/o/be2a7fdd42ce6d96ac3bbcc705f5688e/norwegian.zig plover.zig ./.zig-cache/o/53b115d537628d64af90fd5493ef8b35/plover.zig polish.zig ./.zig-cache/o/cb7d5aa2368a0da9fa8e139be0a54f7e/polish.zig portuguese.zig ./.zig-cache/o/20e597285663c6a70e21c237d8a7f636/portuguese.zig portuguese_mac_iso.zig ./.zig-cache/o/298b68f9ded7bbf8c81ff2243ea6cf63/portuguese_mac_iso.zig romanian.zig ./.zig-cache/o/f93b2c33ffcceb3dd183fb807c3029e2/romanian.zig russian.zig ./.zig-cache/o/4f8bca77d004d5059cc00e3b65402556/russian.zig russian_typewriter.zig ./.zig-cache/o/a635ef16126bc3dbc4aaeb016914247f/russian_typewriter.zig serbian.zig ./.zig-cache/o/8aa3bf4ddd99a0f5697e6f7563c88e9b/serbian.zig serbian_latin.zig ./.zig-cache/o/663be85893a5686156e3e1b466835f36/serbian_latin.zig slovak.zig ./.zig-cache/o/67e40f617ceada74ab702a7b592318ee/slovak.zig slovenian.zig ./.zig-cache/o/4972e8dcb13c55d9ff2d66ed8276d461/slovenian.zig spanish.zig ./.zig-cache/o/41631b5a0c99e1e35e9d653130924307/spanish.zig spanish_dvorak.zig ./.zig-cache/o/2e21ee1918590130dc274a2db73c257c/spanish_dvorak.zig spanish_latin_america.zig ./.zig-cache/o/c1be83c4859ab63f513e226f0555063c/spanish_latin_america.zig swedish.zig ./.zig-cache/o/7fff67e590788cc3f2a92768816d2347/swedish.zig swedish_mac_ansi.zig ./.zig-cache/o/2ed818b06dba9a7308542eda856c2987/swedish_mac_ansi.zig swedish_mac_iso.zig ./.zig-cache/o/eaff54489a03613ce78877e0ac24fa27/swedish_mac_iso.zig swedish_pro_mac_ansi.zig ./.zig-cache/o/1726fcc768084003b10248560ccdbe84/swedish_pro_mac_ansi.zig swedish_pro_mac_iso.zig ./.zig-cache/o/fa2eb1042f2895a856358a230e6c7713/swedish_pro_mac_iso.zig swiss_de.zig ./.zig-cache/o/a4d124771dba696f8f4f6bd9e0b84685/swiss_de.zig swiss_fr.zig ./.zig-cache/o/6bf4ac343cd1f6c92cd3efa81c96c646/swiss_fr.zig turkish_f.zig ./.zig-cache/o/e1377ace9b5f0de96b700a1ca4a5c5e3/turkish_f.zig turkish_q.zig ./.zig-cache/o/0b5dbaf92592e40cfe6ba6a700da60aa/turkish_q.zig uk.zig ./.zig-cache/o/028ce47e28a6cfdb1e3a816eaf0eb5a4/uk.zig ukrainian.zig ./.zig-cache/o/bfd002989875312b91fa37c8cc93cfbd/ukrainian.zig us.zig ./.zig-cache/o/1cef098f2764bc5daa10906a4464b51e/us.zig us_extended.zig ./.zig-cache/o/798102f51c5b4e6e5ac7675172595797/us_extended.zig us_international.zig ./.zig-cache/o/67e0256ca4a4aa04033f779924a80242/us_international.zig us_international_linux.zig ./.zig-cache/o/b089ad92cc3b92ed05c3a385735024fc/us_international_linux.zig workman.zig ./.zig-cache/o/422870f48c65e3dc02946a30242b41d6/workman.zig workman_zxcvm.zig ./.zig-cache/o/7e3577308560f070886f25ab7882d1e5/workman_zxcvm.zig all.zig ./.zig-cache/o/f8bc1f37436d9846c6d693b6c07807af/all.zig
+
+Build Summary: 77/80 steps succeeded (1 failed)
+check-generated transitive failure
++- keycodes-check-generated transitive failure
+|  +- run python3 failure
+|     +- run exe zkeycodes (keycodes.zig) success 28ms
+|     |  +- compile exe zkeycodes Debug native cached 53ms MaxRSS:31M
+|     +- run exe zkeycodes (belgian.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (bepo.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (brazilian_abnt2.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_french.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_multilingual.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (colemak.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (croatian.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_ansi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_iso.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (danish.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_fr.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_programmer.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (estonian.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (eurkey.zig) success 21ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (farsi.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (finnish.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_afnor.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_mac_iso.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german_mac_iso.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (greek.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hebrew.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hungarian.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (icelandic.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (irish.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_ansi.zig) success 24ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_iso.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (japanese.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (korean.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (latvian.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_azerty.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_qwerty.zig) success 20ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (neo2.zig) success 11ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (nordic.zig) success 10ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norman.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norwegian.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (plover.zig) success 10ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (polish.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese_mac_iso.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (romanian.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian_typewriter.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian_latin.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovak.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovenian.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_dvorak.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_latin_america.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_ansi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_iso.zig) success 20ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_ansi.zig) success 23ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_iso.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_de.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_fr.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_f.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_q.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (uk.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (ukrainian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us.zig) success 11ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_extended.zig) success 22ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international_linux.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman_zxcvm.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- WriteFile all.zig success
++- registry-check-generated success
+   +- run python3 success 37ms
+      +- run python3 (keyboard_registry.zig) success 60ms
+
+error: the following build command failed with exit code 1:
+.zig-cache/o/8d217dde80fc6294a0c2232207a538e7/build /Users/clorz/.zvm/0.16.0/zig /Users/clorz/.zvm/0.16.0/lib /Users/clorz/Documents/zigmkay/firmware-phase-2 .zig-cache /Users/clorz/.cache/zig --seed 0x353ac57d -Z1c5ac19fb626cb8a check-generated -j4 --summary all

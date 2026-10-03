@@ -1,0 +1,148 @@
+Build Summary: 75/75 steps succeeded
+convert-all success
++- UpdateSourceFiles success
+   +- run exe zkeycodes (keycodes.zig) cached
+   |  +- compile exe zkeycodes Debug native cached 37ms MaxRSS:31M
+   +- run exe zkeycodes (belgian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (bepo.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (brazilian_abnt2.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (canadian_french.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (canadian_multilingual.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (colemak.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (croatian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (czech.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (czech_mac_ansi.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (czech_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (danish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (dvorak.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (dvorak_fr.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (dvorak_programmer.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (estonian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (eurkey.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (farsi.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (finnish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (french.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (french_afnor.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (french_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (german.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (german_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (greek.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (hebrew.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (hungarian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (icelandic.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (irish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (italian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (italian_mac_ansi.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (italian_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (japanese.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (korean.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (latvian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (lithuanian_azerty.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (lithuanian_qwerty.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (neo2.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (nordic.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (norman.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (norwegian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (plover.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (polish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (portuguese.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (portuguese_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (romanian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (russian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (russian_typewriter.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (serbian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (serbian_latin.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (slovak.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (slovenian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (spanish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (spanish_dvorak.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (spanish_latin_america.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swedish.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swedish_mac_ansi.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swedish_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swedish_pro_mac_ansi.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swedish_pro_mac_iso.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swiss_de.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (swiss_fr.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (turkish_f.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (turkish_q.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (uk.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (ukrainian.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (us.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (us_extended.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (us_international.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (us_international_linux.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (workman.zig) cached
+   |  +- compile exe zkeycodes Debug native (reused)
+   +- run exe zkeycodes (workman_zxcvm.zig) cached
+      +- compile exe zkeycodes Debug native (reused)
+

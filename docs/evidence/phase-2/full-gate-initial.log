@@ -1,0 +1,688 @@
+Compiler: /Users/clorz/.zvm/0.16.0/zig (0.16.0)
+SDK: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+Checking .: test
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.291s
+
+OK
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.687s
+
+OK
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.007s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.475s
+
+OK
+Build Summary: 99/99 steps succeeded; 203/203 tests passed
+test success
++- core-test success
+|  +- run test 11 pass (11 total) 11ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 20 pass (20 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 9 pass (9 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 5 pass (5 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 53ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 41ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test success 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 53ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 45ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 13 pass (13 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 10 pass (10 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 6ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 47ms MaxRSS:31M
+|  +- run test 11 pass (11 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 47ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|     +- compile test Debug native cached 56ms MaxRSS:31M
++- keycodes-test success
+|  +- run test success 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 48ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 41ms MaxRSS:31M
+|  +- run test 10 pass (10 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 41ms MaxRSS:31M
+|  |     +- run exe zkeycodes (keycodes.zig) cached
+|  |     |  +- compile exe zkeycodes Debug native cached 65ms MaxRSS:31M
+|  |     +- run exe zkeycodes (us_international.zig) cached
+|  |     |  +- compile exe zkeycodes Debug native (reused)
+|  |     +- run exe zkeycodes (german_mac_iso.zig) cached
+|  |        +- compile exe zkeycodes Debug native (reused)
+|  +- run test 12 pass (12 total) 2ms MaxRSS:2M
+|     +- compile test Debug native cached 39ms MaxRSS:31M
+|        +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
++- run test 6 pass (6 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 42ms MaxRSS:31M
++- compile obj protocol-check Debug wasm32-freestanding cached 33ms MaxRSS:31M
++- run test 3 pass (3 total) 2ms MaxRSS:2M
+|  +- compile test Debug native cached 54ms MaxRSS:31M
++- run test 1 pass (1 total) 2ms MaxRSS:2M
+|  +- compile test Debug native cached 49ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 54ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 66ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 63ms MaxRSS:31M
++- model-test success
+|  +- run test 1 pass (1 total) 6ms MaxRSS:2M
+|     +- compile test Debug native cached 48ms MaxRSS:31M
++- check-portable cached
+|  +- compile obj layout-model-check Debug native cached 50ms MaxRSS:31M
+|  +- compile obj layout-model-check Debug wasm32-freestanding cached 37ms MaxRSS:31M
++- run python3 success 63ms
++- run python3 success 726ms
+|  +- compile exe zigmkay-companion-headless-lk7 Debug native cached 66ms MaxRSS:31M
+|  +- compile exe zkeycodes Debug native (reused)
++- run python3 success 514ms
++- run python3 success 338ms
+
+Checking .: check-generated
+Build Summary: 80/80 steps succeeded
+check-generated success
++- keycodes-check-generated success
+|  +- run python3 success 19ms
+|     +- run exe zkeycodes (keycodes.zig) cached
+|     |  +- compile exe zkeycodes Debug native cached 37ms MaxRSS:31M
+|     +- run exe zkeycodes (belgian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (bepo.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (brazilian_abnt2.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_french.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_multilingual.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (colemak.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (croatian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_ansi.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (danish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_fr.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_programmer.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (estonian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (eurkey.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (farsi.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (finnish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_afnor.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (greek.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hebrew.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hungarian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (icelandic.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (irish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_ansi.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (japanese.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (korean.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (latvian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_azerty.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_qwerty.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (neo2.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (nordic.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norman.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norwegian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (plover.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (polish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (romanian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian_typewriter.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian_latin.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovak.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovenian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_dvorak.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_latin_america.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_ansi.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_ansi.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_iso.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_de.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_fr.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_f.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_q.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (uk.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (ukrainian.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_extended.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international_linux.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman_zxcvm.zig) cached
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- WriteFile all.zig cached
++- registry-check-generated success
+   +- run python3 success 30ms
+      +- run python3 (keyboard_registry.zig) cached
+
+Checking .: firmware -Dkeyboard=lk7
+Build Summary: 20/20 steps succeeded
+firmware success
++- install generated to firmware/lk7/zigmkay.uf2 success
+   +- run exe elf2uf2 (output.uf2) success 2ms
+      +- compile exe elf2uf2 ReleaseSafe native cached 51ms MaxRSS:31M
+      +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 566ms MaxRSS:164M
+         +- run exe generate_linker_script (linker.ld) cached
+         |  +- compile exe generate_linker_script Debug native cached 49ms MaxRSS:31M
+         +- options cached
+         +- run exe regz (chips) cached
+         |  +- compile exe regz ReleaseSafe native cached 43ms MaxRSS:32M
+         |     +- WriteFile libxml/xmlversion.h cached
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h cached
+         |     +- compile lib xml ReleaseSafe native cached 41ms MaxRSS:30M
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     |  +- configure cmake header dependency to config.h cached
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     +- compile lib xml ReleaseSafe native (+3 more reused dependencies)
+         |     +- WriteFile  cached
+         |     +- compile lib sqlite ReleaseSafe native cached 37ms MaxRSS:30M
+         |     +- WriteFile sqlite3.h cached
+         |     +- compile lib sqlite3 ReleaseSafe native cached 46ms MaxRSS:30M
+         |     +- compile lib sqlite ReleaseSafe native (reused)
+         |     +- compile lib sqlite3 ReleaseSafe native (reused)
+         +- objcopy generated cached
+            +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi cached 36ms MaxRSS:30M
+
+Checking .: firmware-all
+Build Summary: 74/74 steps succeeded
+firmware-all success
++- install generated to firmware/clacky_chan/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native cached 48ms MaxRSS:31M
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 717ms MaxRSS:170M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native cached 48ms MaxRSS:31M
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native cached 50ms MaxRSS:31M
+|        |     +- WriteFile libxml/xmlversion.h cached
+|        |     |  +- configure cmake header dependency to libxml/xmlversion.h cached
+|        |     +- compile lib xml ReleaseSafe native cached 38ms MaxRSS:30M
+|        |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+|        |     |  +- configure cmake header dependency to config.h cached
+|        |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+|        |     +- compile lib xml ReleaseSafe native (+3 more reused dependencies)
+|        |     +- WriteFile  cached
+|        |     +- compile lib sqlite ReleaseSafe native cached 43ms MaxRSS:30M
+|        |     +- WriteFile sqlite3.h cached
+|        |     +- compile lib sqlite3 ReleaseSafe native cached 42ms MaxRSS:30M
+|        |     +- compile lib sqlite ReleaseSafe native (reused)
+|        |     +- compile lib sqlite3 ReleaseSafe native (reused)
+|        +- objcopy generated cached
+|           +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi cached 37ms MaxRSS:30M
++- install generated to firmware/dasbob/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 757ms MaxRSS:180M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/encoder_demo/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 565ms MaxRSS:161M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/lk1/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 650ms MaxRSS:163M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/lk2/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 3ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 647ms MaxRSS:165M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/lk6/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 553ms MaxRSS:165M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/lk7/zigmkay.uf2 cached
+|  +- run exe elf2uf2 (output.uf2) cached
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi cached 53ms MaxRSS:31M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/molekula/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 554ms MaxRSS:163M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/tuckytwotimes/zigmkay.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms
+|     +- compile exe elf2uf2 ReleaseSafe native (reused)
+|     +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 781ms MaxRSS:176M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native (reused)
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+|        +- objcopy generated (+1 more reused dependencies)
++- install generated to firmware/yak/zigmkay.uf2 success
+   +- run exe elf2uf2 (output.uf2) success 3ms
+      +- compile exe elf2uf2 ReleaseSafe native (reused)
+      +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 771ms MaxRSS:175M
+         +- run exe generate_linker_script (linker.ld) cached
+         |  +- compile exe generate_linker_script Debug native (reused)
+         +- options cached
+         +- run exe regz (chips) cached
+         |  +- compile exe regz ReleaseSafe native (+9 more reused dependencies)
+         +- objcopy generated (+1 more reused dependencies)
+
+Checking .: companion -Dkeyboard=lk7
+Build Summary: 3/3 steps succeeded
+companion success
++- install zigmkay-companion-headless-lk7 success
+   +- compile exe zigmkay-companion-headless-lk7 Debug native cached 39ms MaxRSS:31M
+
+Checking .: (default)
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.010s
+
+OK
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.307s
+
+OK
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.633s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.540s
+
+OK
+Build Summary: 99/99 steps succeeded; 203/203 tests passed
+test success
++- core-test success
+|  +- run test 11 pass (11 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 41ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 53ms MaxRSS:31M
+|  +- run test 20 pass (20 total) 6ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 9 pass (9 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 8ms MaxRSS:2M
+|  |  +- compile test Debug native cached 62ms MaxRSS:31M
+|  +- run test 5 pass (5 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 6ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 42ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 41ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test success 7ms MaxRSS:2M
+|  |  +- compile test Debug native cached 62ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 5ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 42ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 63ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 7ms MaxRSS:2M
+|  |  +- compile test Debug native cached 62ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 6ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 13 pass (13 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 10 pass (10 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 4ms MaxRSS:2M
+|  |  +- compile test Debug native cached 7ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 11 pass (11 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 42ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|     +- compile test Debug native cached 51ms MaxRSS:31M
++- keycodes-test success
+|  +- run test success 5ms MaxRSS:2M
+|  |  +- compile test Debug native cached 53ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 6ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 10 pass (10 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  |     +- run exe zkeycodes (keycodes.zig) cached
+|  |     |  +- compile exe zkeycodes Debug native cached 47ms MaxRSS:31M
+|  |     +- run exe zkeycodes (us_international.zig) cached
+|  |     |  +- compile exe zkeycodes Debug native (reused)
+|  |     +- run exe zkeycodes (german_mac_iso.zig) cached
+|  |        +- compile exe zkeycodes Debug native (reused)
+|  +- run test 12 pass (12 total) 6ms MaxRSS:2M
+|     +- compile test Debug native cached 49ms MaxRSS:31M
+|        +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
++- run test 6 pass (6 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 52ms MaxRSS:31M
++- compile obj protocol-check Debug wasm32-freestanding cached 33ms MaxRSS:31M
++- run test 3 pass (3 total) 6ms MaxRSS:2M
+|  +- compile test Debug native cached 56ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 57ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 52ms MaxRSS:31M
++- run test 1 pass (1 total) 12ms MaxRSS:2M
+|  +- compile test Debug native cached 55ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 46ms MaxRSS:31M
++- model-test success
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|     +- compile test Debug native cached 52ms MaxRSS:31M
++- check-portable cached
+|  +- compile obj layout-model-check Debug native cached 43ms MaxRSS:31M
+|  +- compile obj layout-model-check Debug wasm32-freestanding cached 33ms MaxRSS:31M
++- run python3 success 64ms
++- run python3 success 668ms
+|  +- compile exe zigmkay-companion-headless-lk7 Debug native cached 47ms MaxRSS:31M
+|  +- compile exe zkeycodes Debug native (reused)
++- run python3 success 577ms
++- run python3 success 350ms
+
+Checking zigmkay: test
+Build Summary: 62/62 steps succeeded; 165/165 tests passed
+test success
++- core-test success
+   +- run test 11 pass (11 total) 246ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:267M
+   +- run test 1 pass (1 total) 613ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:275M
+   +- run test 20 pass (20 total) 733ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:302M
+   +- run test 8 pass (8 total) 536ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:282M
+   +- run test 9 pass (9 total) 960ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:291M
+   +- run test 2 pass (2 total) 400ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:274M
+   +- run test 5 pass (5 total) 631ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:281M
+   +- run test 4 pass (4 total) 645ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:275M
+   +- run test 1 pass (1 total) 243ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:293M
+   +- run test 3 pass (3 total) 611ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:275M
+   +- run test 3 pass (3 total) 241ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:285M
+   +- run test success 239ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:265M
+   +- run test 1 pass (1 total) 241ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:265M
+   +- run test 7 pass (7 total) 456ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:267M
+   +- run test 4 pass (4 total) 304ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:282M
+   +- run test 4 pass (4 total) 765ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:284M
+   +- run test 3 pass (3 total) 796ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:294M
+   +- run test 2 pass (2 total) 408ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:279M
+   +- run test 8 pass (8 total) 240ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:263M
+   +- run test 7 pass (7 total) 240ms MaxRSS:2M
+   |  +- compile test Debug native success 991ms MaxRSS:271M
+   +- run test 13 pass (13 total) 419ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:271M
+   +- run test 4 pass (4 total) 795ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:283M
+   +- run test 10 pass (10 total) 846ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:279M
+   +- run test 8 pass (8 total) 262ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:284M
+   +- run test 2 pass (2 total) 399ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:274M
+   +- run test 11 pass (11 total) 1s MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:291M
+   +- run test 3 pass (3 total) 816ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:282M
+   +- run test 1 pass (1 total) 241ms MaxRSS:2M
+   |  +- compile test Debug native success 990ms MaxRSS:276M
+   +- run test 2 pass (2 total) 602ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:278M
+   +- run test 8 pass (8 total) 244ms MaxRSS:2M
+      +- compile test Debug native success 1s MaxRSS:274M
+
+Checking zkeycodes: test -Dtarget=thumb-freestanding-eabi
+Build Summary: 14/14 steps succeeded; 24/24 tests passed
+test success
++- keycodes-test success
+   +- run test success 285ms MaxRSS:2M
+   |  +- compile test Debug native success 1s MaxRSS:271M
+   +- run test 2 pass (2 total) 4ms MaxRSS:2M
+   |  +- compile test Debug native cached 65ms MaxRSS:31M
+   +- run test 10 pass (10 total) 3ms MaxRSS:2M
+   |  +- compile test Debug native cached 54ms MaxRSS:31M
+   |     +- run exe zkeycodes (keycodes.zig) cached
+   |     |  +- compile exe zkeycodes Debug native cached 65ms MaxRSS:31M
+   |     +- run exe zkeycodes (us_international.zig) cached
+   |     |  +- compile exe zkeycodes Debug native (reused)
+   |     +- run exe zkeycodes (german_mac_iso.zig) cached
+   |        +- compile exe zkeycodes Debug native (reused)
+   +- run test 12 pass (12 total) 3ms MaxRSS:2M
+      +- compile test Debug native cached 54ms MaxRSS:31M
+         +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+         +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+         +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
+
+Checking keyboards: firmware -Dkeyboard=lk7
+Build Summary: 20/20 steps succeeded
+firmware success
++- install generated to firmware/lk7/zigmkay.uf2 success
+   +- run exe elf2uf2 (output.uf2) success 2ms
+      +- compile exe elf2uf2 ReleaseSafe native cached 50ms MaxRSS:31M
+      +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 563ms MaxRSS:170M
+         +- run exe generate_linker_script (linker.ld) cached
+         |  +- compile exe generate_linker_script Debug native cached 42ms MaxRSS:31M
+         +- options cached
+         +- run exe regz (chips) cached
+         |  +- compile exe regz ReleaseSafe native cached 42ms MaxRSS:31M
+         |     +- WriteFile libxml/xmlversion.h cached
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h cached
+         |     +- compile lib xml ReleaseSafe native cached 38ms MaxRSS:30M
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     |  +- configure cmake header dependency to config.h cached
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     +- compile lib xml ReleaseSafe native (+3 more reused dependencies)
+         |     +- WriteFile  cached
+         |     +- compile lib sqlite ReleaseSafe native cached 46ms MaxRSS:30M
+         |     +- WriteFile sqlite3.h cached
+         |     +- compile lib sqlite3 ReleaseSafe native cached 37ms MaxRSS:30M
+         |     +- compile lib sqlite ReleaseSafe native (reused)
+         |     +- compile lib sqlite3 ReleaseSafe native (reused)
+         +- objcopy generated cached
+            +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi cached 35ms MaxRSS:30M
+
+Checking .: companion -Dkeyboard=lk7 -Dtarget=thumb-freestanding-eabi
+Build Summary: 3/3 steps succeeded
+companion cached
++- install zigmkay-companion-headless-lk7 cached
+   +- compile exe zigmkay-companion-headless-lk7 Debug native cached 44ms MaxRSS:31M
+
+LK7 root/standalone UF2 match: 4924493306b302a7c2019e948ce04c79225c7d08dba1711eafc3cccbc32380e8
+Offline tool sentinel: no flasher or device tool executed
+Source contents and file inventory unchanged

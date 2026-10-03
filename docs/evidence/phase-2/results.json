@@ -1,0 +1,191 @@
+{
+  "compiler": "/Users/clorz/.zvm/0.16.0/zig",
+  "version": "0.16.0",
+  "xcode": "27.0 (27A266a)",
+  "sdk_version": "27.0",
+  "sdk": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
+  "legacy_sdk_overrides": false,
+  "python": "3.14.7",
+  "integration_base": "e754f5cd95eec6abcb21aeec91f9e630f0598212",
+  "validated_revision": "fab43a54ca62041793e36b92e432e182942fd6fb",
+  "microzig_revision": "00fde43fa3756790037b099baeafacc3e6bf9499",
+  "microzig_hash": "microzig-0.15.2-D20YSUgL4ADiSBUt_UcXeT9vQJmqvig4dYwWEaHnnGRE",
+  "tests": {
+    "preserved_phase1": 201,
+    "zig": 203,
+    "python_registry": 13,
+    "python_adapters": 10,
+    "python_build_boundaries": 5,
+    "python_check_wrapper": 3,
+    "total": 234
+  },
+  "commands": [
+    {
+      "cwd": ".",
+      "argv": [
+        "/Users/clorz/.zvm/0.16.0/zig",
+        "build",
+        "test",
+        "-j4",
+        "--summary",
+        "all"
+      ],
+      "exit_code": 0,
+      "build_steps": 99
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/Users/clorz/.zvm/0.16.0/zig",
+        "build",
+        "check-generated",
+        "-j4",
+        "--summary",
+        "all"
+      ],
+      "exit_code": 0,
+      "build_steps": 80
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/Users/clorz/.zvm/0.16.0/zig",
+        "build",
+        "firmware",
+        "-Dkeyboard=lk7",
+        "-j4",
+        "--summary",
+        "all"
+      ],
+      "exit_code": 0,
+      "build_steps": 20
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/Users/clorz/.zvm/0.16.0/zig",
+        "build",
+        "firmware-all",
+        "-j4",
+        "--summary",
+        "all"
+      ],
+      "exit_code": 0,
+      "build_steps": 74
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/Users/clorz/.zvm/0.16.0/zig",
+        "build",
+        "companion",
+        "-Dkeyboard=lk7",
+        "-j4",
+        "--summary",
+        "all"
+      ],
+      "exit_code": 0,
+      "build_steps": 3
+    }
+  ],
+  "full_wrapper": {
+    "argv": [
+      "./tools/check-local",
+      "--full"
+    ],
+    "environment": {
+      "ZIG_BIN": "/Users/clorz/.zvm/0.16.0/zig"
+    },
+    "exit_code": 0,
+    "source_inventory_unchanged": true,
+    "hardware_tool_sentinel_triggered": false
+  },
+  "standalone": {
+    "core_tests": 165,
+    "keycode_tests": 24,
+    "host_tools_under_firmware_target": true,
+    "lk7_uf2_bytes_match": true
+  },
+  "fresh_checkout": {
+    "revision": "ac08bf8bb0b0bd0d40d7d8b4ae5e4cec6d7d6bdb",
+    "test_exit": 0,
+    "check_generated_exit": 0,
+    "lk7_exit": 0,
+    "lk7_uf2_bytes_match": true,
+    "uses_sibling_dependencies": false
+  },
+  "registry_bootstrap": {
+    "temporary_minimal_project": true,
+    "missing_check_exit": 1,
+    "missing_check_created_file": false,
+    "generate_exit": 0,
+    "check_exit": 0,
+    "generated_source_compile_exit": 0
+  },
+  "artifacts": [
+    {
+      "path": "zig-out/firmware/clacky_chan/zigmkay.uf2",
+      "bytes": 76800,
+      "sha256": "0175142fa8c2b2c6d4b1f5f73b7e556974232fe3f88e8f136a8825c700e3db96"
+    },
+    {
+      "path": "zig-out/firmware/dasbob/zigmkay.uf2",
+      "bytes": 83456,
+      "sha256": "662105383dc39fa0024a723a05db1c7bdfb14fb2589f6adc7a59835c20611b4f"
+    },
+    {
+      "path": "zig-out/firmware/encoder_demo/zigmkay.uf2",
+      "bytes": 50688,
+      "sha256": "3a27d8b6d007b468febad967b4a9b1b6dd539bc725132933f910bea6be005c3a"
+    },
+    {
+      "path": "zig-out/firmware/lk1/zigmkay.uf2",
+      "bytes": 70656,
+      "sha256": "047435803e00b3ce9a8961e26afdf34fc9767a532df5a7d90e382ea16ea60514"
+    },
+    {
+      "path": "zig-out/firmware/lk2/zigmkay.uf2",
+      "bytes": 72192,
+      "sha256": "99d0773491fdf972ddbdad383be07618fa87abc1ad674f6dba6897c70035521a"
+    },
+    {
+      "path": "zig-out/firmware/lk6/zigmkay.uf2",
+      "bytes": 71680,
+      "sha256": "cd76df150e48620c86363ea90bdedfcdbeb494ab4cbe158d61a33487ed7b130d"
+    },
+    {
+      "path": "zig-out/firmware/lk7/zigmkay.uf2",
+      "bytes": 71168,
+      "sha256": "4924493306b302a7c2019e948ce04c79225c7d08dba1711eafc3cccbc32380e8"
+    },
+    {
+      "path": "zig-out/firmware/molekula/zigmkay.uf2",
+      "bytes": 71680,
+      "sha256": "08a28176e70bf9f85830b6008f8bc1fc2893b09e817aeaf3d0f588f21933d785"
+    },
+    {
+      "path": "zig-out/firmware/tuckytwotimes/zigmkay.uf2",
+      "bytes": 80896,
+      "sha256": "58741fc737ddceeef73cbe936694ab0aabfc0d842a2d354689d7e486eef8805c"
+    },
+    {
+      "path": "zig-out/firmware/yak/zigmkay.uf2",
+      "bytes": 72704,
+      "sha256": "a7b2a4ad8063f95350747296d79bc24962fbd6781b1a7cf0f4ea7a5938d9eae4"
+    },
+    {
+      "path": "zig-out/bin/zigmkay-companion-headless-lk7",
+      "bytes": 2094096,
+      "sha256": "bd9c99d37e3bf905087b2cc9156d964ab3cf4c956a36868200975080e908fdf6"
+    }
+  ],
+  "unsupported": [
+    "hardware acceptance",
+    "production HID/USB transport",
+    "Hello/Snapshot and resynchronization",
+    "bounded telemetry queue recovery",
+    "legacy GUI",
+    "native zkeymap migration",
+    "flashing"
+  ]
+}

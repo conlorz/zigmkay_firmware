@@ -1,0 +1,313 @@
+$ /Users/clorz/.zvm/0.16.0/zig build test -j4 --summary all
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 1.293s
+
+OK
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.288s
+
+OK
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.014s
+
+OK
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.520s
+
+OK
+Build Summary: 99/99 steps succeeded; 203/203 tests passed
+test success
++- core-test success
+|  +- run test 11 pass (11 total) 436ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:267M
+|  +- run test 1 pass (1 total) 250ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:277M
+|  +- run test 20 pass (20 total) 711ms MaxRSS:3M
+|  |  +- compile test Debug native success 1s MaxRSS:297M
+|  +- run test 8 pass (8 total) 446ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:279M
+|  +- run test 9 pass (9 total) 933ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:288M
+|  +- run test 2 pass (2 total) 898ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:274M
+|  +- run test 5 pass (5 total) 831ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:278M
+|  +- run test 4 pass (4 total) 243ms MaxRSS:2M
+|  |  +- compile test Debug native success 978ms MaxRSS:278M
+|  +- run test 1 pass (1 total) 749ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:297M
+|  +- run test 3 pass (3 total) 410ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:276M
+|  +- run test 3 pass (3 total) 395ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:281M
+|  +- run test success 239ms MaxRSS:2M
+|  |  +- compile test Debug native success 977ms MaxRSS:261M
+|  +- run test 1 pass (1 total) 242ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:264M
+|  +- run test 7 pass (7 total) 724ms MaxRSS:2M
+|  |  +- compile test Debug native success 998ms MaxRSS:267M
+|  +- run test 4 pass (4 total) 445ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:277M
+|  +- run test 4 pass (4 total) 588ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:284M
+|  +- run test 3 pass (3 total) 1s MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:293M
+|  +- run test 2 pass (2 total) 612ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:282M
+|  +- run test 8 pass (8 total) 227ms MaxRSS:2M
+|  |  +- compile test Debug native success 946ms MaxRSS:261M
+|  +- run test 7 pass (7 total) 244ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:271M
+|  +- run test 13 pass (13 total) 253ms MaxRSS:2M
+|  |  +- compile test Debug native success 926ms MaxRSS:270M
+|  +- run test 4 pass (4 total) 355ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:283M
+|  +- run test 10 pass (10 total) 480ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:277M
+|  +- run test 8 pass (8 total) 652ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:283M
+|  +- run test 2 pass (2 total) 267ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:273M
+|  +- run test 11 pass (11 total) 249ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:295M
+|  +- run test 3 pass (3 total) 601ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:281M
+|  +- run test 1 pass (1 total) 400ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:277M
+|  +- run test 2 pass (2 total) 379ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:278M
+|  +- run test 8 pass (8 total) 247ms MaxRSS:2M
+|     +- compile test Debug native success 1s MaxRSS:274M
++- keycodes-test success
+|  +- run test success 248ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:265M
+|  +- run test 2 pass (2 total) 249ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:274M
+|  +- run test 10 pass (10 total) 381ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:266M
+|  |     +- run exe zkeycodes (keycodes.zig) success 422ms
+|  |     |  +- compile exe zkeycodes Debug native success 1s MaxRSS:329M
+|  |     +- run exe zkeycodes (us_international.zig) success 425ms
+|  |     |  +- compile exe zkeycodes Debug native (reused)
+|  |     +- run exe zkeycodes (german_mac_iso.zig) success 426ms
+|  |        +- compile exe zkeycodes Debug native (reused)
+|  +- run test 12 pass (12 total) 598ms MaxRSS:2M
+|     +- compile test Debug native success 1s MaxRSS:267M
+|        +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
++- run test 6 pass (6 total) 453ms MaxRSS:2M
+|  +- compile test Debug native success 1s MaxRSS:280M
++- compile obj protocol-check Debug wasm32-freestanding success 140ms MaxRSS:86M
++- run test 3 pass (3 total) 412ms MaxRSS:2M
+|  +- compile test Debug native success 992ms MaxRSS:280M
++- run test 1 pass (1 total) 794ms MaxRSS:2M
+|  +- compile test Debug native success 1s MaxRSS:272M
++- run test 1 pass (1 total) 381ms MaxRSS:2M
+|  +- compile test Debug native success 1s MaxRSS:291M
++- run test 1 pass (1 total) 242ms MaxRSS:2M
+|  +- compile test Debug native success 1s MaxRSS:283M
++- run test 1 pass (1 total) 255ms MaxRSS:2M
+|  +- compile test Debug native success 1s MaxRSS:269M
++- model-test success
+|  +- run test 1 pass (1 total) 249ms MaxRSS:2M
+|     +- compile test Debug native success 1s MaxRSS:264M
++- check-portable success
+|  +- compile obj layout-model-check Debug native success 237ms MaxRSS:114M
+|  +- compile obj layout-model-check Debug wasm32-freestanding success 98ms MaxRSS:86M
++- run python3 success 80ms
++- run python3 success 1s
+|  +- compile exe zigmkay-companion-headless-lk7 Debug native success 1s MaxRSS:269M
+|  +- compile exe zkeycodes Debug native (reused)
++- run python3 success 555ms
++- run python3 success 332ms
+
+exit=0
+$ /Users/clorz/.zvm/0.16.0/zig build check-generated -j4 --summary all
+Build Summary: 80/80 steps succeeded
+check-generated success
++- keycodes-check-generated success
+|  +- run python3 success 19ms
+|     +- run exe zkeycodes (keycodes.zig) success 24ms
+|     |  +- compile exe zkeycodes Debug native cached 38ms MaxRSS:31M
+|     +- run exe zkeycodes (belgian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (bepo.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (brazilian_abnt2.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_french.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (canadian_multilingual.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (colemak.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (croatian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_ansi.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (czech_mac_iso.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (danish.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_fr.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (dvorak_programmer.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (estonian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (eurkey.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (farsi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (finnish.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_afnor.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (french_mac_iso.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (german_mac_iso.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (greek.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hebrew.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (hungarian.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (icelandic.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (irish.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_ansi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (italian_mac_iso.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (japanese.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (korean.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (latvian.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_azerty.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (lithuanian_qwerty.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (neo2.zig) success 11ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (nordic.zig) success 11ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norman.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (norwegian.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (plover.zig) success 9ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (polish.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (portuguese_mac_iso.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (romanian.zig) success 14ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (russian_typewriter.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (serbian_latin.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovak.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (slovenian.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_dvorak.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (spanish_latin_america.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_ansi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_mac_iso.zig) success 20ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_ansi.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swedish_pro_mac_iso.zig) success 18ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_de.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (swiss_fr.zig) success 13ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_f.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (turkish_q.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (uk.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (ukrainian.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_extended.zig) success 19ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international.zig) success 16ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (us_international_linux.zig) success 17ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman.zig) success 15ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- run exe zkeycodes (workman_zxcvm.zig) success 12ms
+|     |  +- compile exe zkeycodes Debug native (reused)
+|     +- WriteFile all.zig success
++- registry-check-generated success
+   +- run python3 success 30ms
+      +- run python3 (keyboard_registry.zig) success 30ms
+
+exit=0
+$ /Users/clorz/.zvm/0.16.0/zig build firmware -Dkeyboard=lk7 -j4 --summary all
+Build Summary: 20/20 steps succeeded
+firmware success
++- install generated to firmware/lk7/zigmkay.uf2 success
+   +- run exe elf2uf2 (output.uf2) success 256ms
+      +- compile exe elf2uf2 ReleaseSafe native success 4s MaxRSS:376M
+      +- compile exe zigmkay ReleaseSafe thumb-freestanding-eabi success 561ms MaxRSS:176M
+         +- run exe generate_linker_script (linker.ld) success 256ms
+         |  +- compile exe generate_linker_script Debug native success 1s MaxRSS:289M
+         +- options success
+         +- run exe regz (chips) success 435ms
+         |  +- compile exe regz ReleaseSafe native success 13s MaxRSS:838M
+         |     +- WriteFile libxml/xmlversion.h success
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h success
+         |     +- compile lib xml ReleaseSafe native success 2s MaxRSS:220M
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     |  +- configure cmake header dependency to config.h success
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     +- compile lib xml ReleaseSafe native (+3 more reused dependencies)
+         |     +- WriteFile  success
+         |     +- compile lib sqlite ReleaseSafe native success 14s MaxRSS:904M
+         |     +- WriteFile sqlite3.h success
+         |     +- compile lib sqlite3 ReleaseSafe native success 14s MaxRSS:914M
+         |     +- compile lib sqlite ReleaseSafe native (reused)
+         |     +- compile lib sqlite3 ReleaseSafe native (reused)
+         +- objcopy generated success 48ms MaxRSS:1M
+            +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi success 155ms MaxRSS:38M
+
+exit=0

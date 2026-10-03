@@ -1,0 +1,10 @@
+$ python3 -B /Users/clorz/Documents/zigmkay/firmware-phase-2/tools/registry/registry.py /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/boards.json /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9 /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/generated/keyboard_registry.zig --check
+registry: missing registry: /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/generated/keyboard_registry.zig; run the independent registry bootstrap command
+exit=1
+$ python3 -B /Users/clorz/Documents/zigmkay/firmware-phase-2/tools/registry/registry.py /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/boards.json /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9 /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/generated/keyboard_registry.zig
+exit=0
+$ python3 -B /Users/clorz/Documents/zigmkay/firmware-phase-2/tools/registry/registry.py /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/boards.json /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9 /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/generated/keyboard_registry.zig --check
+exit=0
+$ /Users/clorz/.zvm/0.16.0/zig test /var/folders/q5/3rg_066s0fscfqf7jqhls_bm0000gn/T/zigmkay-phase2-bootstrap-3zzlgbi9/generated/keyboard_registry.zig
+All 0 tests passed.
+exit=0

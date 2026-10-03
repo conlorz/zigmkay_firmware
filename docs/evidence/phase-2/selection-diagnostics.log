@@ -1,0 +1,48 @@
+$ /Users/clorz/.zvm/0.16.0/zig build firmware -j4
+firmware
++- fail failure
+error: Missing -Dkeyboard; available IDs: clacky_chan, dasbob, encoder_demo, lk1, lk2, lk6, lk7, molekula, tuckytwotimes, yak
+
+Build Summary: 0/2 steps succeeded (1 failed)
+firmware transitive failure
++- fail failure
+
+error: the following build command failed with exit code 1:
+.zig-cache/o/e23171e7947d9dc47f2e3e05aadb4a3c/build /Users/clorz/.zvm/0.16.0/zig /Users/clorz/.zvm/0.16.0/lib /Users/clorz/Documents/zigmkay/firmware-phase-2 .zig-cache /Users/clorz/.cache/zig --seed 0x8d100d79 -Zdd1931cf7d45e24b firmware -j4
+exit=1
+$ /Users/clorz/.zvm/0.16.0/zig build firmware -Dkeyboard=unknown_board -j4
+firmware
++- fail failure
+error: Unknown keyboard 'unknown_board'; available IDs: clacky_chan, dasbob, encoder_demo, lk1, lk2, lk6, lk7, molekula, tuckytwotimes, yak
+
+Build Summary: 0/2 steps succeeded (1 failed)
+firmware transitive failure
++- fail failure
+
+error: the following build command failed with exit code 1:
+.zig-cache/o/e23171e7947d9dc47f2e3e05aadb4a3c/build /Users/clorz/.zvm/0.16.0/zig /Users/clorz/.zvm/0.16.0/lib /Users/clorz/Documents/zigmkay/firmware-phase-2 .zig-cache /Users/clorz/.cache/zig --seed 0xd70dc5ab -Z01afd8816ca2adfd firmware -Dkeyboard=unknown_board -j4
+exit=1
+$ /Users/clorz/.zvm/0.16.0/zig build companion -Dkeyboard=yak -j4
+companion
++- fail failure
+error: Unsupported companion board 'yak'; supported companion IDs: lk7
+
+Build Summary: 0/2 steps succeeded (1 failed)
+companion transitive failure
++- fail failure
+
+error: the following build command failed with exit code 1:
+.zig-cache/o/e23171e7947d9dc47f2e3e05aadb4a3c/build /Users/clorz/.zvm/0.16.0/zig /Users/clorz/.zvm/0.16.0/lib /Users/clorz/Documents/zigmkay/firmware-phase-2 .zig-cache /Users/clorz/.cache/zig --seed 0x3a71d26b -Z7ce3a97c6a001d78 companion -Dkeyboard=yak -j4
+exit=1
+$ /Users/clorz/.zvm/0.16.0/zig build flash -Dkeyboard=lk7 -j4
+flash
++- fail failure
+error: flash is not implemented in phase 2
+
+Build Summary: 0/2 steps succeeded (1 failed)
+flash transitive failure
++- fail failure
+
+error: the following build command failed with exit code 1:
+.zig-cache/o/e23171e7947d9dc47f2e3e05aadb4a3c/build /Users/clorz/.zvm/0.16.0/zig /Users/clorz/.zvm/0.16.0/lib /Users/clorz/Documents/zigmkay/firmware-phase-2 .zig-cache /Users/clorz/.cache/zig --seed 0x6e43d96c -Zf2fa93007b3fc8d4 flash -Dkeyboard=lk7 -j4
+exit=1
