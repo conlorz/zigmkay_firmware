@@ -1,0 +1,13 @@
+.{
+    .name = .zkeymap,
+    .version = "0.0.1",
+    .dependencies = .{
+        .zkeycodes = .{
+            .url = "git+https://codeberg.org/OpenKeyboardCollective/zkeycodes.git#285c485b6cae7e6add994089dcf267343fc335ed",
+            .hash = "zkeycodes-0.1.0-rLNdPlfjEQAqd8q5AgBnA1ZVuyGgrvWhCFl78fKVtLo6",
+        },
+    },
+    .minimum_zig_version = "0.15.2",
+    .paths = .{""},
+    .fingerprint = 0x9c4ecb00f4f73577,
+}
