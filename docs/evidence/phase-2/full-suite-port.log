@@ -1,0 +1,101 @@
+Build Summary: 94/94 steps succeeded; 203/203 tests passed
+test success
++- test success
+|  +- run test 11 pass (11 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 59ms MaxRSS:31M
+|  +- run test 20 pass (20 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 58ms MaxRSS:31M
+|  +- run test 9 pass (9 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 45ms MaxRSS:31M
+|  +- run test 5 pass (5 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 59ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 59ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 50ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test success 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 45ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 2ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 44ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 56ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 43ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 43ms MaxRSS:31M
+|  +- run test 7 pass (7 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 13 pass (13 total) 4ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 4 pass (4 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 44ms MaxRSS:31M
+|  +- run test 10 pass (10 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 48ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 4ms MaxRSS:2M
+|  |  +- compile test Debug native cached 66ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 45ms MaxRSS:31M
+|  +- run test 11 pass (11 total) 4ms MaxRSS:2M
+|  |  +- compile test Debug native cached 55ms MaxRSS:31M
+|  +- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 52ms MaxRSS:31M
+|  +- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 51ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 54ms MaxRSS:31M
+|  +- run test 8 pass (8 total) 3ms MaxRSS:2M
+|     +- compile test Debug native cached 55ms MaxRSS:31M
++- test success
+|  +- run test success 3ms MaxRSS:2M
+|  |  +- compile test Debug native cached 49ms MaxRSS:31M
+|  +- run test 2 pass (2 total) 245ms MaxRSS:2M
+|  |  +- compile test Debug native success 1s MaxRSS:275M
+|  +- run test 10 pass (10 total) 291ms MaxRSS:2M
+|  |  +- compile test Debug native success 896ms MaxRSS:266M
+|  |     +- run exe zkeycodes (keycodes.zig) success 277ms
+|  |     |  +- compile exe zkeycodes Debug native success 1s MaxRSS:332M
+|  |     +- run exe zkeycodes (us_international.zig) success 279ms
+|  |     |  +- compile exe zkeycodes Debug native (reused)
+|  |     +- run exe zkeycodes (german_mac_iso.zig) success 280ms
+|  |        +- compile exe zkeycodes Debug native (reused)
+|  +- run test 12 pass (12 total) 241ms MaxRSS:2M
+|     +- compile test Debug native success 953ms MaxRSS:268M
+|        +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
++- run test 6 pass (6 total) 6ms MaxRSS:2M
+|  +- compile test Debug native cached 63ms MaxRSS:31M
++- compile obj protocol-check Debug wasm32-freestanding cached 35ms MaxRSS:31M
++- run test 3 pass (3 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 46ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 64ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 49ms MaxRSS:31M
++- run test 1 pass (1 total) 3ms MaxRSS:2M
+|  +- compile test Debug native cached 49ms MaxRSS:31M
++- run test 1 pass (1 total) 2ms MaxRSS:2M
+|  +- compile test Debug native cached 45ms MaxRSS:31M
++- test success
+|  +- run test 1 pass (1 total) 5ms MaxRSS:2M
+|     +- compile test Debug native cached 62ms MaxRSS:31M
++- check-portable cached
+   +- compile obj layout-model-check Debug native cached 59ms MaxRSS:31M
+   +- compile obj layout-model-check Debug wasm32-freestanding cached 35ms MaxRSS:31M
+

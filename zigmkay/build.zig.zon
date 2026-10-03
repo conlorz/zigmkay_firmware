@@ -2,13 +2,13 @@
     .name = .zigmkay,
     .version = "0.1.0",
     .fingerprint = 0x96c3db5c7cca4e4,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .layout_model = .{ .path = "../layout-model" },
         .device_protocol = .{ .path = "../device-protocol" },
         .microzig = .{
-            .url = "git+https://github.com/ZigEmbeddedGroup/microzig.git#bd650e87a808385d3f05d365d128c58956b91bfe",
-            .hash = "microzig-0.15.2-D20YSYdJ3gA04LTZlTUs3OdwmdTokw7tj61C_nzDt7Ub",
+            .url = "git+https://github.com/ZigEmbeddedGroup/microzig.git#00fde43fa3756790037b099baeafacc3e6bf9499",
+            .hash = "microzig-0.15.2-D20YSUgL4ADiSBUt_UcXeT9vQJmqvig4dYwWEaHnnGRE",
         },
     },
     .paths = .{

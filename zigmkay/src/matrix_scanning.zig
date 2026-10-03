@@ -49,6 +49,7 @@ pub fn CreateMatrixScannerType(
                     row_col_to_keyindex[col_idx][row_idx] = key_index;
                 }
             };
+            const mapping = row_col_to_keyindex;
             return struct {
                 // current_states should be a packed struct
                 var current_states: [matrix_settings.pins_to_keys_mapping.len]bool = [1]bool{false} ** (matrix_settings.pins_to_keys_mapping.len);
@@ -65,7 +66,7 @@ pub fn CreateMatrixScannerType(
 
                             for (matrix_settings.pin_rows, 0..) |row, row_idx| {
                                 // find the key index for this combination
-                                const key_index_or_null = row_col_to_keyindex[col_idx][row_idx];
+                                const key_index_or_null = mapping[col_idx][row_idx];
                                 if (key_index_or_null) |key_index| {
                                     const pressed = row.read() == 1;
 
@@ -91,7 +92,7 @@ pub fn CreateMatrixScannerType(
 
                             for (matrix_settings.pin_cols, 0..) |col, col_idx| {
                                 // find the key index for this combination
-                                const key_index_or_null = row_col_to_keyindex[col_idx][row_idx];
+                                const key_index_or_null = mapping[col_idx][row_idx];
                                 if (key_index_or_null) |key_index| {
                                     const pressed = col.read() == 1;
 

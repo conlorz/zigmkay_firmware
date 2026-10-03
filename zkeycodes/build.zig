@@ -52,12 +52,12 @@ pub fn build(b: *std.Build) void {
 
     // Source updates are reachable only through explicit regeneration.
     const update = b.addUpdateSourceFiles();
-    var dir = b.build_root.handle.openDir("qmk_imports", .{ .iterate = true }) catch |err|
+    var dir = b.build_root.handle.openDir(b.graph.io, "qmk_imports", .{ .iterate = true }) catch |err|
         std.debug.panic("Cannot read qmk_imports: {}", .{err});
-    defer dir.close();
+    defer dir.close(b.graph.io);
     var names: std.ArrayList([]const u8) = .empty;
     var iter = dir.iterate();
-    while (iter.next() catch @panic("Cannot enumerate qmk_imports")) |entry| {
+    while (iter.next(b.graph.io) catch @panic("Cannot enumerate qmk_imports")) |entry| {
         if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".hjson"))
             names.append(b.allocator, b.dupe(entry.name)) catch @panic("Out of memory");
     }

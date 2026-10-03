@@ -35,6 +35,9 @@ def main():
     if sdk and not Path(sdk).is_dir():
         parser.error("ZIG_SYSROOT must be an existing SDK directory")
     version = subprocess.check_output([compiler, "version"], text=True).strip()
+    expected = (ROOT / ".zigversion").read_text().strip()
+    if version != expected:
+        parser.error(f"Expected Zig {expected}, got {version}")
     print(f"Compiler: {compiler} ({version})", flush=True)
     print(f"SDK: {sdk or 'compiler default'}", flush=True)
     common = [compiler, "build", "-j4", "--summary", "all"]

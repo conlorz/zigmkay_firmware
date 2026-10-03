@@ -1,7 +1,6 @@
 const std = @import("std");
 
 const microzig = @import("microzig");
-const flash = @import("zig_flash");
 const MicroBuild = microzig.MicroBuild(.{
     .rp2xxx = true,
 });
@@ -25,10 +24,6 @@ const keyboard_samples = [_]KeyboardSample{
 
 pub fn build(b: *std.Build) void {
     const selected_keyboard = b.option([]const u8, "keyboard", keyboardOptionDescription(b)) orelse keyboard_samples[0].name;
-
-    if (shouldPrintSamplesForListSteps(b)) {
-        printAvailableSamples();
-    }
 
     const mz_dep = b.dependency("microzig", .{});
     const mb = MicroBuild.init(b, mz_dep) orelse return;
@@ -58,11 +53,6 @@ pub fn build(b: *std.Build) void {
     firmware.add_app_import("zkeycodes", zkeycodes_mod, .{ .depend_on_microzig = true });
     firmware.add_app_import("layout-model", b.dependency("layout_model", .{}).module("layout-model"), .{});
     mb.install_firmware(firmware, .{});
-
-    const flash_dep = b.dependency("zig_flash", .{});
-    const flash_exe = flash_dep.artifact("zig_flash");
-
-    _ = flash.addFlashStep(b, flash_exe, .{ .input_name = "zigmkay_firmware.uf2" });
 }
 
 fn keyboardOptionDescription(b: *std.Build) []const u8 {
@@ -93,17 +83,4 @@ fn printAvailableSamples() void {
     }
     std.debug.print("zig build -Dkeyboard=<name>\t\tBuild the Firmware\n", .{});
     std.debug.print("zig build flash -Dkeyboard=<name>\tBuild & Flash the Firmware \n\n", .{});
-}
-
-fn shouldPrintSamplesForListSteps(b: *std.Build) bool {
-    const args = std.process.argsAlloc(b.allocator) catch return false;
-    defer std.process.argsFree(b.allocator, args);
-
-    for (args) |arg| {
-        if (std.mem.eql(u8, arg, "-l") or std.mem.eql(u8, arg, "--list-steps")) {
-            return true;
-        }
-    }
-
-    return false;
 }

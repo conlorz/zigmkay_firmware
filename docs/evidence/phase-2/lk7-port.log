@@ -1,0 +1,27 @@
+Build Summary: 20/20 steps succeeded
+install success
++- install generated to zigmkay_firmware.uf2 success
+   +- run exe elf2uf2 (output.uf2) success 239ms
+      +- compile exe elf2uf2 ReleaseSafe native success 4s MaxRSS:375M
+      +- compile exe zigmkay_firmware ReleaseSafe thumb-freestanding-eabi success 581ms MaxRSS:182M
+         +- run exe generate_linker_script (linker.ld) success 257ms
+         |  +- compile exe generate_linker_script Debug native success 1s MaxRSS:292M
+         +- options success
+         +- run exe regz (chips) success 542ms
+         |  +- compile exe regz ReleaseSafe native success 13s MaxRSS:831M
+         |     +- WriteFile libxml/xmlversion.h success
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h success
+         |     +- compile lib xml ReleaseSafe native success 3s MaxRSS:219M
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     |  +- configure cmake header dependency to config.h success
+         |     |  +- configure cmake header dependency to libxml/xmlversion.h (reused)
+         |     +- compile lib xml ReleaseSafe native (+3 more reused dependencies)
+         |     +- WriteFile  success
+         |     +- compile lib sqlite ReleaseSafe native success 14s MaxRSS:907M
+         |     +- WriteFile sqlite3.h success
+         |     +- compile lib sqlite3 ReleaseSafe native success 14s MaxRSS:899M
+         |     +- compile lib sqlite ReleaseSafe native (reused)
+         |     +- compile lib sqlite3 ReleaseSafe native (reused)
+         +- objcopy generated success 60ms MaxRSS:1M
+            +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi success 264ms MaxRSS:38M
+

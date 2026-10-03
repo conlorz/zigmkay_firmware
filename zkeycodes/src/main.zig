@@ -12,57 +12,40 @@ const usage = "Usage: zkeycodes <in.hjson> <out.zig>\n";
 
 const OutputType = enum { keycodes, alias };
 
-/// Creates the directory at `dir_path`, including any missing parent directories.
-fn ensureDir(dir_path: []const u8) !void {
-    try std.fs.cwd().makePath(dir_path);
-}
-
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    var args = try std.process.argsWithAllocator(allocator);
-    defer args.deinit();
-
-    _ = args.next(); // skip exe name
-
-    const in_path = args.next() orelse {
+/// The entry point owns I/O; parsing and rendering only receive memory and a writer.
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+    if (args.len != 3) {
         std.debug.print(usage, .{});
-        return;
-    };
-    const out_path = args.next() orelse {
-        std.debug.print(usage, .{});
-        return;
-    };
-
-    // Ensure the output directory exists before creating the file.
-    if (std.fs.path.dirname(out_path)) |dir| {
-        try ensureDir(dir);
+        return error.InvalidArguments;
     }
-
-    // Read the entire input file into memory (max 10 MiB).
-    const in_file = try std.fs.cwd().openFile(in_path, .{});
-    defer in_file.close();
-    const in_content = try in_file.readToEndAlloc(allocator, 1024 * 1024 * 10);
-    defer allocator.free(in_content);
-
-    // Open the output file and wrap it in a buffered writer.
-    const out_file = try std.fs.cwd().createFile(out_path, .{});
-    defer out_file.close();
-    var buf: [65536]u8 = undefined;
-    var raw_writer = out_file.writer(&buf);
-    const writer = &raw_writer.interface;
-
-    // Determine output type from the filename: "basic" → keycodes structs, otherwise alias layout.
+    const in_path = args[1];
+    const out_path = args[2];
+    const cwd = std.Io.Dir.cwd();
+    const content = try cwd.readFileAlloc(io, in_path, allocator, .limited(10 * 1024 * 1024));
+    defer allocator.free(content);
     const basename = std.fs.path.basename(in_path);
-    const output_type: OutputType = if (std.mem.indexOf(u8, basename, "basic") != null)
-        .keycodes
-    else
-        .alias;
-
-    try parseAndGenerate(allocator, in_content, writer, output_type, basename);
-    try std.Io.Writer.flush(writer);
+    const output_type: OutputType = if (std.mem.indexOf(u8, basename, "basic") != null) .keycodes else .alias;
+    var rendered: std.Io.Writer.Allocating = .init(allocator);
+    defer rendered.deinit();
+    try parseAndGenerate(allocator, content, &rendered.writer, output_type, basename);
+    // One formatting policy for explicit generation and cache-only checks.
+    const source = try allocator.dupeZ(u8, rendered.written());
+    defer allocator.free(source);
+    var ast = try std.zig.Ast.parse(allocator, source, .zig);
+    defer ast.deinit(allocator);
+    if (ast.errors.len != 0) return error.InvalidGeneratedSource;
+    var formatting: std.Io.Writer.Allocating = .init(allocator);
+    defer formatting.deinit();
+    try ast.render(allocator, &formatting.writer, .{});
+    const formatted = formatting.written();
+    if (std.fs.path.dirname(out_path)) |dir| try cwd.createDirPath(io, dir);
+    var atomic = try cwd.createFileAtomic(io, out_path, .{});
+    defer atomic.deinit(io);
+    try atomic.file.writeStreamingAll(io, formatted);
+    try atomic.replace(io);
 }
 
 /// Extracts the language identifier and version string from a QMK HJSON filename.
@@ -463,11 +446,17 @@ fn generateKeycodes(allocator: std.mem.Allocator, content: []const u8, writer: a
                         content[i] != '}') i += 1;
                 }
             }
+            if (depth != 0 or def.key.len == 0) {
+                def.aliases.deinit(allocator);
+                return error.InvalidInput;
+            }
             try defs.append(allocator, def);
         } else {
             i += 1;
         }
     }
+
+    if (defs.items.len == 0) return error.InvalidInput;
 
     // --- Phase 2: Group definitions by their "group" field. ---
 
@@ -607,11 +596,11 @@ fn generateAliases(allocator: std.mem.Allocator, content: []const u8, writer: an
             // Re-emit each line of the block comment as a `//` comment.
             var lines = std.mem.splitSequence(u8, content[comment_start..i], "\n");
             while (lines.next()) |raw_line| {
-                var line = std.mem.trimRight(u8, raw_line, "\r"); // strip CRLF
+                var line = std.mem.trimEnd(u8, raw_line, "\r"); // strip CRLF
                 // Strip comment delimiters and leading `*` decoration.
                 if (std.mem.startsWith(u8, line, "/*")) line = line[2..];
                 if (std.mem.endsWith(u8, line, "*/")) line = line[0 .. line.len - 2];
-                line = std.mem.trimLeft(u8, line, " *");
+                line = std.mem.trimStart(u8, line, " *");
 
                 if (line.len == 0) {
                     try writer.print("//\n", .{});
@@ -680,6 +669,7 @@ fn generateAliases(allocator: std.mem.Allocator, content: []const u8, writer: an
                     i += 1;
                 }
             }
+            if (depth != 0) return error.InvalidInput;
             if (i < content.len and content[i] == '}') i += 1;
 
             // // Only emit an alias constant for recognized source-expression forms.
@@ -725,6 +715,8 @@ fn generateAliases(allocator: std.mem.Allocator, content: []const u8, writer: an
         }
     }
 
+    if (collected_originals.items.len == 0) return error.InvalidInput;
+
     // --- Emit label lookup table, referencing stripped const names as values. ---
     //
     // The label string is derived from the original key name (e.g. "NE_1" → "1"),
@@ -742,4 +734,18 @@ fn generateAliases(allocator: std.mem.Allocator, content: []const u8, writer: an
     try writer.print("pub fn getLabel(keycode: core.KeyCodeFire, shortest: bool) ?[]const u8 {{\n", .{});
     try writer.print("    return localcore.getLabel(&_labels, keycode, shortest);\n", .{});
     try writer.print("}}\n", .{});
+}
+
+test "generator rejects empty and truncated definitions" {
+    var output: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer output.deinit();
+    try std.testing.expectError(error.InvalidInput, parseAndGenerate(std.testing.allocator, "{}", &output.writer, .keycodes, "keycodes_0.0.1_basic.hjson"));
+    try std.testing.expectError(error.InvalidInput, parseAndGenerate(std.testing.allocator, "{\"0x0004\": {\"key\": \"KC_A\"", &output.writer, .keycodes, "keycodes_0.0.1_basic.hjson"));
+    try std.testing.expectError(error.InvalidInput, parseAndGenerate(std.testing.allocator, "{}", &output.writer, .alias, "keycodes_us_0.0.1.hjson"));
+}
+
+test "generator propagates writer failure" {
+    var buffer: [1]u8 = undefined;
+    var output = std.Io.Writer.fixed(&buffer);
+    try std.testing.expectError(error.WriteFailed, parseAndGenerate(std.testing.allocator, "{}", &output, .keycodes, "keycodes_0.0.1_basic.hjson"));
 }

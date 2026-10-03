@@ -1,3 +1,7 @@
+pub const std_options = @import("microzig").std_options(.{});
+comptime {
+    _ = @import("microzig").export_startup();
+}
 const model = @import("layout-model");
 pub const physical_layout = @import("lk7_physical_layout.zig");
 comptime {
