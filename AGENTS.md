@@ -1,9 +1,20 @@
-# Local development agreement
+# Zig workspace agreement
 
-- Keep implementation, comments, diagnostics, test names, and commit messages in English.
-- This repository is a local fork. Create local commits only; do not push or publish pull requests.
-- Preserve the other worktrees, including the unfinished companion checkout.
-- Use explicit compiler paths and document dependency and SDK versions.
-- Default builds and tests must never access hardware, enter BOOTSEL, or flash firmware.
-- Keep generated test outputs in the build cache, not in source directories.
-- Use Leonardo Keycaprio v0.7 (`lk7`) for the first integration milestone.
+This workspace is a Zig project. The canonical monorepo is `zigmkay_firmware/`.
+Use Zig 0.16.0, pinned by its `.zigversion`, and implement as much as possible
+in Zig: production code, build logic, utilities, generators, and tests.
+
+- Other languages may be introduced or used for new implementation only with
+  explicit user permission. Existing imported C interoperability bridges and
+  upstream dependencies may be retained; do not expand them without permission.
+- This is a local fork. Never push changes, publish branches, or create pull
+  requests. Make frequent, focused local commits inside `zigmkay_firmware` so
+  mistakes can be rolled back easily.
+- Keep first-party packages inside the monorepo. Pin external dependencies in
+  `build.zig.zon` with immutable revisions and hashes. Do not recreate sibling
+  clones or branch worktrees unless the user asks for them.
+- Default builds and automated tests must not access hardware or flash firmware.
+  Device operations require an explicit hardware task from the user.
+- Run appropriate Zig checks for each change. Keep generated test outputs in
+  build caches; update committed generated sources only by explicit regeneration.
+- Keep code, comments, diagnostics, test names, and commit messages in English.
