@@ -101,20 +101,10 @@ test "real LK7 press release and custom layer trace reaches exact bytes and comp
     try std.testing.expectEqualDeep(expected, captured.output);
     try std.testing.expectEqualDeep(expected, disabled.output);
     try std.testing.expectEqualDeep(expected, full.output);
-    const prefixes = [_][12]u8{
-        .{ 0xA7, 1, 3, 4, 0, 0, 0, 0, 1, 0, 0, 0 },
-        .{ 0xA7, 1, 3, 4, 1, 0, 0, 0, 0, 0, 0, 0 },
-        .{ 0xA7, 1, 3, 4, 2, 0, 0, 0, 1, 30, 0, 0 },
-        .{ 0xA7, 1, 1, 4, 3, 0, 0, 0, 3, 0, 1, 0 },
-        .{ 0xA7, 1, 3, 4, 4, 0, 0, 0, 1, 0, 1, 0 },
-        .{ 0xA7, 1, 3, 4, 5, 0, 0, 0, 0, 0, 1, 0 },
-        .{ 0xA7, 1, 3, 4, 6, 0, 0, 0, 0, 30, 1, 0 },
-        .{ 0xA7, 1, 1, 4, 7, 0, 0, 0, 1, 0, 0, 0 },
-    };
-    try std.testing.expectEqual(prefixes.len, captured.capture.count);
-    for (prefixes, 0..) |prefix, i| {
-        const bytes: protocol.Report = prefix ++ [_]u8{0} ** 20;
-        try std.testing.expectEqual(bytes, captured.capture.reports[i]);
+    const fixture = @embedFile("fixtures/lk7_trace.bin");
+    try std.testing.expectEqual(fixture.len / protocol.report_size, captured.capture.count);
+    for (captured.capture.reports[0..captured.capture.count], 0..) |report, i| {
+        try std.testing.expectEqualSlices(u8, fixture[i * protocol.report_size ..][0..protocol.report_size], &report);
     }
     try std.testing.expectEqual(@as(u32, 0), captured.drops);
     try std.testing.expectEqual(@as(u32, 8), full.drops);

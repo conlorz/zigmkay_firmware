@@ -124,4 +124,31 @@ pub fn build(b: *std.Build) void {
     const generated_checks = b.step("registry-check-generated", "Check registry against catalog");
     generated_checks.dependOn(&check_registry.step);
     check_generated.dependOn(generated_checks);
+    const headless = b.addExecutable(.{
+        .name = "zigmkay-companion-headless-lk7",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("apps/headless/main.zig"),
+            .target = b.graph.host,
+            .imports = &.{
+                .{ .name = "lk7-keymap", .module = keymap },
+                .{ .name = "device-protocol", .module = protocol },
+                .{ .name = "companion-model", .module = companion },
+            },
+        }),
+    });
+    const companion_step = b.step("companion", "Build the selected offline headless companion");
+    if (@import("keyboards").api.selectionError(b, selection)) |message| {
+        companion_step.dependOn(&b.addFail(message).step);
+    } else if (!@import("keyboards").api.find(selection.?).?.companion) {
+        companion_step.dependOn(&b.addFail(b.fmt("Unsupported companion board '{s}'; supported companion IDs: lk7", .{selection.?})).step);
+    } else {
+        companion_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
+    }
+    const adapter_checks = b.addSystemCommand(&.{ "python3", "-B" });
+    adapter_checks.addFileArg(b.path("tools/test_adapters.py"));
+    adapter_checks.addArtifactArg(headless);
+    adapter_checks.addFileArg(b.path("tests/fixtures/lk7_trace.bin"));
+    adapter_checks.addArtifactArg(keycodes.generator);
+    adapter_checks.addFileArg(b.path("zkeycodes/tools/check_generated.py"));
+    test_step.dependOn(&adapter_checks.step);
 }
