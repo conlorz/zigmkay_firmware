@@ -2,9 +2,8 @@ const std = @import("std");
 
 pub const Published = struct { module: *std.Build.Module, helpers: *std.Build.Module, basic: *std.Build.Module, generator: *std.Build.Step.Compile, tests: *std.Build.Step, check: *std.Build.Step };
 
-pub fn publish(b: *std.Build, root: std.Build.LazyPath, model: *std.Build.Module) Published {
+pub fn publish(b: *std.Build, root: std.Build.LazyPath, model: *std.Build.Module, optimize: std.builtin.OptimizeMode) Published {
     const target = b.graph.host;
-    const optimize = b.standardOptimizeOption(.{});
     const helpers = b.addModule("keycode-helpers", .{
         .root_source_file = root.path(b, "src/core.zig"),
         .imports = &.{.{ .name = "layout-model", .module = model }},
@@ -114,7 +113,7 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, model: *std.Build.Module
 }
 
 pub fn build(b: *std.Build) void {
-    const published = publish(b, b.path("."), b.dependency("layout_model", .{}).module("layout-model"));
+    const published = publish(b, b.path("."), b.dependency("layout_model", .{}).module("layout-model"), b.standardOptimizeOption(.{}));
     b.installArtifact(published.generator);
     b.step("check-generated", "Check generated keycodes").dependOn(published.check);
     const tests = b.step("test", "Run keycode tests");

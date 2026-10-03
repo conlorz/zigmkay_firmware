@@ -4,6 +4,7 @@
     .fingerprint = 0x2daa5d84554bd0e3, // Changing this has security and trust implications.
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .device_protocol = .{ .path = "../device-protocol" },
         .layout_model = .{ .path = "../layout-model" },
         .zigmkay = .{
             .path = "../zigmkay",
@@ -19,6 +20,10 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "src",
+        "build_api.zig",
+        "boards.json",
+        "generated",
+        "my_keyboards",
+        "examples",
     },
 }

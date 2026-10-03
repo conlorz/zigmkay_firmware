@@ -65,7 +65,7 @@ pub const UartClient = union(enum) {
         switch (self.*) {
             .uart => |uart| {
                 const uart_send_buffer = [1]u8{data};
-                uart.write_blocking(&uart_send_buffer, microzig.drivers.time.Deadline{ .timeout = microzig.drivers.time.Absolute.from_us(100 * 1000) }) catch |e| {
+                _ = uart.write_blocking(&uart_send_buffer, microzig.drivers.time.Deadline{ .timeout = microzig.drivers.time.Absolute.from_us(100 * 1000) }) catch |e| {
                     uart.clear_errors();
                     return e;
                 };

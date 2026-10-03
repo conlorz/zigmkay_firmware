@@ -1,6 +1,9 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
+    const selection = b.option([]const u8, "keyboard", "Select a firmware or companion board explicitly");
+    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Firmware optimization (default ReleaseSafe)") orelse .ReleaseSafe;
+    _ = b.standardTargetOptions(.{});
     const model_dep = b.dependency("layout_model", .{});
     const core_dep = b.dependency("zigmkay", .{});
     const keycodes_dep = b.dependency("zkeycodes", .{});
@@ -10,11 +13,12 @@ pub fn build(b: *std.Build) void {
     const protocol = @import("device_protocol").publish(b, protocol_dep.path("."), model.module);
     const companion = @import("companion_model").publish(b, companion_dep.path("."), model.module, protocol);
     const firmware = @import("zigmkay").publish(b, core_dep.path("."), model.module, protocol);
-    const keycodes = @import("zkeycodes").publish(b, keycodes_dep.path("."), model.module);
+    const keycodes = @import("zkeycodes").publish(b, keycodes_dep.path("."), model.module, .Debug);
     const test_step = b.step("test", "Run portable and firmware core tests");
     test_step.dependOn(firmware.tests);
     test_step.dependOn(keycodes.tests);
-    b.step("check-generated", "Check committed generated sources").dependOn(keycodes.check);
+    const check_generated = b.step("check-generated", "Check committed generated sources");
+    check_generated.dependOn(keycodes.check);
     b.default_step = test_step;
     const codec_test = b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("tests/test_device_protocol.zig"),
@@ -94,4 +98,30 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(types_test).step);
     test_step.dependOn(model.tests);
     test_step.dependOn(model.portable);
+    const keyboards = b.dependency("keyboards", .{});
+    @import("keyboards").api.commands(b, keyboards.path("."), b.dependency("microzig", .{}), .{
+        .processor_root = core_dep.path("."),
+        .model = model.module,
+        .protocol = protocol,
+        .keycodes = keycodes.module,
+    }, selection, optimize);
+    const registry_tests = b.addSystemCommand(&.{ "python3", "-B" });
+    registry_tests.addFileArg(b.path("tools/registry/test_registry.py"));
+    test_step.dependOn(&registry_tests.step);
+    const generate_registry = b.addSystemCommand(&.{ "python3", "-B" });
+    generate_registry.addFileArg(b.path("tools/registry/registry.py"));
+    generate_registry.addFileArg(keyboards.path("boards.json"));
+    generate_registry.addDirectoryArg(keyboards.path("."));
+    const generated_registry = generate_registry.addOutputFileArg("keyboard_registry.zig");
+    const check_registry = b.addSystemCommand(&.{ "python3", "-B" });
+    check_registry.addFileArg(b.path("tools/registry/registry.py"));
+    check_registry.addFileArg(keyboards.path("boards.json"));
+    check_registry.addDirectoryArg(keyboards.path("."));
+    check_registry.addFileArg(generated_registry);
+    check_registry.addArg("--compare");
+    check_registry.addFileArg(keyboards.path("generated/keyboard_registry.zig"));
+    // This step was already created above for keycode checks.
+    const generated_checks = b.step("registry-check-generated", "Check registry against catalog");
+    generated_checks.dependOn(&check_registry.step);
+    check_generated.dependOn(generated_checks);
 }

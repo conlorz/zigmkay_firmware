@@ -1,3 +1,7 @@
+pub const std_options = @import("microzig").std_options(.{});
+comptime {
+    _ = @import("microzig").export_startup();
+}
 const std = @import("std");
 
 const microzig = @import("microzig");

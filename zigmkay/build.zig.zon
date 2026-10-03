@@ -6,10 +6,6 @@
     .dependencies = .{
         .layout_model = .{ .path = "../layout-model" },
         .device_protocol = .{ .path = "../device-protocol" },
-        .microzig = .{
-            .url = "git+https://github.com/ZigEmbeddedGroup/microzig.git#00fde43fa3756790037b099baeafacc3e6bf9499",
-            .hash = "microzig-0.15.2-D20YSUgL4ADiSBUt_UcXeT9vQJmqvig4dYwWEaHnnGRE",
-        },
     },
     .paths = .{
         "build.zig",

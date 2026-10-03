@@ -4,11 +4,17 @@
     .fingerprint = 0xcb9fa52fb2e20478,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .keyboards = .{ .path = "keyboards" },
+        .microzig = .{
+            .url = "git+https://github.com/ZigEmbeddedGroup/microzig.git#00fde43fa3756790037b099baeafacc3e6bf9499",
+            .hash = "microzig-0.15.2-D20YSUgL4ADiSBUt_UcXeT9vQJmqvig4dYwWEaHnnGRE",
+        },
+
         .zigmkay = .{ .path = "zigmkay" },
         .layout_model = .{ .path = "layout-model" },
         .zkeycodes = .{ .path = "zkeycodes" },
         .device_protocol = .{ .path = "device-protocol" },
         .companion_model = .{ .path = "companion-model" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model" },
+    .paths = .{ "build.zig", "build.zig.zon", "zigmkay", "layout-model", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model", "tools", "apps", ".zigversion" },
 }
