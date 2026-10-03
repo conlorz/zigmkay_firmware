@@ -15,5 +15,7 @@
         "build.zig",
         "build.zig.zon",
         "src",
+        "tests",
+        "build_utils.zig",
     },
 }

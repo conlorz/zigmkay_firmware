@@ -1,10 +1,10 @@
 const std = @import("std");
 
-pub fn add_test_steps(b: *std.Build, zigmkay_module: *std.Build.Module, test_step: *std.Build.Step, test_dir: []const u8) void {
-    const target = b.standardTargetOptions(.{});
+pub fn add_test_steps(b: *std.Build, root: std.Build.LazyPath, zigmkay_module: *std.Build.Module, test_step: *std.Build.Step, test_dir: []const u8) void {
+    const target = b.graph.host;
 
     // START: Create test file iterator
-    var src_dir = b.build_root.handle.openDir(b.graph.io, test_dir, .{ .iterate = true }) catch |err|
+    var src_dir = std.Io.Dir.cwd().openDir(b.graph.io, root.path(b, test_dir).getPath(b), .{ .iterate = true }) catch |err|
         std.debug.panic("Failed to open '{s}': {}", .{ test_dir, err });
     defer src_dir.close(b.graph.io);
 
@@ -21,7 +21,7 @@ pub fn add_test_steps(b: *std.Build, zigmkay_module: *std.Build.Module, test_ste
             //std.debug.print("{s}\n", .{current_test_file_path});
 
             const current_test_file_module = b.createModule(.{
-                .root_source_file = .{ .src_path = .{ .owner = b, .sub_path = current_test_file_path } },
+                .root_source_file = root.path(b, current_test_file_path),
                 .target = target,
             });
             current_test_file_module.addImport("zigmkay", zigmkay_module);
