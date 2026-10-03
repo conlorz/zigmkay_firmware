@@ -1,63 +1,139 @@
 #!/usr/bin/env python3
-"""Run local host checks without accessing keyboard hardware."""
+"""Run pinned offline host checks, optionally including the complete build matrix."""
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+# These are explicit cache, artifact, evidence, and task-note output locations.
+EXCLUDED_DIRS = {'.git', '.zig-cache', 'zig-out', 'zig-pkg', '__pycache__'}
+EXCLUDED_PATHS = {Path('docs/evidence'), Path('.slim/deepwork')}
 
 
-def sources():
-    paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).split(b"\0")
-    return {p: hashlib.sha256((ROOT / os.fsdecode(p)).read_bytes()).hexdigest()
-            for p in paths if p and (ROOT / os.fsdecode(p)).is_file()}
+def sources(root=ROOT):
+    """Include untracked and ignored source files, additions, and deletions."""
+    result = {}
+    for directory, dirs, files in os.walk(root):
+        base = Path(directory)
+        dirs[:] = sorted(name for name in dirs if name not in EXCLUDED_DIRS
+                         and (base / name).relative_to(root) not in EXCLUDED_PATHS)
+        for name in sorted(files):
+            path = base / name
+            if path.is_symlink():
+                content = b'symlink:' + os.fsencode(os.readlink(path))
+            else:
+                content = path.read_bytes()
+            result[str(path.relative_to(root))] = hashlib.sha256(content).hexdigest()
+    return result
+
+
+def install_sentinels(directory, env):
+    marker = directory / 'hardware-tool-executed'
+    program = '#!' + sys.executable + '\nimport os,sys\nfrom pathlib import Path\nPath(os.environ["ZIGMKAY_SENTINEL"]).write_text(sys.argv[0])\nsys.exit(99)\n'
+    for name in ('zig_flash', 'zig-flash', 'picotool', 'diskutil', 'mount', 'flash'):
+        tool = directory / name
+        tool.write_text(program)
+        tool.chmod(0o755)
+    env['ZIGMKAY_SENTINEL'] = str(marker)
+    env['PATH'] = str(directory) + os.pathsep + env.get('PATH', '')
+    return marker
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--firmware", action="store_true", help="Also compile LK7; never flash")
+    parser.add_argument('--firmware', action='store_true', help='Also compile selected LK7; never flash')
+    parser.add_argument('--full', action='store_true', help='Check all boards, standalone parity, generated files, and executable boundaries')
     args = parser.parse_args()
-    compiler = os.environ.get("ZIG_BIN") or shutil.which("zig")
+    compiler = os.environ.get('ZIG_BIN') or shutil.which('zig')
     if not compiler or not Path(compiler).is_file():
-        parser.error("Set ZIG_BIN to an installed Zig compiler")
+        parser.error('Set ZIG_BIN to an installed Zig compiler')
     compiler = str(Path(compiler).resolve())
-    env = dict(os.environ)
-    shim = env.get("ZIG_XCRUN_DIR")
-    if shim:
-        if not (Path(shim) / "xcrun").is_file():
-            parser.error("ZIG_XCRUN_DIR must contain xcrun")
-        env["PATH"] = shim + os.pathsep + env.get("PATH", "")
-    sdk = env.get("ZIG_SYSROOT")
-    if sdk and not Path(sdk).is_dir():
-        parser.error("ZIG_SYSROOT must be an existing SDK directory")
-    version = subprocess.check_output([compiler, "version"], text=True).strip()
-    expected = (ROOT / ".zigversion").read_text().strip()
+    expected = (ROOT / '.zigversion').read_text().strip()
+    version = subprocess.check_output([compiler, 'version'], text=True).strip()
     if version != expected:
-        parser.error(f"Expected Zig {expected}, got {version}")
-    print(f"Compiler: {compiler} ({version})", flush=True)
-    print(f"SDK: {sdk or 'compiler default'}", flush=True)
-    common = [compiler, "build", "-j4", "--summary", "all"]
+        parser.error(f'Expected Zig {expected}, got {version}')
+    env = dict(os.environ)
+    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    # Legacy SDK overrides are supported only when explicitly supplied.
+    shim = env.get('ZIG_XCRUN_DIR')
+    if shim:
+        if not (Path(shim) / 'xcrun').is_file():
+            parser.error('ZIG_XCRUN_DIR must contain xcrun')
+        env['PATH'] = shim + os.pathsep + env.get('PATH', '')
+    sdk = env.get('ZIG_SYSROOT')
+    if sdk and not Path(sdk).is_dir():
+        parser.error('ZIG_SYSROOT must be an existing SDK directory')
+    if not sdk and sys.platform == 'darwin':
+        sdk_label = subprocess.check_output(['xcrun', '--show-sdk-path'], env=env, text=True).strip()
+    else:
+        sdk_label = sdk or 'compiler default'
+    print(f'Compiler: {compiler} ({version})', flush=True)
+    print(f'SDK: {sdk_label}', flush=True)
+    common = [compiler, 'build', '-j4', '--summary', 'all']
     if sdk:
-        common += ["--sysroot", sdk]
+        common += ['--sysroot', sdk]
     before = sources()
-    checks = [(ROOT, ["test"])]
-    if args.firmware:
-        checks.append((ROOT / "keyboards", ["-Dkeyboard=lk7"]))
+    checks = [(ROOT, ['test'])]
+    if args.full:
+        checks.extend([
+            (ROOT, ['check-generated']),
+            (ROOT, ['firmware', '-Dkeyboard=lk7']),
+            (ROOT, ['firmware-all']),
+            (ROOT, ['companion', '-Dkeyboard=lk7']),
+            (ROOT, []),
+            (ROOT / 'zigmkay', ['test']),
+            (ROOT / 'zkeycodes', ['test', '-Dtarget=thumb-freestanding-eabi']),
+            (ROOT / 'keyboards', ['firmware', '-Dkeyboard=lk7']),
+            (ROOT, ['companion', '-Dkeyboard=lk7', '-Dtarget=thumb-freestanding-eabi']),
+        ])
+    elif args.firmware:
+        checks.append((ROOT, ['firmware', '-Dkeyboard=lk7']))
     result = 0
-    for directory, flags in checks:
-        print(f"Checking {directory.relative_to(ROOT)}: {' '.join(flags)}", flush=True)
-        result = subprocess.run(common + flags, cwd=directory, env=env).returncode
-        if result:
-            break
-    if sources() != before:
-        print("Error: checks changed tracked source files", file=sys.stderr)
+    with tempfile.TemporaryDirectory(prefix='zigmkay-offline-check-') as temporary:
+        marker = install_sentinels(Path(temporary), env)
+        for directory, flags in checks:
+            print(f"Checking {directory.relative_to(ROOT)}: {' '.join(flags) or '(default)'}", flush=True)
+            result = subprocess.run(common + flags, cwd=directory, env=env).returncode
+            if result:
+                break
+        if not result and args.full:
+            entries = json.loads((ROOT / 'keyboards/boards.json').read_text())
+            outputs = [ROOT / 'zig-out/firmware' / entry['name'] / 'zigmkay.uf2' for entry in entries]
+            if len(set(outputs)) != len(entries) or any(not p.is_file() for p in outputs):
+                print('Error: firmware matrix has missing or colliding artifacts', file=sys.stderr)
+                result = 1
+            root_uf2 = ROOT / 'zig-out/firmware/lk7/zigmkay.uf2'
+            standalone_uf2 = ROOT / 'keyboards/zig-out/firmware/lk7/zigmkay.uf2'
+            if root_uf2.read_bytes() != standalone_uf2.read_bytes():
+                print('Error: root and standalone LK7 UF2 bytes differ', file=sys.stderr)
+                result = 1
+            else:
+                print(f'LK7 root/standalone UF2 match: {hashlib.sha256(root_uf2.read_bytes()).hexdigest()}', flush=True)
+            executable = ROOT / 'zig-out/bin/zigmkay-companion-headless-lk7'
+            # Replay the installed binary, including the cross-target selection build.
+            replay = subprocess.run([str(executable), str(ROOT / 'tests/fixtures/lk7_trace.bin')], capture_output=True, text=True)
+            if replay.returncode or 'reports=8\npressed=[]\nactive_layers=1' not in replay.stdout:
+                print('Error: installed headless companion replay failed', file=sys.stderr)
+                result = 1
+        if marker.exists():
+            print(f'Error: hardware tool executed: {marker.read_text()}', file=sys.stderr)
+            result = 1
+        else:
+            print('Offline tool sentinel: no flasher or device tool executed', flush=True)
+    after = sources()
+    if after != before:
+        changed = sorted(path for path in before.keys() | after.keys() if before.get(path) != after.get(path))
+        print('Error: checks changed source files: ' + ', '.join(changed), file=sys.stderr)
         return 1
+    print('Source contents and file inventory unchanged', flush=True)
     return result
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

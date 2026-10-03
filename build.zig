@@ -151,4 +151,12 @@ pub fn build(b: *std.Build) void {
     adapter_checks.addArtifactArg(keycodes.generator);
     adapter_checks.addFileArg(b.path("zkeycodes/tools/check_generated.py"));
     test_step.dependOn(&adapter_checks.step);
+    const build_checks = b.addSystemCommand(&.{ "python3", "-B" });
+    build_checks.addFileArg(b.path("tools/test_build_boundaries.py"));
+    build_checks.addArg(b.graph.zig_exe);
+    build_checks.addDirectoryArg(b.path("."));
+    test_step.dependOn(&build_checks.step);
+    const wrapper_checks = b.addSystemCommand(&.{ "python3", "-B" });
+    wrapper_checks.addFileArg(b.path("tools/test_check_local.py"));
+    test_step.dependOn(&wrapper_checks.step);
 }

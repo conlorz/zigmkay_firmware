@@ -125,7 +125,7 @@ pub const WAW = keycodes.kcf.COMM;
 pub const DOT = keycodes.kcf.DOT;
 /// /
 pub const SLSH = keycodes.kcf.SLSH;
-///  
+///
 pub const SPC = keycodes.kcf.SPC;
 // Shifted symbols
 // ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───────┐
