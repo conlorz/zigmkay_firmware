@@ -10,3 +10,4 @@ pub const loops = @import("loops.zig");
 pub const split_communication = @import("split_communication.zig");
 pub const split_protocol = @import("split_protocol.zig");
 pub const microzig = @import("microzig");
+pub const telemetry = @import("telemetry.zig");

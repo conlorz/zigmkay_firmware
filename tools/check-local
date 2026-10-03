@@ -41,7 +41,7 @@ def main():
     if sdk:
         common += ["--sysroot", sdk]
     before = sources()
-    checks = [(ROOT, ["test"]), (ROOT / "zkeycodes", ["test"])]
+    checks = [(ROOT, ["test"])]
     if args.firmware:
         checks.append((ROOT / "keyboards", ["-Dkeyboard=lk7"]))
     result = 0

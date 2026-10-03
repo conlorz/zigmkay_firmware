@@ -1,5 +1,6 @@
 const std = @import("std");
 const core = @import("core.zig");
+const telemetry = @import("telemetry.zig");
 const stats_collector = @import("stats_collector.zig");
 
 pub fn CreateProcessorType(
@@ -28,7 +29,48 @@ pub fn CreateProcessorType(
         one_shot_hold_to_enable_before_next_tap: ?core.HoldDef = null,
         one_shot_hold_to_disable_after_next_release: ?core.HoldDef = null,
 
+        observer: telemetry.Observer = .{},
+        observed_pending: usize = 0,
+        last_observed_layers: u16 = 1,
+        last_observed_modifiers: u8 = 0,
+
+        /// Observe appended physical inputs once, before any decision can retry them.
+        fn observe_inputs(self: *Self) !void {
+            const pending = self.input_matrix_changes.peek_all();
+            if (pending.len < self.observed_pending) return error.InputQueueChanged;
+            for (pending[self.observed_pending..]) |event| {
+                if (event.key_index >= keymap_dimensions.key_count) return error.InvalidKeyIndex;
+                self.observer.emit(.{ .key = .{
+                    .pressed = event.pressed,
+                    .key_index = event.key_index,
+                    .layer = self.layers_activations.get_top_most_active_layer(),
+                    .modifiers = self.output_usb_commands.current_mods,
+                } });
+                self.observed_pending += 1;
+            }
+        }
+
+        fn observe_state(self: *Self) void {
+            if (self.observer.sink == null) return;
+            var active: u16 = 1;
+            for (1..keymap_dimensions.layer_count) |layer| {
+                if (self.layers_activations.is_layer_active(@intCast(layer)))
+                    active |= @as(u16, 1) << @as(u4, @intCast(layer));
+            }
+            const modifiers = self.output_usb_commands.current_mods;
+            if (active != self.last_observed_layers or modifiers.toByte() != self.last_observed_modifiers) {
+                self.observer.emit(.{ .layers = .{
+                    .active_layers = active,
+                    .highest_layer = self.layers_activations.get_top_most_active_layer(),
+                    .modifiers = modifiers,
+                } });
+                self.last_observed_layers = active;
+                self.last_observed_modifiers = modifiers.toByte();
+            }
+        }
+
         pub fn Process(self: *Self, current_time: core.TimeSinceBoot) !void {
+            try self.observe_inputs();
             _ = self.stats.register_tick(current_time);
             on_event(self, core.ProcessorEvent.Tick);
 
@@ -47,12 +89,14 @@ pub fn CreateProcessorType(
                 switch (try process_next(self, data, current_time)) {
                     .DequeueAndRunAgain => |dequeue_info| {
                         try self.input_matrix_changes.dequeue_count(dequeue_info.dequeue_count);
+                        self.observed_pending -= dequeue_info.dequeue_count;
                     },
                     .Stop => break,
                 }
             }
 
             try tick_autofire(self, current_time);
+            self.observe_state();
         }
 
         fn process_next(self: *Self, data: []core.MatrixStateChange, current_time: core.TimeSinceBoot) !ProcessContinuation {
@@ -369,6 +413,7 @@ pub fn CreateProcessorType(
             if (custom.on_event) |ev| {
                 ev(event, &self.layers_activations, self.output_usb_commands);
             }
+            self.observe_state();
         }
 
         fn warn(comptime msg: []const u8, args: anytype) void {

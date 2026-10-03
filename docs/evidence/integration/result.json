@@ -1,0 +1,9 @@
+{
+  "compiler": "0.15.2",
+  "host_checks": "Build Summary: 94/94 steps succeeded; 201/201 tests passed",
+  "firmware_checks": "Build Summary: 20/20 steps succeeded",
+  "artifact": "keyboards/zig-out/firmware/zigmkay_firmware.uf2",
+  "bytes": 68608,
+  "sha256": "d00d4fd7adbdeb7660a5d97e742988a42738934023d3b017b38d49c5e6e13f7f",
+  "flashed": false
+}

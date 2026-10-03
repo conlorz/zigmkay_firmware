@@ -1,6 +1,6 @@
 # First implementation: a tested LK7 integration foundation
 
-Status: proposed implementation, based on the local sources inspected on 2026-10-03. This document does not claim that the changes or checks below have already been executed.
+Status: completed locally on 2026-10-03. See [the milestone report](milestone-1.md) for executed checks, results, and remaining phase 2/3 work. The steps below preserve the original implementation plan.
 
 The first milestone combines phases 0 and 1 of the existing roadmap. Its outcome is a clean local branch, working core and zkeycodes tests, shared portable types, and one real LK7 input trace passing through a protocol codec into a headless companion model. A small observation interface is brought forward from phase 3 to make that last test meaningful.
 

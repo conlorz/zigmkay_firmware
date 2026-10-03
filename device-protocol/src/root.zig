@@ -53,6 +53,7 @@ pub fn encode(message: Message, dimensions: model.KeymapDimensions) ProtocolErro
 
 pub fn decode(bytes: []const u8, dimensions: model.KeymapDimensions) ProtocolError!Message {
     if (bytes.len != report_size) return error.InvalidLength;
+    if (dimensions.key_count == 0 or dimensions.layer_count == 0) return error.InvalidDimensions;
     if (bytes[0] != 0xA7) return error.InvalidMagic;
     if (bytes[1] != 1) return error.UnsupportedVersion;
     if (bytes[2] != 1 and bytes[2] != 3) return error.UnsupportedKind;

@@ -36,3 +36,18 @@ without SDK/shim overrides the compiler uses its installed SDK selection.
 
 Baseline logs and the reference UF2 digest are in `docs/evidence/baseline`.
 Hardware behavior is not inferred from successful compilation.
+
+## Completed first milestone
+
+See [milestone-1.md](milestone-1.md) for results and current limits, and
+[device-protocol.md](device-protocol.md) for the exact offline wire contract.
+The root `test` step now includes every host suite delivered in this milestone.
+`tools/check-local --firmware` passes 201 tests and compiles LK7, while verifying
+that tracked files are unchanged by the checks. Generated test fixtures live in
+the build cache; `zig build convert-all` in zkeycodes is the explicit source
+regeneration step.
+
+The bounded 0.16 dependency probe is on `local/probe-016` in the sibling
+`firmware-integration-016` worktree. It passed core/model tests, minimal RP2040,
+LK7, native SDL3 DVUI, and DVUI-Wasm. It does not yet migrate all host tools or
+include the final integration trace. Phase 2 should use the successful 0.16 pins.

@@ -26,6 +26,7 @@ test "golden wire bytes are independent of memory layout" {
 
 test "decoder rejects malformed framing and values before narrowing" {
     const valid = golden(.{ 0xA7, 1, 3, 4, 0, 0, 0, 0, 1, 0, 0, 0 });
+    try std.testing.expectError(error.InvalidDimensions, protocol.decode(&valid, .{ .key_count = 0, .layer_count = 4 }));
     var long: [33]u8 = @splat(0);
     @memcpy(long[0..32], &valid);
     for (0..34) |len| {

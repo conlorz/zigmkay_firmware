@@ -1,0 +1,131 @@
+Compiler: /Users/clorz/.zvm/0.15.2/zig (0.15.2)
+SDK: /tmp/zigmkay-macos-sdk
+Checking .: test
+
+Build Summary: 94/94 steps succeeded; 201/201 tests passed
+test success
++- test success
+|  +- run test 11 passed 800ms MaxRSS:2M
+|  |  +- compile test Debug native success 761ms MaxRSS:239M
+|  +- run test 1 passed 850ms MaxRSS:2M
+|  |  +- compile test Debug native success 827ms MaxRSS:242M
+|  +- run test 20 passed 875ms MaxRSS:2M
+|  |  +- compile test Debug native success 914ms MaxRSS:274M
+|  +- run test 8 passed 468ms MaxRSS:2M
+|  |  +- compile test Debug native success 798ms MaxRSS:252M
+|  +- run test 9 passed 492ms MaxRSS:2M
+|  |  +- compile test Debug native success 919ms MaxRSS:259M
+|  +- run test 2 passed 487ms MaxRSS:2M
+|  |  +- compile test Debug native success 845ms MaxRSS:251M
+|  +- run test 5 passed 482ms MaxRSS:2M
+|  |  +- compile test Debug native success 845ms MaxRSS:258M
+|  +- run test 4 passed 614ms MaxRSS:2M
+|  |  +- compile test Debug native success 817ms MaxRSS:248M
+|  +- run test 1 passed 737ms MaxRSS:2M
+|  |  +- compile test Debug native success 885ms MaxRSS:264M
+|  +- run test 3 passed 936ms MaxRSS:2M
+|  |  +- compile test Debug native success 720ms MaxRSS:245M
+|  +- run test 3 passed 742ms MaxRSS:2M
+|  |  +- compile test Debug native success 814ms MaxRSS:251M
+|  +- run test success 1s MaxRSS:1M
+|  |  +- compile test Debug native success 782ms MaxRSS:235M
+|  +- run test 1 passed 520ms MaxRSS:1M
+|  |  +- compile test Debug native success 733ms MaxRSS:236M
+|  +- run test 7 passed 588ms MaxRSS:2M
+|  |  +- compile test Debug native success 812ms MaxRSS:239M
+|  +- run test 4 passed 744ms MaxRSS:2M
+|  |  +- compile test Debug native success 866ms MaxRSS:246M
+|  +- run test 4 passed 938ms MaxRSS:2M
+|  |  +- compile test Debug native success 752ms MaxRSS:250M
+|  +- run test 3 passed 705ms MaxRSS:2M
+|  |  +- compile test Debug native success 851ms MaxRSS:261M
+|  +- run test 2 passed 1s MaxRSS:2M
+|  |  +- compile test Debug native success 828ms MaxRSS:250M
+|  +- run test 8 passed 721ms MaxRSS:2M
+|  |  +- compile test Debug native success 748ms MaxRSS:236M
+|  +- run test 7 passed 1s MaxRSS:2M
+|  |  +- compile test Debug native success 808ms MaxRSS:241M
+|  +- run test 13 passed 512ms MaxRSS:2M
+|  |  +- compile test Debug native success 827ms MaxRSS:239M
+|  +- run test 4 passed 815ms MaxRSS:2M
+|  |  +- compile test Debug native success 805ms MaxRSS:251M
+|  +- run test 10 passed 980ms MaxRSS:2M
+|  |  +- compile test Debug native success 816ms MaxRSS:247M
+|  +- run test 8 passed 465ms MaxRSS:2M
+|  |  +- compile test Debug native success 799ms MaxRSS:248M
+|  +- run test 2 passed 1s MaxRSS:2M
+|  |  +- compile test Debug native success 857ms MaxRSS:242M
+|  +- run test 11 passed 749ms MaxRSS:2M
+|  |  +- compile test Debug native success 865ms MaxRSS:266M
+|  +- run test 3 passed 450ms MaxRSS:2M
+|  |  +- compile test Debug native success 776ms MaxRSS:244M
+|  +- run test 1 passed 1s MaxRSS:2M
+|  |  +- compile test Debug native success 841ms MaxRSS:244M
+|  +- run test 2 passed 1s MaxRSS:2M
+|  |  +- compile test Debug native success 814ms MaxRSS:249M
+|  +- run test 8 passed 855ms MaxRSS:2M
+|     +- compile test Debug native success 760ms MaxRSS:245M
++- test success
+|  +- run test success 236ms MaxRSS:1M
+|  |  +- compile test Debug native success 842ms MaxRSS:236M
+|  +- run test success 493ms MaxRSS:1M
+|  |  +- compile test Debug native success 843ms MaxRSS:235M
+|  +- run test 10 passed 360ms MaxRSS:2M
+|  |  +- compile test Debug native success 802ms MaxRSS:236M
+|  |     +- run exe zkeycodes (keycodes.zig) success 901ms MaxRSS:2M
+|  |     |  +- compile exe zkeycodes Debug native success 793ms MaxRSS:229M
+|  |     +- run exe zkeycodes (us_international.zig) success 501ms MaxRSS:2M
+|  |     |  +- compile exe zkeycodes Debug native (reused)
+|  |     +- run exe zkeycodes (german_mac_iso.zig) success 759ms MaxRSS:2M
+|  |        +- compile exe zkeycodes Debug native (reused)
+|  +- run test 12 passed 553ms MaxRSS:2M
+|     +- compile test Debug native success 799ms MaxRSS:238M
+|        +- run exe zkeycodes (keycodes.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (us_international.zig) (+1 more reused dependencies)
+|        +- run exe zkeycodes (german_mac_iso.zig) (+1 more reused dependencies)
++- run test 6 passed 379ms MaxRSS:2M
+|  +- compile test Debug native success 871ms MaxRSS:251M
++- compile obj protocol-check Debug wasm32-freestanding success 148ms MaxRSS:77M
++- run test 3 passed 325ms MaxRSS:2M
+|  +- compile test Debug native success 876ms MaxRSS:246M
++- run test 1 passed 277ms MaxRSS:2M
+|  +- compile test Debug native success 717ms MaxRSS:242M
++- run test 1 passed 728ms MaxRSS:2M
+|  +- compile test Debug native success 897ms MaxRSS:256M
++- run test 1 passed 664ms MaxRSS:2M
+|  +- compile test Debug native success 917ms MaxRSS:246M
++- run test 1 passed 568ms MaxRSS:1M
+|  +- compile test Debug native success 825ms MaxRSS:239M
++- test success
+|  +- run test 1 passed 2ms MaxRSS:1M
+|     +- compile test Debug native cached 42ms MaxRSS:31M
++- check-portable cached
+   +- compile obj layout-model-check Debug native cached 41ms MaxRSS:31M
+   +- compile obj layout-model-check Debug wasm32-freestanding cached 30ms MaxRSS:31M
+
+Checking keyboards: -Dkeyboard=lk7
+
+Build Summary: 20/20 steps succeeded
+install success
++- install generated to zigmkay_firmware.uf2 success
+|  +- run exe elf2uf2 (output.uf2) success 2ms MaxRSS:1M
+|     +- compile exe elf2uf2 ReleaseSafe native cached 50ms MaxRSS:31M
+|     +- compile exe zigmkay_firmware ReleaseSafe thumb-freestanding-eabi success 624ms MaxRSS:152M
+|        +- run exe generate_linker_script (linker.ld) cached
+|        |  +- compile exe generate_linker_script Debug native cached 42ms MaxRSS:31M
+|        +- options cached
+|        +- run exe regz (chips) cached
+|        |  +- compile exe regz ReleaseSafe native cached 40ms MaxRSS:31M
+|        |     +- WriteFile libxml/xmlversion.h cached
+|        |     +- compile lib xml2 ReleaseSafe native cached 40ms MaxRSS:30M
+|        |     +- compile lib xml2 ReleaseSafe native (reused)
+|        |     +- WriteFile  cached
+|        |     +- compile lib sqlite ReleaseSafe native cached 49ms MaxRSS:30M
+|        |     +- WriteFile sqlite3.h cached
+|        |     +- compile lib sqlite3 ReleaseSafe native cached 49ms MaxRSS:30M
+|        |     +- compile lib sqlite ReleaseSafe native (reused)
+|        |     +- compile lib sqlite3 ReleaseSafe native (reused)
+|        +- objcopy generated cached
+|           +- compile exe stage2-w25q080 ReleaseSmall thumb-freestanding-eabi cached 34ms MaxRSS:31M
++- install zig_flash cached
+   +- compile exe zig_flash ReleaseSafe native cached 50ms MaxRSS:31M

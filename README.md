@@ -1,3 +1,11 @@
+# Local integration fork
+
+This local branch contains the tested LK7 integration foundation. See
+[local development](docs/development.md), [milestone results](docs/milestone-1.md),
+and the [protocol specification](docs/device-protocol.md). Development commits
+stay local. The upstream overview follows; its keymap-only contribution guidance
+does not limit implementation work in this local fork.
+
 # Welcome
 ZigMkay is a keyboard firmware made in zig. You also configure your own keymaps in zig. 
 
