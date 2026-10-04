@@ -146,3 +146,202 @@ test "v2 arbitrary mutations either fail or reencode exactly" {
         };
     }
 }
+
+const companion = @import("companion-model");
+fn startSession() !companion.Session {
+    var session = try companion.Session.init(fixture_identity);
+    const actions = try session.connect(0, 0x11223344);
+    try std.testing.expectEqual(hello, try protocol.encodePacket(actions.items[0].send, dimensions, .host_to_device));
+    for (identity_parts, 0..) |part, index| {
+        const result = session.receive(&part, index + 1);
+        if (index != 2) try std.testing.expectEqual(@as(u2, 0), result.count) else try std.testing.expectEqual(snapshot_request, try protocol.encodePacket(result.items[0].send, dimensions, .host_to_device));
+    }
+    return session;
+}
+fn liveSession() !companion.Session {
+    var session = try startSession();
+    for (snapshot_parts) |part| _ = session.receive(&part, 5);
+    try std.testing.expectEqual(companion.Phase.live, session.phase);
+    try std.testing.expect(!session.stale);
+    return session;
+}
+fn delta(sequence: u16, pressed: bool, index: model.KeyIndex) protocol.Packet {
+    return .{ .session = 0x11223344, .sequence = sequence, .payload = .{ .key = .{ .pressed = pressed, .key_index = index, .layer = 1, .modifiers = .{} } } };
+}
+fn respondSnapshot(session: *companion.Session, snapshot: protocol.Snapshot, boundary: u16, now: u64) !companion.Actions {
+    const packets = try protocol.snapshotPackets(snapshot, dimensions, session.token, session.request, boundary);
+    _ = session.apply(packets[0], now);
+    return session.apply(packets[1], now);
+}
+
+test "session initializes already held keys then wraps sequence and ignores duplicates" {
+    var session = try liveSession();
+    try std.testing.expect(session.state.pressed[0] and session.state.pressed[30]);
+    try std.testing.expectEqual(@as(u16, 3), session.state.active_layers);
+    try std.testing.expect(session.state.modifiers.left_ctrl);
+    _ = session.receive(&release, 6);
+    try std.testing.expect(!session.state.pressed[0]);
+    const after_release = session.state;
+    _ = session.receive(&release, 7);
+    try std.testing.expectEqualDeep(after_release, session.state);
+    _ = session.apply(delta(0, false, 30), 8);
+    try std.testing.expectEqual(@as(u16, 0), session.state.last_sequence.?);
+    try std.testing.expect(!session.state.pressed[30]);
+}
+
+test "gap overflow and malformed frames recover with stale atomic replacement" {
+    for (0..3) |mode| {
+        var session = try liveSession();
+        const before = session.state;
+        const actions = switch (mode) {
+            0 => session.apply(delta(2, false, 0), 6),
+            1 => session.receive(&overflow, 6),
+            else => session.receive(&.{0xA7}, 6),
+        };
+        try std.testing.expectEqual(@as(u2, 1), actions.count);
+        try std.testing.expectEqual(companion.Phase.recovering, session.phase);
+        try std.testing.expect(session.stale and session.state.needs_resync);
+        try std.testing.expectEqual(before.pressed, session.state.pressed);
+        const parts = try protocol.snapshotPackets(.{}, dimensions, session.token, session.request, 10);
+        _ = session.apply(parts[0], 7);
+        try std.testing.expect(session.state.pressed[0]);
+        _ = session.apply(parts[1], 8);
+        try std.testing.expectEqual(companion.Phase.live, session.phase);
+        try std.testing.expect(!session.state.pressed[0] and !session.state.pressed[30]);
+        _ = session.apply(delta(10, true, 1), 9);
+        try std.testing.expect(session.state.pressed[1]);
+    }
+}
+
+test "fragment ordering duplicates conflicts and stale request or session traffic" {
+    var session = try startSession();
+    _ = session.receive(&snapshot_parts[1], 5);
+    _ = session.receive(&snapshot_parts[1], 6);
+    try std.testing.expect(session.stale);
+    _ = session.receive(&snapshot_parts[0], 7);
+    try std.testing.expectEqual(companion.Phase.live, session.phase);
+    var stale = delta(65535, false, 0);
+    stale.session = 0x1234;
+    _ = session.apply(stale, 8);
+    try std.testing.expect(session.state.pressed[0]);
+    _ = session.apply(delta(1, false, 0), 9);
+    const request = session.request;
+    _ = session.receive(&snapshot_parts[0], 10);
+    try std.testing.expectEqual(@as(u2, 0), session.snapshot_seen);
+    var parts = try protocol.snapshotPackets(.{}, dimensions, session.token, request, 2);
+    _ = session.apply(parts[0], 11);
+    parts[0].payload.snapshot.bytes[0] = 1;
+    _ = session.apply(parts[0], 12);
+    try std.testing.expect(session.request != request);
+    try std.testing.expect(session.stale and session.state.pressed[0]);
+    var mismatched = try protocol.snapshotPackets(.{}, dimensions, session.token, session.request, 2);
+    _ = session.apply(mismatched[0], 13);
+    mismatched[1].sequence = 3;
+    _ = session.apply(mismatched[1], 14);
+    try std.testing.expectEqual(@as(u2, 0), session.snapshot_seen);
+}
+
+test "pending deltas filter pre-cut events commit contiguous suffix and bound storage" {
+    var session = try startSession();
+    _ = session.apply(delta(65534, false, 0), 5); // Included in captured state.
+    _ = session.apply(delta(65535, false, 0), 6);
+    _ = session.apply(delta(65535, false, 0), 7); // Duplicate pending delta.
+    _ = session.apply(delta(0, false, 30), 8);
+    for (snapshot_parts) |part| _ = session.receive(&part, 9);
+    try std.testing.expectEqual(companion.Phase.live, session.phase);
+    try std.testing.expect(!session.state.pressed[0] and !session.state.pressed[30]);
+    try std.testing.expectEqual(@as(u16, 1), session.expected_sequence);
+    session = try startSession();
+    for (0..9) |index| _ = session.apply(delta(@intCast(index), true, 0), 5 + index);
+    try std.testing.expectEqual(companion.Phase.recovering, session.phase);
+    try std.testing.expectEqual(@as(u4, 0), session.pending_count);
+    try std.testing.expect(session.stale);
+    session = try startSession();
+    _ = session.apply(delta(0, true, 1), 5); // Boundary 65535 missing.
+    for (snapshot_parts) |part| _ = session.receive(&part, 6);
+    try std.testing.expect(session.stale and !session.state.pressed[1]);
+}
+
+test "timeouts bounded retries interrupted recovery fresh session and request exhaustion" {
+    var session = try startSession();
+    try std.testing.expectEqual(@as(u2, 0), (try session.tick(502, 0x22334455)).count);
+    try std.testing.expectEqual(@as(u2, 1), (try session.tick(503, 0x22334455)).count);
+    _ = try session.tick(1003, 0x22334455);
+    try std.testing.expectEqual(@as(u2, 0), (try session.tick(1503, 0x22334455)).count);
+    try std.testing.expect(session.exhausted and session.stale);
+    _ = session.receive(&snapshot_parts[0], 1505);
+    try std.testing.expectEqual(@as(u2, 0), session.snapshot_seen);
+    try std.testing.expectEqual(@as(u2, 0), (try session.tick(2502, 0x22334455)).count);
+    const hello_again = try session.tick(2503, 0x22334455);
+    try std.testing.expectEqual(@as(u32, 0x22334455), hello_again.items[0].send.nonce);
+    _ = session.receive(&identity_parts[0], 2505);
+    try std.testing.expectEqual(@as(u3, 0), session.identity_seen);
+    session.disconnect();
+    try std.testing.expectEqual(companion.Phase.disconnected, session.phase);
+    _ = session.receive(&identity_parts[1], 2506);
+    try std.testing.expectEqual(@as(u3, 0), session.identity_seen);
+    _ = try session.connect(2507, 0x33445566);
+    session = try liveSession();
+    session.request_counter = 65535;
+    _ = session.apply(delta(2, false, 0), 10);
+    try std.testing.expect(session.exhausted and session.stale);
+    const fresh = try session.tick(10, 0x55667788);
+    try std.testing.expectEqual(@as(u32, 0x55667788), fresh.items[0].send.nonce);
+}
+
+test "identity mismatch and invalid snapshot never partly mutate visible state" {
+    var session = try companion.Session.init(fixture_identity);
+    _ = try session.connect(0, 0x11223344);
+    var parts = identity_parts;
+    parts[1][20] ^= 1;
+    for (parts) |part| _ = session.receive(&part, 1);
+    try std.testing.expectEqual(companion.Phase.incompatible, session.phase);
+    try std.testing.expect(session.stale);
+    session = try startSession();
+    var snapshots = snapshot_parts;
+    snapshots[1][20] = 0;
+    for (snapshots) |part| _ = session.receive(&part, 5);
+    try std.testing.expect(session.stale and !session.state.pressed[0]);
+    try std.testing.expectEqual(error.InvalidLayerMask, session.last_error.?);
+}
+
+test "signals share sequence and return bounded intents only for presses" {
+    var session = try liveSession();
+    const signal = protocol.Packet{ .session = session.token, .sequence = 65535, .payload = .{ .signal = .{ .kind = .overlay_toggle, .pressed = true } } };
+    const actions = session.apply(signal, 6);
+    try std.testing.expectEqual(@as(u2, 1), actions.count);
+    try std.testing.expectEqual(protocol.SignalKind.overlay_toggle, actions.items[0].signal);
+    try std.testing.expectEqual(@as(u2, 0), session.apply(signal, 7).count);
+    var released = signal;
+    released.sequence = 0;
+    released.payload.signal.pressed = false;
+    try std.testing.expectEqual(@as(u2, 0), session.apply(released, 8).count);
+    session = try startSession();
+    for (0..3) |index| {
+        var pending_signal = signal;
+        pending_signal.sequence = 65535 +% @as(u16, @intCast(index));
+        _ = session.apply(pending_signal, 5);
+    }
+    for (snapshot_parts) |part| _ = session.receive(&part, 6);
+    try std.testing.expect(session.stale and !session.state.pressed[0]);
+}
+
+test "repeated malformed recovery is bounded and version mismatch is incompatible" {
+    var session = try liveSession();
+    _ = session.receive(&.{0}, 10);
+    _ = session.receive(&.{0}, 11);
+    _ = session.receive(&.{0}, 12);
+    try std.testing.expectEqual(@as(u2, 0), session.receive(&.{0}, 13).count);
+    try std.testing.expect(session.exhausted and session.stale and session.state.pressed[0]);
+    session = try liveSession();
+    var unsupported = release;
+    unsupported[1] = 1;
+    _ = session.receive(&unsupported, 14);
+    try std.testing.expectEqual(companion.Phase.incompatible, session.phase);
+    try std.testing.expectEqual(error.UnsupportedVersion, session.last_error.?);
+}
+
+test "session static memory budget" {
+    try std.testing.expect(@sizeOf(companion.Session) <= 2048);
+    try std.testing.expect(@sizeOf(companion.Actions) <= 128);
+}

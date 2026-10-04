@@ -29,3 +29,17 @@ export fn canonical_identity_byte(index: u8) u8 {
     }) catch return 0;
     return identity.digest[index];
 }
+
+export fn session_receive(bytes: [*]const u8, len: usize, now: u64) bool {
+    var session = companion.Session.init(.{
+        .board_id = .{ 'l', 'k', '7', 0, 0, 0, 0, 0 },
+        .profile_id = .{ 't', 'e', 's', 't', 0, 0, 0, 0 },
+        .digest = @splat(0),
+        .dimensions = .{ .key_count = 34, .layer_count = 4 },
+    }) catch return false;
+    _ = session.connect(0, 1) catch return false;
+    _ = session.receive(bytes[0..len], now);
+    _ = session.tick(now, 2) catch return false;
+    session.disconnect();
+    return session.stale;
+}

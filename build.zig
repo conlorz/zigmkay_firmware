@@ -157,7 +157,14 @@ pub fn build(b: *std.Build) void {
         companion_step.dependOn(&b.addInstallArtifact(gui.exe, .{}).step);
         headless_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
     }
-    const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{ .root_source_file = b.path("tools/process_checks.zig"), .target = b.graph.host }) });
+    const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{
+        .root_source_file = b.path("tools/process_checks.zig"),
+        .target = b.graph.host,
+        .imports = &.{
+            .{ .name = "device-protocol", .module = protocol },
+            .{ .name = "lk7-keymap", .module = keymap },
+        },
+    }) });
     const adapter_checks = b.addRunArtifact(process_checks);
     adapter_checks.addArtifactArg(headless);
     adapter_checks.addFileArg(b.path("tests/fixtures/lk7_trace.bin"));

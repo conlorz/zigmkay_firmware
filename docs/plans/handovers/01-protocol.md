@@ -88,3 +88,50 @@ Scoped checks on this working tree:
 All commands use `/Users/clorz/.zvm/0.16.0/zig`; no hardware accessed. Coordinator
 native/Wasm/LK7 publication checks pending. Session/recovery, replay, full acceptance
 and G01 remain pending. Next: coordinator review/commit codec, release reducer.
+
+## Session and replay checkpoint
+
+State: Submitted; worker paused. Accepted input: codec/publication/build checkpoint
+`c15d182` (coordinator reports 289/289 root tests and Wasm codec/hash compilation).
+Worker changed `companion-model/src/root.zig`, `apps/headless/main.zig`, dedicated
+`tests/test_protocol_session.zig`, protocol doc and this handover. Coordinator's
+portable entrypoint and generated replay process fixture are separate integration
+prerequisites. No Git/index changes or hardware access by worker.
+
+Session API implements injected-time negotiation, identity compatibility, atomic
+snapshot assembly/replacement, pre-cut and duplicate filtering, wraparound and
+gap/overflow recovery, obsolete session/request rejection, bounded retries,
+request exhaustion, explicit stale retention, and sequenced UI signals. Actions
+capacity two; more than two pending signal presses abort the candidate atomically.
+Native aarch64 sizes measured: Session 528, Actions 76, Packet 32 bytes; all buffers
+are static. Unsupported version is incompatible; other malformed framing produces
+bounded recovery actions and records last_error. Consumer details in protocol doc.
+
+Replay `--session` infers initial token from first Identity, uses actual shared
+LK7 identity, consumes device reports only at deterministic 1 ms/report and fails
+unless terminal state is live/current. Default strict v1 replay remains intact.
+Arbitrary live timing/disconnect recordings need an explicitly timed format in 03.
+
+Scoped checks, working tree:
+
+- Prior dedicated test command with companion-model dependency added: 15 passed.
+  New traces cover held initialization, wrap/duplicates, gap/overflow/malformed
+  recovery, atomic/stale state, fragments/conflicts/obsolete responses, bounded
+  pending deltas, pre-cut events, timeout exhaustion/fresh negotiation, request
+  wrap, identity mismatch, invalid snapshots, interrupted recovery and signals.
+- `/Users/clorz/.zvm/0.16.0/zig build-obj -target wasm32-freestanding
+  -fno-emit-bin --dep device-protocol --dep companion-model
+  -Mroot=tests/protocol_portable.zig --dep layout-model
+  -Mdevice-protocol=device-protocol/src/root.zig
+  -Mlayout-model=layout-model/src/root.zig --dep layout-model --dep device-protocol
+  -Mcompanion-model=companion-model/src/root.zig`: passed, including coordinator's
+  actual Session/codec/hash entrypoints.
+- Direct freestanding `zig test` attempt failed in standard-library OS/Io test
+  runner, which is not freestanding; portable production build-obj above passed.
+- `zig fmt` owned Zig files completed. Scoped tests passed before removal of an
+  informational native-size print; no behavior changed afterward.
+
+Remaining gate: coordinator root process/replay, check/check-full and stable-tree
+integration evidence, then commit/final acceptance of G01. No hardware delivery
+claim. Worker releases editing for review; next concrete action is coordinator
+integration checks and contract freeze for 02/03.

@@ -1,4 +1,6 @@
 const std = @import("std");
+const protocol = @import("device-protocol");
+const lk7 = @import("lk7-keymap");
 const expected = "board=lk7\nkeys=34\nlayers=4\nreports=8\npressed=[]\nactive_layers=1\nhighest_layer=0\nmodifiers=0x00\nlast_sequence=7\nneeds_resync=false\n";
 const Runner = struct {
     gpa: std.mem.Allocator,
@@ -59,6 +61,34 @@ pub fn main(init: std.process.Init) !void {
     _ = try r.run(&.{args[1]}, false, "Usage:");
     const missing = try std.fs.path.join(gpa, &.{ scratch, "missing.bin" });
     _ = try r.run(&.{ args[1], missing }, false, "FileNotFound");
+    // Session replay fixtures are generated only into the build scratch cache.
+    // Independent literal wire fixtures are checked by test_protocol_session.
+    const identity = comptime lk7.identity(protocol);
+    const session: u32 = 0x11223344;
+    const identity_packets = try protocol.identityPackets(identity, session, 1);
+    var held = protocol.Snapshot{};
+    held.pressed[0] = 1;
+    const initial_snapshot = try protocol.snapshotPackets(held, lk7.dimensions, session, 2, 65535);
+    const release_key = protocol.Packet{ .session = session, .sequence = 65535, .payload = .{ .key = .{ .pressed = false, .key_index = 0, .layer = 0, .modifiers = .{} } } };
+    const gap = protocol.Packet{ .session = session, .sequence = 2, .payload = .{ .key = .{ .pressed = true, .key_index = 1, .layer = 0, .modifiers = .{} } } };
+    held.pressed = @splat(0);
+    held.pressed[3] = 0x40;
+    const recovered_snapshot = try protocol.snapshotPackets(held, lk7.dimensions, session, 3, 3);
+    const final_release = protocol.Packet{ .session = session, .sequence = 3, .payload = .{ .key = .{ .pressed = false, .key_index = 30, .layer = 0, .modifiers = .{} } } };
+    const packets = identity_packets ++ initial_snapshot ++ .{ release_key, release_key, gap } ++ recovered_snapshot ++ .{final_release};
+    var session_trace: [packets.len * protocol.report_size]u8 = undefined;
+    for (packets, 0..) |packet, index| {
+        const encoded = try protocol.encodePacket(packet, lk7.dimensions, .device_to_host);
+        @memcpy(session_trace[index * protocol.report_size ..][0..protocol.report_size], &encoded);
+    }
+    const session_path = try std.fs.path.join(gpa, &.{ scratch, "lk7_session_recovery.bin" });
+    try dir.writeFile(init.io, .{ .sub_path = "lk7_session_recovery.bin", .data = &session_trace });
+    _ = try r.run(&.{ args[1], "--session", session_path }, true, "pressed=[]\nactive_layers=1\nhighest_layer=0");
+    try dir.writeFile(init.io, .{ .sub_path = "lk7_session_recovery.bin", .data = session_trace[0 .. 9 * protocol.report_size] });
+    _ = try r.run(&.{ args[1], "--session", session_path }, false, "");
+    session_trace[14] ^= 1; // Corrupt echoed nonce while keeping report framing valid.
+    try dir.writeFile(init.io, .{ .sub_path = "lk7_session_recovery.bin", .data = &session_trace });
+    _ = try r.run(&.{ args[1], "--session", session_path }, false, "");
     const input = try std.fs.path.join(gpa, &.{ scratch, "keycodes_0.0.1_basic.hjson" });
     const output = try std.fs.path.join(gpa, &.{ scratch, "output.zig" });
     for ([_][]const u8{ "{}", "{\"0x0004\":{\"key\":\"KC_A\"", "not hjson" }) |bad| {

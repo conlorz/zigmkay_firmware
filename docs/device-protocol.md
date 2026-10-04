@@ -1,6 +1,7 @@
 # Device protocol: frozen proposal for v2
 
-Checkpoint state: proposed; coordinator review pending. Existing v1 codec and
+Checkpoint state: codec integrated at `c15d182`; session/replay submitted for
+coordinator review. Existing v1 codec and
 literal offline fixtures remain unchanged. V1 is explicitly offline-only; live
 adapters require v2 and never guess legacy RawHID formats.
 
@@ -165,6 +166,10 @@ Headless default remains strict v1 replay. Explicit `--session` reads v2 reports
 against the compiled LK7 identity; it runs a deterministic clock (1 ms/report),
 prints session/stale state, and requires a live terminal state. It executes no
 transport/device I/O. Literal session fixtures reside in dedicated Zig tests.
+This mode replays one initial session's device reports, inferring its token from
+the first Identity header. It does not reproduce arbitrary real disconnects or
+elapsed timeout behavior. 03 must specify a bounded recording format with clock
+and host-control/disconnect records if live failure recordings require those.
 
 Codec checkpoint API: `IdentityInput` contains board_id/profile_id `[8]u8`,
 dimensions, keys `[]const ?model.KeyDef` in layer-major order, sides, combos,
@@ -182,6 +187,24 @@ Session implementation must discard queued pre-cut deltas using the same modular
 order rule before validating post-cut contiguity. A malformed frame during live
 operation must itself produce a bounded recovery intent; an adapter must not be
 required to infer recovery solely from a returned decode error.
+
+Implemented reducer detail: `connect` and `tick` return `ProtocolError!Actions`
+(invalid fresh token is an error); `receive` and `apply` return `Actions` directly.
+`receive` records malformed framing in `last_error`, and starts/retries recovery.
+Unsupported major version marks `incompatible`, records `UnsupportedVersion`,
+and produces no transport action. Other malformed data triggers bounded retries.
+Adapters display incompatibility from phase and diagnostic from last_error;
+last_error is historical and may remain set after a later successful snapshot.
+`Actions.slice()` returns its occupied actions; capacity is two. Three pending
+signal presses would exceed the return capacity, so candidate snapshot commit
+is aborted/retried without applying state or executing partial signals.
+`disconnect` retains last complete state stale. Snapshot commit clears
+`state.needs_resync`; `state.last_sequence` becomes boundary-1 if no delta follows.
+State storage on native aarch64: Session 528 bytes, Actions 76 bytes, Packet
+32 bytes. These are in-memory ABI sizes, never serialized wire representations;
+consumer builds must use their own target sizes. Fixed storage limits are
+38-byte identity assembly, 20-byte snapshot assembly, eight pending Packets,
+128 physical-key booleans and two returned Actions. No dynamic allocation.
 
 ## Preserved v1 literals
 
