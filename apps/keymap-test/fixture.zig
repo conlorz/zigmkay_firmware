@@ -3,10 +3,11 @@ const p = @import("keymap-project");
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
-    var fixture = try p.profiles.create(gpa, .eurkey);
+    const registered = args.len == 3 and std.mem.eql(u8, args[2], "danish");
+    var fixture = try p.profiles.create(gpa, if (registered) .danish else .eurkey);
     defer fixture.deinit();
     var board = p.profiles.board;
-    if (args.len == 3) {
+    if (args.len == 3 and !registered) {
         const actions = @constCast(fixture.snapshot.document.layers[0].actions);
         actions[11] = .{ .hold_only = .{ .hold_modifiers = .{ .left_shift = true } } };
         actions[12] = .{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 6 } }, .hold = .{ .hold_modifiers = .{ .left_ctrl = true } }, .tapping_term = .{ .ms = 180 }, .retro_tapping = true } };

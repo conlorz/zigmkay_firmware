@@ -79,6 +79,7 @@ pub fn commands(b: *std.Build, root: std.Build.LazyPath, microzig_dep: *std.Buil
     b.step("list-keyboards", "List sorted IDs and companion support").dependOn(&list.step);
     b.step("ls", "Alias for list-keyboards").dependOn(&list.step);
     if (selectionError(b, selected)) |message| chosen.dependOn(&b.addFail(message).step);
+    if (shared.profile != null and selected != null and !std.mem.eql(u8, selected.?, "lk7")) chosen.dependOn(&b.addFail("Editor profile export currently supports LK7 only").step);
     const mb = MicroBuild.init(b, microzig_dep) orelse return;
     for (registry.entries) |entry| {
         const result = publish(b, mb, root, entry, shared, optimize, b.fmt("firmware/{s}/zigmkay.uf2", .{entry.name}));

@@ -6,6 +6,7 @@ pub const exporter = @import("export.zig");
 pub const adapter = @import("adapter.zig");
 pub const profiles = @import("profiles.zig");
 pub const sources = @import("sources.zig");
+pub const assessment = @import("assessment.zig");
 
 pub const schema_version = 1;
 pub const Limits = struct {
@@ -290,4 +291,5 @@ test {
     _ = @import("tests.zig");
     _ = profiles;
     _ = sources;
+    _ = assessment;
 }

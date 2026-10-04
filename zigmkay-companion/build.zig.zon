@@ -4,6 +4,9 @@
     .fingerprint = 0xf34c18abb2711003,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .keymap_project = .{ .path = "../keymap-project" },
+        .companion_jobs = .{ .path = "../companion-jobs" },
+        .keymap_test = .{ .path = "../apps/keymap-test" },
         .dvui = .{ .url = "git+https://github.com/david-vanderson/dvui.git#9b372ab0e3beca5060eb1f9ffe3e83ee61665e37", .hash = "dvui-0.5.0-dev-AQFJmRbtAwHyeIDl5laSSUlHNC1I_TXiwitJOowF6z-n" },
         .icons = .{ .url = "git+https://github.com/nat3Github/zig-lib-icons.git#b7299b19fa11caa5be93ef49743d8fc31a4bf9a0", .hash = "icons-0.1.0-iJxA-VrGMwAVIStBxqDPFeC3wdnANtYyDrNfYXNz95OW" },
         .zigmkay = .{ .path = "../zigmkay" },

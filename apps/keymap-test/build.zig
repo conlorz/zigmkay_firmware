@@ -37,9 +37,19 @@ pub fn build(b: *std.Build) void {
     acceptance_options.addOption([32]u8, "snapshot_id", @splat(0));
     acceptance_module.addOptions("snapshot-options", acceptance_options);
     const acceptance_exe = b.addExecutable(.{ .name = "action-test-runner", .root_module = acceptance_module });
+    const registered_generator = b.addExecutable(.{ .name = "registered-fixture", .root_module = b.createModule(.{ .root_source_file = b.path("fixture.zig"), .target = b.graph.host, .imports = &.{.{ .name = "keymap-project", .module = b.dependency("keymap_project", .{}).module("keymap-project") }} }) });
+    const registered_run = b.addRunArtifact(registered_generator);
+    const registered_source = registered_run.addOutputFileArg("danish.zig");
+    registered_run.addArg("danish");
+    const registered_handler = b.dependency("keymap_project", .{}).module("keymap-project").import_table.get("rollercole-profile").?;
+    const registered_profile = b.createModule(.{ .root_source_file = registered_source, .imports = &.{ .{ .name = "zigmkay", .module = firmware }, .{ .name = "callback_0", .module = registered_handler } } });
+    const registered_module = b.createModule(.{ .root_source_file = b.path("main.zig"), .target = b.graph.host, .imports = &.{ .{ .name = "zigmkay", .module = firmware }, .{ .name = "selected-profile", .module = registered_profile }, .{ .name = "runner-protocol", .module = runner_protocol } } });
+    registered_module.addOptions("snapshot-options", acceptance_options);
+    const registered_exe = b.addExecutable(.{ .name = "registered-test-runner", .root_module = registered_module });
     const test_options = b.addOptions();
     test_options.addOptionPath("runner_path", exe.getEmittedBin());
     test_options.addOptionPath("action_runner_path", acceptance_exe.getEmittedBin());
+    test_options.addOptionPath("registered_runner_path", registered_exe.getEmittedBin());
     tests.root_module.addOptions("options", test_options);
     b.step("test", "Test the generated native draft runner without device APIs").dependOn(&b.addRunArtifact(tests).step);
 }

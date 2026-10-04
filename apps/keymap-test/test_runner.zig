@@ -56,11 +56,14 @@ const Harness = struct {
     sequence: u64 = 0,
     time: u64 = 0,
     fn init() !Harness {
+        return initPath(@import("options").action_runner_path);
+    }
+    fn initPath(path: []const u8) !Harness {
         const gpa = std.testing.allocator;
         const session = try gpa.create(jobs.Session);
         errdefer gpa.destroy(session);
         session.* = .{};
-        try session.start(std.testing.io, &.{@import("options").action_runner_path});
+        try session.start(std.testing.io, &.{path});
         errdefer session.stop(std.testing.io);
         const greeting = try session.request(gpa, std.testing.io, null, 1000);
         defer gpa.free(greeting);
@@ -174,4 +177,17 @@ test "native runner startup and input roundtrip latency measurement" {
     try h.step(.{ .key_down = 10 }, 0, &.{.{ .KeyCodePress = 4 }}, 1);
     const completed = std.Io.Clock.awake.now(io);
     std.debug.print("runner startup={d}us input-roundtrip={d}us\n", .{ @divTrunc(start.durationTo(prepared).nanoseconds, 1000), @divTrunc(prepared.durationTo(completed).nanoseconds, 1000) });
+}
+
+test "unchanged registered Danish callback layers and Alt Tab literal trace" {
+    var h = try Harness.initPath(@import("options").registered_runner_path);
+    defer h.deinit();
+    try h.step(.{ .key_down = 31 }, 0, &.{}, 1);
+    try h.step(.advance, 151, &.{}, 5);
+    try h.step(.{ .key_down = 32 }, 1, &.{}, 5);
+    try h.step(.advance, 151, &.{}, 9);
+    try h.step(.{ .key_up = 32 }, 1, &.{}, 5);
+    try h.step(.{ .key_down = 1 }, 1, &.{ .{ .ModifiersChanged = .{ .left_alt = true } }, .{ .KeyCodePress = 43 }, .{ .KeyCodeRelease = 43 } }, 5);
+    try h.step(.{ .key_up = 1 }, 1, &.{}, 5);
+    try h.step(.{ .key_up = 31 }, 1, &.{.{ .ModifiersChanged = .{} }}, 1);
 }

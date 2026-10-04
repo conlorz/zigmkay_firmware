@@ -153,3 +153,19 @@ pub const Session = struct {
         self.reader = null;
     }
 };
+
+pub const ArtifactInput = struct { snapshot_id: SnapshotId, build_inputs_digest: [32]u8, zig_version: []const u8, target: []const u8, optimize: []const u8 };
+/// Separate from telemetry identity: compiler/dependency/target changes invalidate artifacts.
+pub fn artifactKey(input: ArtifactInput) [32]u8 {
+    var hash = std.crypto.hash.sha2.Sha256.init(.{});
+    hash.update("zigmkay-artifact-v1\x00");
+    hash.update(&input.snapshot_id);
+    hash.update(&input.build_inputs_digest);
+    for ([_][]const u8{ input.zig_version, input.target, input.optimize }) |field| {
+        var length: [8]u8 = undefined;
+        std.mem.writeInt(u64, &length, field.len, .little);
+        hash.update(&length);
+        hash.update(field);
+    }
+    return hash.finalResult();
+}

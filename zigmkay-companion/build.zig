@@ -17,8 +17,12 @@ pub fn build(b: *std.Build) void {
     _ = b.standardOptimizeOption(.{});
     const core = b.dependency("zigmkay", .{}).module("zigmkay");
     const keycodes = b.dependency("zkeycodes", .{}).module("zkeycodes");
-    const keymap = b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = core }, .{ .name = "zkeycodes", .module = keycodes } } });
     const model = b.dependency("layout_model", .{}).module("layout-model");
+    const keymap = if (b.option([]const u8, "profile", "Absolute verified LK7 export directory")) |path| blk: {
+        const selected = @import("keymap_project").selector.load(b, path, core, keycodes, model) catch |err| @panic(b.fmt("Invalid editor profile: {s}", .{@errorName(err)}));
+        if (!std.mem.eql(u8, &selected.manifest.board_id, &[_]u8{ 'l', 'k', '7', 0, 0, 0, 0, 0 })) @panic("Companion profile must be LK7");
+        break :blk selected.module;
+    } else b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = core }, .{ .name = "zkeycodes", .module = keycodes } } });
     const physical = b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/lk7_physical_layout.zig"), .imports = &.{.{ .name = "layout-model", .module = model }} });
     const gui = publish(b, b.path("."), b, .{ .keymap = keymap, .core = core, .keycodes = keycodes, .keymap_native = b.dependency("zkeymap", .{}).module("zkeymap"), .protocol = b.dependency("device_protocol", .{}).module("device-protocol"), .companion = b.dependency("companion_model", .{}).module("companion-model"), .model = model, .physical = physical });
     b.installArtifact(gui.exe);

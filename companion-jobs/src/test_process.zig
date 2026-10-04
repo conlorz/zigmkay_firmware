@@ -40,3 +40,19 @@ test "hung runner session timeout terminates the child and clears session state"
     try std.testing.expectError(error.Timeout, session.request(gpa, io, null, 30));
     try std.testing.expect(session.child == null);
 }
+
+test "artifact freshness includes compiler target optimization and dependency inputs" {
+    var input = jobs.ArtifactInput{ .snapshot_id = @splat(1), .build_inputs_digest = @splat(2), .zig_version = "0.16.0", .target = "native", .optimize = "Debug" };
+    const original = jobs.artifactKey(input);
+    input.zig_version = "future";
+    try std.testing.expect(!std.mem.eql(u8, &original, &jobs.artifactKey(input)));
+    input.zig_version = "0.16.0";
+    input.target = "thumb-freestanding-eabi";
+    try std.testing.expect(!std.mem.eql(u8, &original, &jobs.artifactKey(input)));
+    input.target = "native";
+    input.optimize = "ReleaseSafe";
+    try std.testing.expect(!std.mem.eql(u8, &original, &jobs.artifactKey(input)));
+    input.optimize = "Debug";
+    input.build_inputs_digest = @splat(3);
+    try std.testing.expect(!std.mem.eql(u8, &original, &jobs.artifactKey(input)));
+}
