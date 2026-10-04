@@ -32,3 +32,31 @@ the frozen interface. Hardware delivery remains unverified and outside this gate
 ## Integrated result
 
 Pending. Complete the [result template](README.md) at submission/integration.
+
+## Contract checkpoint
+
+State: Submitted (proposal only; implementation and G01 remain pending).
+Producer: protocol worker; base `ab66f12`, lease checkpoint `ed14722`.
+Changed paths: `docs/device-protocol.md`, `tests/test_protocol_session.zig`, this
+handover. No production sources changed. Coordinator owns integration/commits.
+
+Proposed v2 contract, canonical digest serialization, session/actions API,
+resource bounds and transport requirements are specified in
+[the protocol](../../device-protocol.md). Dedicated tests contain independent
+literal Hello, three-part identity, snapshot request/two-part snapshot, key
+release and overflow reports. Existing v1 literals and binary trace are untouched.
+
+Scoped check: `/Users/clorz/.zvm/0.16.0/zig test tests/test_protocol_session.zig`
+passed 1 test on the working tree. This verifies fixture framing/padding only;
+codec/session acceptance and portable integrated checks remain pending.
+`zig fmt tests/test_protocol_session.zig` completed. No hardware access.
+
+Important downstream requirement: macOS SDL writes use Output SetReport, while
+pinned MicroZig only ACKs that path. 02 must implement a first-party Zig controller
+wrapper for validated vendor-interface setup and ep0 OUT data-stage reception,
+alongside interrupt OUT reception. Its short-transfer validation is mandatory.
+No C expansion or upstream dependency edit is authorized.
+
+Ownership: worker paused at contract checkpoint awaiting coordinator review.
+Next action: freeze/review contract, commit literal fixture checkpoint, then
+release codec implementation. G01 remains pending.
