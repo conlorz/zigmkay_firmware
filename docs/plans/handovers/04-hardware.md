@@ -1,15 +1,15 @@
 # 04 handover: observed LK7 live acceptance
 
-**Latest status:** plan 11 recovery accepted; focused 04 session active.
+**Latest status:** G04 accepted on macOS/LK7; plan 11 recovery accepted.
 All 34 highlights/releases, layers, modifier display, rapid typing, move/resize,
 fresh held-key attach and held-key cable reconnect passed per user. Safe existing
-combo/autofire and input-source refresh checks are pending. See the
+combo/autofire and U.S./EurKEY Next source/label refresh also passed. See the
 [worksheet](../04-manual-worksheet.md) and [recovery handoff](11-usb-hid-recovery.md).
 Earlier flash investigation below is history, not current device behavior.
 
-State: **Active**. Offline entry gate accepted at `4fd4c66`;
+State: **Accepted**. Offline entry gate accepted at `4fd4c66`;
 the [worksheet](../04-manual-worksheet.md) identifies firmware, GUI, shared
-identity and rollback. Hardware troubleshooting has started; acceptance is pending.
+identity and rollback. The focused user session completed all required checks.
 Producer: coordinator with the user. Reviewer: coordinator records observed results.
 Plan: [04](../04-lk7-hardware-acceptance.md). Rules: [handover format](README.md).
 
@@ -48,7 +48,13 @@ responsive rapid typing, usable move/resize, fresh process snapshot while P alre
 held, and unplug/replug while holding P: stale during absence, correct held state
 after fresh session, clean release and normal typing. Required connection-loss
 recovery has real evidence; deliberate packet-overflow injection is unavailable.
-Remaining checks are recorded above. New order after G04 is 06 → 07 → 08 → 05 → 09.
+User also confirmed W+R emits j, W autofire stops/clears on release, and switching
+U.S./EurKEY Next updates source text and symbol labels. G04 is released for the
+revised order 06 → 07 → 08 → 05 → 09. Click-through/screen-reader behavior,
+physical mechanical measurements, exact cable/hub identity, deliberate packet
+overflow and the undefined legacy gaming layer are unverified; these are not
+claimed as passing. Connection-loss recovery was observed, and offline packet-
+loss/overflow fixtures remain passing. No new firmware write or fix was required.
 
 ## Flash investigation, 2026-10-04
 

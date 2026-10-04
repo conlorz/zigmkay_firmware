@@ -7,7 +7,7 @@ initial implementation `2e30e9d`. Current R5 candidate is recorded in
 authorization. R-keyboard does not automatically accept the original G04
 identity/session/overlay rows below; companion tests wait for R-keyboard.
 
-State: focused 04 acceptance session active; plan 11 recovery accepted.
+State: G04 accepted on macOS/LK7; plan 11 recovery accepted.
 Current input source: EurKEY Next, macOS KeyboardLayout ID -31468, read from
 AppleSelectedInputSources. Remaining rows are being checked with physical-position
 instructions; do not repeat accepted recovery flashing.
@@ -100,13 +100,13 @@ layer combinations. Do not type into sensitive applications during this session.
 | Boot / identity | Keyboard works and expected board/profile/digest is negotiated | Passed in plan 11: root flash/headless identity and coherent snapshot |
 | Single keys 0–33, separately | Correct physical index highlights on press and clears on release | Passed: user checked all 34 positions, correct highlight/release |
 | Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Passed: layers 2/1/3/0; Option 04, Control 01, Shift 02, Command 08, all release to 00 |
-| Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Pending |
+| Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Passed: W+R combo produces j; W autofire repeats, stops on release and clears highlight; tap/hold controls passed in recovery |
 | Attach while key 3 is held | Initial snapshot highlights key 3 without a fresh press | Passed: new process opened while user held left top-row P; immediately highlighted, cleared on release |
-| Companion restart | Typing continues; restarted companion synchronizes current state | Fresh companion sessions/typing passed in plan 11; held-state attach still pending |
+| Companion restart | Typing continues; restarted companion synchronizes current state | Passed: fresh sessions/typing in plan 11; focused session confirms held P is highlighted immediately on reopening and clears on release |
 | USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Passed: held P across three-second unplug/replug; stale while absent, live/held highlight restored, release clears, typing works |
 | Firmware restart | Old-session traffic discarded; new state synchronized | Passed in plan 11: fresh running session/snapshot and post-flash controls/input |
 | Safe burst / explicit diagnostic loss | Typing remains responsive; recovery clears any obsolete press | Rapid typing passed: highlights clear, typing normal; deliberate loss not injected (no diagnostic mode) |
-| Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Movement/resize passed: usable diagram and responsive app; input-source switch pending |
+| Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Passed: movement/resize usable/responsive; user confirms U.S./EurKEY Next source line and symbol labels refresh |
 
 Start capture only when explicitly requested and keep it bounded and sanitized.
 If ordinary typing regresses, stop advanced tests and recover through physical

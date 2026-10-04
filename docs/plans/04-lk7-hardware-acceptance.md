@@ -1,7 +1,7 @@
 # 04: Joint LK7 hardware acceptance on macOS
 
-Status: largely covered by accepted plan 11 recovery evidence; remaining focused
-overlay/recovery validation pending. Depends on 02 and 03. The user has an LK7 and will flash and
+Status: accepted on macOS/LK7 after plan 11 baseline plus the focused overlay/
+recovery session. Depends on 02 and 03. The user has an LK7 and will flash and
 verify it with the agent. This is an interactive hardware milestone.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and

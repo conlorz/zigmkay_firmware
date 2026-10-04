@@ -1,7 +1,7 @@
 # Next-step roadmap
 
-Status: plan 11 recovery is accepted on macOS/LK7. Original milestone 04 still
-needs its remaining overlay/recovery checks. User reordered the remaining work:
+Status: plan 11 recovery and milestone 04 are accepted on macOS/LK7.
+Editor architecture is ready next. User reordered the remaining work:
 **04 → 06 → 07 → 08 → 05 → 09**. The personal QWERTY/EurKEY Next profile will be
 created through the finished editor, not hand-built before it. This supersedes
 the original G05 prerequisites for 06–08. Reordering does not start hardware work.

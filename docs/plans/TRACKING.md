@@ -1,6 +1,6 @@
 # Central milestone tracker
 
-## Recovery complete; original roadmap remains deferred
+## Recovery and G04 accepted; next is editor architecture/export
 
 User-revised order: **04 → 06 → 07 → 08 → 05 → 09**. Build shared profile
 selection in 07/08; use existing profiles and representative fixtures for editor
@@ -27,11 +27,12 @@ User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconn
 
 Research workers have stopped and released all leases. The coordinator owns
 all integration. Source remains Zig 0.16.0 with the immutable MicroZig pin;
-all commits are local. Original G04 and 05–09 remain unaccepted/deferred as before.
+all commits are local. G04 is now accepted by the focused user session;
+06 is ready, and 07/08/05/09 retain their revised entry gates.
 All plan 11 gates are accepted for the available Mac/LK7 and agreed controls.
 Windows/Linux live behavior, Caps Lock LED state, legacy gaming action and exact
-binary readback remain outside this acceptance. Do not resume 04–09 without user
-direction.
+binary readback remain outside this acceptance. The user requested completion
+of 04 to proceed toward the editor; further hardware runs need an explicit task.
 
 ### Historical reset instruction
 
@@ -91,8 +92,8 @@ remains none. Exact active ownership is recorded below.
 | 01 | [Protocol](01-protocol-and-recovery.md) / [handover](handovers/01-protocol.md) | Accepted | Clean baseline inspected | Frozen v2 contract consumed by 02/03 | Coordinator / `5b092ec` |
 | 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
-| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Active | User starts remaining acceptance now; plan 11 baseline reused | All-key/layer highlights, held attach/reconnect, burst and overlay/input-source checks | Coordinator with user / none |
-| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Planned | G04; 06A already accepted | Finalize architecture using existing profiles and editor requirements | Unassigned / none |
+| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Accepted | Plan 11 baseline plus focused user session | All required baseline/highlight/snapshot/recovery checks passed; limits in handover | Coordinator with user / `0aa2ca7` implementation |
+| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Ready | G04; 06A already accepted | Finalize architecture using existing profiles and editor requirements | Coordinator / none |
 | 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G04 and G06 | Schema/export/shared selector first, editor UI second | Unassigned / none |
 | 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |
 | 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
@@ -102,11 +103,11 @@ remains none. Exact active ownership is recorded below.
 
 | Task | Initial status | Writable scope | Acceptance / release |
 | --- | --- | --- | --- |
-| 06A | Accepted | Architecture research document; 06 handover | `2762d91`; sourced comparison; final editor decision awaits G05 |
-| 06B | Planned | Architecture decision; revised 07/08 plan proposals | G05, source-backed decision, coordinator acceptance within agreed scope |
-| 07A | Planned | New schema/export Zig source and dedicated tests | G05/G06, lossless format/API and G07-export accepted |
+| 06A | Accepted | Architecture research document; 06 handover | `2762d91`; sourced comparison; G04 now releases final editor decision |
+| 06B | Ready | Architecture decision; revised 07/08 plan proposals | G04, source-backed decision, coordinator acceptance within agreed scope |
+| 07A | Planned | New schema/export Zig source and dedicated tests | G04/G06, lossless format/API and G07-export accepted |
 | 07B | Planned | Editor UI and dedicated UI tests | G07-export, supported save/edit/export workflow; completes 07 criteria |
-| 08A | Planned | Build/flasher backend and dedicated fake tests | G05/G06/G07-export; no GUI/hardware; partial backend only |
+| 08A | Planned | Build/flasher backend and dedicated fake tests | G06/G07-export; no GUI/hardware; partial backend only |
 | 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
 | 09A | Accepted | Platform/board capability documents | `99c1dbe`; documentation only; refresh after G04/G05, no support claims |
 | 09B | Deferred | A selected target's new plan, then assigned source | User selects target/environment; own implementation and hardware gates |
@@ -122,9 +123,9 @@ against a protocol/export interface that has not been frozen.
 | --- | --- | --- |
 | G01 | Accepted 01: versioned wire/API, identity, snapshot ordering, limits, fixtures and passing offline checks | Accepted `5b092ec`; check/check-full passed |
 | G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Initial `4fd4c66`; superseded artifacts at `2089219` fix mandatory UF2 metadata; full checks and all ten UF2 validations pass; worksheet refreshed |
-| G04 | Actual passing typing/identity/snapshot/recovery worksheet from 04; optional overlay limits have explicit follow-ups | Pending user session |
+| G04 | Actual passing typing/identity/snapshot/recovery worksheet from 04; optional overlay limits have explicit follow-ups | Accepted: [worksheet](04-manual-worksheet.md), implementation `0aa2ca7`, user-confirmed Mac/LK7 checks |
 | G05 | Reviewed key assignments, shared selector/identity, compiled profiles and actual EurKEY Next typing checks | Pending |
-| G06 | Final architecture decision grounded in G05; alternatives/sources and 07/08 specifications | Pending |
+| G06 | Final architecture decision grounded in G04, existing profiles and editor requirements; alternatives/sources and 07/08 specifications | Ready for final decision |
 | G07-export | Accepted 07A: schema/version, action preservation, export/API/path ownership, existing identity/digest, errors and consumer instructions | Pending |
 | G07 | All 07 offline/editor acceptance, including save/reopen/export and matching build behavior | Pending |
 | G08 | 08 offline integration plus explicit flash session, running identity and typing/overlay checks | Pending user session |
@@ -145,13 +146,15 @@ material architecture scope change require the user's decision before that work.
 3. **Live baseline:** coordinator integrates/checks 02+03, prepares 04, and waits
    for the user to start the hardware session. Independent research/diagrams may
    continue; no agent flashes or fabricates a hardware pass.
-4. **Personal profile:** after G04, review concrete assignments and implement 05.
-   06 research may refine in parallel; accept its final decision only after G05.
-5. **Editor/export:** after G05/G06, implement 07A. At G07-export, run 07B editor
-   UI and 08A backend concurrently with disjoint leases.
+4. **Architecture:** after G04, finalize 06 using existing profiles and editor
+   requirements; personal assignments are deferred until the finished editor.
+5. **Editor/export:** after G04/G06, implement 07A including shared selection.
+   At G07-export, implement 07B editor UI and 08A backend.
 6. **Build/flash UI:** after G07 and accepted 08A, transfer GUI ownership to 08B,
    integrate/check, then wait for its explicit manual flash/acceptance session.
-7. **Expansion:** refresh 09A matrices against observed results. Only a selected,
+7. **Personal profile:** after G07/G08, the user creates 05 through the finished
+   editor, with reviewed assignments and an explicit hardware acceptance session.
+8. **Expansion:** refresh 09A matrices against observed results. Only a selected,
    separately scoped 09B target begins implementation; others remain deferred.
 
 ## Completed leases and integration queue
@@ -161,7 +164,7 @@ material architecture scope change require the user's decision before that work.
 | protocol / 01 | Released to coordinator; frozen contract | `5b092ec` / v2 | Consumers request amendments | Accepted |
 | firmware / 02 | Released to coordinator; exact changed paths in handover | `4fd4c66` / G-live-offline | Manual 04 only after user starts hardware task | Accepted |
 | overlay / 03 | Released to coordinator; exact changed paths in handover | `4fd4c66` / G-live-offline | Manual 04 only after user starts hardware task | Accepted |
-| architecture / 06A | Released; coordinator owns future 06B dispatch | `2762d91` / research | Final decision pending G05 | Accepted |
+| architecture / 06A | Released; coordinator owns future 06B dispatch | `2762d91` / research | G04 passed; final decision ready | Accepted |
 | inventory / 09A | Released; coordinator owns future refresh | `99c1dbe` / inventory v1 | Refresh after observed acceptance | Accepted |
 
 Coordinator records exact paths before dispatch; this table supersedes broad

@@ -4,8 +4,9 @@ The companion defaults to a 760 × 370 resizable window showing the shared LK7
 physical geometry, compiled profile, active layer, firmware modifier byte, and
 macOS input-source/layout IDs. Default and replay modes never enumerate HID.
 Plan 11's Mac/LK7 input, agreed controls and root flash/verify checks passed.
-Original milestone 04's broader worksheet remains unaccepted; offline smoke
-alone is not hardware acceptance.
+Milestone 04's live worksheet also passed: all positions, layers, modifiers,
+held-state attach/reconnect, combo/autofire and input-source label refresh.
+See the [accepted hardware handover](plans/handovers/04-hardware.md) for limits.
 
 From the monorepo root, using mise's pinned Zig 0.16.0:
 
