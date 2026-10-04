@@ -35,6 +35,7 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
         gate: Gate = .{},
         control_owned: bool = false,
         status_out_pending: bool = false,
+        configuration_reply: [1]u8 = .{0},
         hooks: Hooks,
         const Self = @This();
 
@@ -47,6 +48,17 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             // not reset these buffers or discard its pending descriptor slice.
             self.hooks.prepare();
             self.base.tx_slice = null;
+            // The pinned controller enumerates GetConfiguration but does not
+            // implement it. Hosts may query the active configuration before or
+            // after selecting one; leaving it unanswered times out EP0.
+            if (@as(u8, @bitCast(packet.request_type)) == 0x80 and packet.request == 8 and
+                packet.value.into() == 0 and packet.index.into() == 0 and packet.length.into() == 1)
+            {
+                self.configuration_reply[0] = @intCast(self.base.cfg_num);
+                _ = device.ep_writev(.ep0, &.{&self.configuration_reply});
+                self.status_out_pending = true;
+                return;
+            }
             if (self.telemetry != null) {
                 if (self.base.drivers()) |drivers| {
                     const decision = self.gate.setup(.{

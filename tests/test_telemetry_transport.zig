@@ -253,6 +253,13 @@ const FakeUsb = struct {
         acks: usize = 0,
         reads: usize = 0,
         last_listen_length: usize = 0,
+        written: [64]u8 = @splat(0),
+        written_length: usize = 0,
+        pub fn ep_writev(self: *@This(), _: Num, data: []const []const u8) usize {
+            self.written_length = data[0].len;
+            @memcpy(self.written[0..self.written_length], data[0]);
+            return self.written_length;
+        }
         pub fn ep_listen(self: *@This(), _: Num, length: usize) void {
             self.listens += 1;
             self.last_listen_length = length;
@@ -277,6 +284,7 @@ const FakeBase = struct {
     driver_data: Drivers = .{},
     configured: bool = true,
     tx_slice: ?[]const u8 = null,
+    cfg_num: u16 = 0,
     setup_count: usize = 0,
     buffers: usize = 0,
     resets: usize = 0,
@@ -417,6 +425,27 @@ test "descriptor status OUT is armed after the final IN and cancelled by SETUP o
     controller.on_bus_reset(&device);
     controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
     try std.testing.expectEqual(@as(usize, 1), device.listens);
+}
+
+test "GetConfiguration returns current configuration and completes its OUT status stage" {
+    var base = FakeBase{ .configured = false };
+    var device = FakeUsb.DeviceInterface{};
+    var controller = zigmkay.usb_control.Controller(FakeUsb, FakeBase){ .base = &base, .hooks = .{ .prepare = HookCapture.prepare, .reject = HookCapture.reject } };
+    var query = setupPacket(0x80, 0, 0, 1);
+    query.request = 8;
+    for ([_]u16{ 0, 1, 0 }) |configuration| {
+        base.cfg_num = configuration;
+        controller.on_setup_req(&device, &query);
+        try std.testing.expectEqual(@as(usize, 1), device.written_length);
+        try std.testing.expectEqual(@as(u8, @intCast(configuration)), device.written[0]);
+        controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+        try std.testing.expectEqual(@as(usize, 0), device.last_listen_length);
+    }
+    try std.testing.expectEqual(@as(usize, 3), device.listens);
+    try std.testing.expectEqual(@as(usize, 0), base.setup_count);
+    query.length.value = 2;
+    controller.on_setup_req(&device, &query);
+    try std.testing.expectEqual(@as(usize, 1), base.setup_count);
 }
 
 test "reserved custom signals bypass full keyboard queue and preserve sequenced release" {

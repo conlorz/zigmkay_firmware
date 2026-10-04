@@ -76,3 +76,12 @@ telemetry as well. A regression covers multi-packet completion, single status
 arming, cancellation and bus reset. `mise //:check-full` passes, including all
 ten firmware builds. Live confirmation remains pending; this is a candidate
 fix, not established hardware acceptance.
+
+Live retry of `4688fe1` completed write/sync and automatic reboot, but still
+produced EP0 timeouts and no HID interfaces. The status-phase change alone is
+insufficient. Further source review found standard GetConfiguration (request 8)
+missing from the pinned controller's device request switch. The wrapper now
+returns the actual configuration byte for a valid query and completes its OUT
+status stage. A regression checks unconfigured/configured/deconfigured values
+and malformed-query delegation. Host logs do not identify the timed-out request
+number, so this remains a compatibility candidate until live verification.
