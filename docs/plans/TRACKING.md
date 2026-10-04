@@ -2,6 +2,11 @@
 
 ## Recovery, G04 and G06 accepted; next is editor schema/export
 
+Additional deferred milestone: [12 device keymap readback](12-device-keymap-readback.md).
+User requests complete layer/combo/configuration transfer in 12A; custom Zig
+source recovery is follow-up 12B with no current use case. No owner,
+implementation start, hardware session or main-sequence change is implied.
+
 06B finalized in the editor planning session on 2026-10-04: separate native
 editor, full existing action set, named layers and bulk editing, offline draft
 runner with EurKEY text, attached externally edited Zig callbacks. See the

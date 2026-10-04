@@ -118,6 +118,11 @@ bring a concrete result and explain the choice rather than inventing a preferenc
 
 ## Open details and deferred work
 
+[12: Complete device keymap readback](12-device-keymap-readback.md) is an
+additional deferred milestone. 12A retrieves layers, combos and complete
+declarative configuration; 12B later recovers custom Zig source. It does not
+change the current implementation order.
+
 The input source and letter arrangement are settled: EurKEY Next and QWERTY.
 During 05, record the installed layout version and native input-source ID, and
 review concrete thumb/layer/shortcut assignments with the user. Do not equate an

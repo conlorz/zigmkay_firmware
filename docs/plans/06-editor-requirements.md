@@ -213,8 +213,9 @@ Readback can preserve registered binding IDs/digests and action data; full proje
 recovery also requires embedding the exact project metadata and attached source
 bundle in firmware, with an explicit storage-size budget. Without that bundle or
 a matching local callback module, imported custom behavior remains read-only or
-export-disabled. This feature is a researched option pending user selection;
-do not silently expand the accepted initial implementation scope.
+export-disabled. The user selected this as the separate deferred
+[plan 12](12-device-keymap-readback.md): complete configuration first, custom Zig
+source recovery later. It does not expand the initial editor implementation scope.
 
 Primary transport precedent retrieved 2026-10-04:
 [QMK Raw HID](https://docs.qmk.fm/features/rawhid) documents bidirectional fixed
