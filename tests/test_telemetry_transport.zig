@@ -252,8 +252,10 @@ const FakeUsb = struct {
         listens: usize = 0,
         acks: usize = 0,
         reads: usize = 0,
-        pub fn ep_listen(self: *@This(), _: Num, _: usize) void {
+        last_listen_length: usize = 0,
+        pub fn ep_listen(self: *@This(), _: Num, length: usize) void {
             self.listens += 1;
+            self.last_listen_length = length;
         }
         pub fn ep_ack(self: *@This(), _: Num) void {
             self.acks += 1;
@@ -274,6 +276,7 @@ const FakeBase = struct {
     const Drivers = struct { rawhid: struct { descriptor: *const Descriptor = &desc } = .{} };
     driver_data: Drivers = .{},
     configured: bool = true,
+    tx_slice: ?[]const u8 = null,
     setup_count: usize = 0,
     buffers: usize = 0,
     resets: usize = 0,
@@ -383,6 +386,37 @@ test "interrupt OUT wrapper rejects short reports and accepts exact length witho
     try std.testing.expect(t.pending != null);
     try std.testing.expectEqual(@as(usize, 6), device.listens);
     try std.testing.expectEqual(@as(usize, 0), base.buffers);
+}
+
+test "descriptor status OUT is armed after the final IN and cancelled by SETUP or reset" {
+    var base = FakeBase{ .configured = false };
+    var device = FakeUsb.DeviceInterface{};
+    var controller = zigmkay.usb_control.Controller(FakeUsb, FakeBase){ .base = &base, .hooks = .{ .prepare = HookCapture.prepare, .reject = HookCapture.reject } };
+    var descriptor = setupPacket(0x80, 0x0200, 0, 146);
+    descriptor.request = 6;
+    base.tx_slice = "old response";
+    controller.on_setup_req(&device, &descriptor);
+    try std.testing.expect(base.tx_slice == null);
+    // The upstream controller keeps a slice until the last data completion.
+    base.tx_slice = "remaining descriptor bytes";
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 0), device.listens);
+    base.tx_slice = null;
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 1), device.listens);
+    try std.testing.expectEqual(@as(usize, 0), device.last_listen_length);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 1), device.listens);
+
+    controller.on_setup_req(&device, &descriptor);
+    var configure = setupPacket(0x00, 1, 0, 0);
+    controller.on_setup_req(&device, &configure);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 1), device.listens);
+    controller.on_setup_req(&device, &descriptor);
+    controller.on_bus_reset(&device);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 1), device.listens);
 }
 
 test "reserved custom signals bypass full keyboard queue and preserve sequenced release" {

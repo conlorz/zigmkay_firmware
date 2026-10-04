@@ -34,13 +34,19 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
         telemetry: ?*transport.Transport = null,
         gate: Gate = .{},
         control_owned: bool = false,
+        status_out_pending: bool = false,
         hooks: Hooks,
         const Self = @This();
 
         pub fn on_setup_req(self: *Self, device: *usb.DeviceInterface, packet: *const usb.types.SetupPacket) void {
-            const was_owned = self.control_owned;
             self.control_owned = false;
+            self.status_out_pending = false;
             self.gate.pending = false;
+            // Every SETUP cancels the previous transfer, including unfinished
+            // descriptor data and its status packet. The pinned controller does
+            // not reset these buffers or discard its pending descriptor slice.
+            self.hooks.prepare();
+            self.base.tx_slice = null;
             if (self.telemetry != null) {
                 if (self.base.drivers()) |drivers| {
                     const decision = self.gate.setup(.{
@@ -53,13 +59,11 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
                     switch (decision) {
                         .receive => {
                             self.control_owned = true;
-                            self.hooks.prepare();
                             device.ep_listen(.ep0, protocol.report_size);
                             return;
                         },
                         .reject => {
                             self.control_owned = true;
-                            self.hooks.prepare();
                             self.hooks.reject();
                             return;
                         },
@@ -67,8 +71,8 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
                     }
                 }
             }
-            if (was_owned) self.hooks.prepare();
             self.base.on_setup_req(device, packet);
+            self.status_out_pending = (@as(u8, @bitCast(packet.request_type)) & 0x80 != 0) and packet.length.into() != 0;
             // A standard deconfiguration is a session boundary as well as bus
             // reset. Physical state survives, but old reports must not resume.
             if (self.telemetry) |t| {
@@ -106,11 +110,21 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
                 }
             }
             self.base.on_buffer(device, ep);
+            if (comptime ep.num == .ep0 and ep.dir == .In) {
+                // MicroZig advances tx_slice here but leaves the ensuing OUT
+                // status stage unarmed. Wait until the final data packet has
+                // completed, including for descriptors spanning several packets.
+                if (self.status_out_pending and self.base.tx_slice == null) {
+                    self.status_out_pending = false;
+                    device.ep_listen(.ep0, 0);
+                }
+            }
         }
 
         pub fn on_bus_reset(self: *Self, device: *usb.DeviceInterface) void {
             self.gate.pending = false;
             self.control_owned = false;
+            self.status_out_pending = false;
             if (self.telemetry) |t| t.disconnect();
             self.base.on_bus_reset(device);
         }

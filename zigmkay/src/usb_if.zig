@@ -265,11 +265,12 @@ pub fn init() void {
     vendor_controller.telemetry = null;
     vendor_controller.gate = .{};
     vendor_controller.control_owned = false;
+    vendor_controller.status_out_pending = false;
     usb_device = .init();
 }
 
 pub fn poll() void {
-    if (vendor_controller.telemetry != null) usb_device.poll(&vendor_controller) else usb_device.poll(&usb_controller);
+    usb_device.poll(&vendor_controller);
 }
 
 pub fn telemetry_endpoint() transport.Endpoint {

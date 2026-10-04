@@ -2,7 +2,7 @@
 
 State: **Waiting-user**. Offline entry gate accepted at `4fd4c66`;
 the [worksheet](../04-manual-worksheet.md) identifies firmware, GUI, shared
-identity and rollback. No hardware session has occurred for this milestone.
+identity and rollback. Hardware troubleshooting has started; acceptance is pending.
 Producer: coordinator with the user. Reviewer: coordinator records observed results.
 Plan: [04](../04-lk7-hardware-acceptance.md). Rules: [handover format](README.md).
 
@@ -59,3 +59,20 @@ write stage. Full offline checks and all ten UF2 validations passed. The
 worksheet now identifies corrected firmware and a baseline rollback with only
 UF2 header metadata repaired. Live retry is pending physical connection reset;
 earlier copy success did not establish that new firmware ran.
+
+After physical reconnect, corrected firmware wrote and synchronized successfully
+through `mise //:flash lk7`, and automatically re-enumerated as ZigMkay. The user
+reported no typing. macOS logs show configuration 1 selection followed by EP0
+timeouts (`0xe00002d6`, zero bytes); no HID interfaces appear in IORegistry.
+Quitting Brave and reconnecting did not resolve it. Flashing the preserved
+`ab66f12` rollback with repaired UF2 headers reproduced the same configuration
+timeouts. This isolates the failure below the new telemetry integration.
+
+The pinned MicroZig controller leaves the descriptor OUT status phase unarmed
+(its `on_buffer` contains a commented-out `ep_listen(.ep0, 0)`). The first-party
+control wrapper now arms this phase after the final IN completion, cancels
+stale EP0 buffers/descriptor slices on every SETUP, and runs for boards without
+telemetry as well. A regression covers multi-packet completion, single status
+arming, cancellation and bus reset. `mise //:check-full` passes, including all
+ten firmware builds. Live confirmation remains pending; this is a candidate
+fix, not established hardware acceptance.
