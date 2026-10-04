@@ -115,3 +115,49 @@ pub const Source = struct {
         return result;
     }
 };
+
+/// Persistent composition for processor output, separate from stateless labels.
+/// UTF-16 output may contain several scalars; no system events are generated.
+pub const Session = struct {
+    source: Source,
+    dead_state: u32 = 0,
+    pub fn init() Session {
+        return .{ .source = Source.init() };
+    }
+    pub fn deinit(self: *Session) void {
+        self.source.deinit();
+    }
+    pub fn reset(self: *Session) void {
+        self.dead_state = 0;
+    }
+    pub fn refresh(self: *Session) bool {
+        if (self.source.refresh()) {
+            self.reset();
+            return true;
+        }
+        return false;
+    }
+    pub fn eurkey(self: *const Session) bool {
+        var lower: [256]u8 = undefined;
+        const id = self.source.id();
+        for (id, lower[0..id.len]) |c, *out| out.* = std.ascii.toLower(c);
+        return std.mem.indexOf(u8, lower[0..id.len], "eurkey") != null;
+    }
+    pub fn translate(self: *Session, key: zkeymap.KeyCodeFire, output: *[128]u8) ![]const u8 {
+        if (builtin.os.tag != .macos) return error.NativeTranslationUnavailable;
+        if (!self.eurkey()) return error.SelectEurKeyInputSource;
+        const native_layout = self.source.layout orelse return error.NativeTranslationUnavailable;
+        const vk = zkeymap.hid_to_platform.hidToMacVk(key.tap_keycode) orelse return error.UnsupportedUsage;
+        const mods = key.tap_modifiers;
+        var carbon: u32 = 0;
+        if (mods.left_shift or mods.right_shift) carbon |= 2;
+        if (mods.left_alt or mods.right_alt) carbon |= 8;
+        if (mods.left_ctrl or mods.right_ctrl) carbon |= 16;
+        if (mods.left_gui or mods.right_gui) carbon |= 1;
+        var count: u32 = 0;
+        var chars: [32]u16 = undefined;
+        if (UCKeyTranslate(native_layout, vk, 0, carbon, LMGetKbdType(), 0, &self.dead_state, chars.len, &count, &chars) != 0 or count > chars.len) return error.NativeTranslationFailed;
+        const n = try std.unicode.utf16LeToUtf8(output, chars[0..count]);
+        return output[0..n];
+    }
+};

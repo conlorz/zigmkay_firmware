@@ -85,6 +85,7 @@ fn receive(state: *companion.State, log: *LogComponent, io: std.Io, bytes: []con
 }
 pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--editor-spike")) return @import("editor/spike.zig").run(init);
     var smoke = false;
     var live = false;
     var verify_running = false;
@@ -258,6 +259,7 @@ pub fn main(init: std.process.Init) !void {
     };
 }
 test {
+    _ = @import("editor/model.zig");
     std.mem.doNotOptimizeAway(&main);
     _ = adapter;
     _ = capture;

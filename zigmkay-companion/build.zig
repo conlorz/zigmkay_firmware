@@ -6,8 +6,8 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     const dvui = deps.dependency("dvui", .{ .target = b.graph.host, .optimize = .Debug, .backend = .sdl3 });
     const icons = deps.dependency("icons", .{});
     const module = b.createModule(.{ .root_source_file = root.path(b, "src/main.zig"), .target = b.graph.host, .imports = &.{
-        .{ .name = "dvui", .module = dvui.module("dvui_sdl3") }, .{ .name = "sdl-backend", .module = dvui.module("sdl3") }, .{ .name = "icons", .module = icons.module("icons") }, .{ .name = "keymap", .module = display }, .{ .name = "zigmkay", .module = shared.core }, .{ .name = "zkeymap", .module = shared.keymap_native }, .{ .name = "device-protocol", .module = shared.protocol }, .{ .name = "companion-model", .module = shared.companion },
-        .{ .name = "layout-model", .module = shared.model },     .{ .name = "lk7-physical", .module = shared.physical },
+        .{ .name = "dvui", .module = dvui.module("dvui_sdl3") }, .{ .name = "sdl-backend", .module = dvui.module("sdl3") }, .{ .name = "icons", .module = icons.module("icons") },                                                    .{ .name = "keymap", .module = display },                                                                 .{ .name = "zigmkay", .module = shared.core },                                                           .{ .name = "zkeymap", .module = shared.keymap_native }, .{ .name = "device-protocol", .module = shared.protocol }, .{ .name = "companion-model", .module = shared.companion },
+        .{ .name = "layout-model", .module = shared.model },     .{ .name = "lk7-physical", .module = shared.physical },    .{ .name = "keymap-project", .module = deps.dependency("keymap_project", .{}).module("keymap-project") }, .{ .name = "companion-jobs", .module = deps.dependency("companion_jobs", .{}).module("companion-jobs") }, .{ .name = "runner-protocol", .module = deps.dependency("keymap_test", .{}).module("runner-protocol") },
     } });
     const exe = b.addExecutable(.{ .name = "zigmkay_companion", .root_module = module });
     return .{ .exe = exe, .tests = &b.addRunArtifact(b.addTest(.{ .root_module = module })).step };
@@ -22,8 +22,8 @@ pub fn build(b: *std.Build) void {
         const selected = @import("keymap_project").selector.load(b, path, core, keycodes, model) catch |err| @panic(b.fmt("Invalid editor profile: {s}", .{@errorName(err)}));
         if (!std.mem.eql(u8, &selected.manifest.board_id, &[_]u8{ 'l', 'k', '7', 0, 0, 0, 0, 0 })) @panic("Companion profile must be LK7");
         break :blk selected.module;
-    } else b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = core }, .{ .name = "zkeycodes", .module = keycodes } } });
-    const physical = b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/lk7_physical_layout.zig"), .imports = &.{.{ .name = "layout-model", .module = model }} });
+    } else b.dependency("keymap_project", .{}).module("keymap-project").import_table.get("rollercole-profile").?;
+    const physical = b.dependency("keymap_project", .{}).module("keymap-project").import_table.get("lk7-physical").?;
     const gui = publish(b, b.path("."), b, .{ .keymap = keymap, .core = core, .keycodes = keycodes, .keymap_native = b.dependency("zkeymap", .{}).module("zkeymap"), .protocol = b.dependency("device_protocol", .{}).module("device-protocol"), .companion = b.dependency("companion_model", .{}).module("companion-model"), .model = model, .physical = physical });
     b.installArtifact(gui.exe);
     b.step("test", "Run companion component tests").dependOn(gui.tests);
