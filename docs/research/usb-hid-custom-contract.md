@@ -87,3 +87,13 @@ infer R-custom from an offline test or merely a window opening.
 
 R-custom needs actual callback/control behavior with the macOS companion and
 concurrent usable typing. Windows/Linux companion access remains unverified.
+
+## Live run started
+
+User confirmed BOOTSEL ready. Coordinator verified one writable RPI-RP2 mount,
+RP2 bootloader v3.0/Board-ID RPI-RP2, and both prepared artifact hashes. One
+`mise run //:flash-file zig-out/firmware/lk7/zigmkay.uf2 --mount /Volumes/RPI-RP2`
+completed write/sync in 4.10 seconds. IORegistry subsequently reports ZigMkay,
+configuration 1. Matching GUI started with explicit live access and a five-minute
+bounded test capture at `.zig-cache/manual-session/recovery-11/custom-session.bin`.
+Actual session identity and user-observed control/input results remain pending.
