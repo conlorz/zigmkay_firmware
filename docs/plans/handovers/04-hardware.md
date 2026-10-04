@@ -43,3 +43,19 @@ Offline chunk/truncation tests and five-platform compilation passed. Live retry
 reported successful write/sync, but RP2 Boot and its mount remained immediately
 afterward. Automatic reboot and installed firmware identity remain unresolved;
 do not release G04 or attribute this conclusively to macOS caching.
+
+Follow-up: user ran mise flash and it stalled after finding the volume. Process
+sampling identified `dirCreateFilePosix -> openat` on the FSKit FAT mount, not
+device discovery. Separate directory access also blocked. Cancellation and
+normal/forced unmount did not release the flasher's uninterruptible syscall;
+physical reconnect requested. No second writer was started against this mount.
+
+A separate definite defect was found: generated UF2 flags/family were zero.
+The RP2040 boot ROM ignores blocks lacking its family flag and ID (see
+[upstream virtual_disk.c](https://github.com/raspberrypi/pico-bootrom/blob/master/bootrom/virtual_disk.c)).
+`2089219` explicitly emits RP2040 family metadata, validates inputs before any
+device file access, preserves the validated bytes while waiting and logs each
+write stage. Full offline checks and all ten UF2 validations passed. The
+worksheet now identifies corrected firmware and a baseline rollback with only
+UF2 header metadata repaired. Live retry is pending physical connection reset;
+earlier copy success did not establish that new firmware ran.

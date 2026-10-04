@@ -9,18 +9,18 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
 | Item | Value |
 | --- | --- |
-| Integrated implementation / current build / protocol | `4fd4c66` / mise migration `447efb8` / G01 `5b092ec`, v2 |
+| Integrated implementation / firmware build / protocol | `4fd4c66` / UF2 correction `2089219` / G01 `5b092ec`, v2 |
 | New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 95,232 bytes |
-| New firmware SHA-256 | `0b9284b423f4918fcb6f769fc0132f33e03e30e8cbd554b16bf55d132c213bda` |
+| New firmware SHA-256 | `551dfa4cb41159545638a70bf147ee0a8e78f342db7d10da02db41e18f748a30` |
 | Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / `447efb8` / 42,245,536 bytes |
 | Companion SHA-256 | `25814eedbcff3249e247da90a9f6a4dda05c2796dc1a8b393db7cbf35bb12e94` |
 | Expected board / profile / digest | `lk7` / `danish` / `1ba43aa9b78a280faf77cdf41d0a42eb` (34 keys, 4 layers) |
 | Zig | 0.16.0 |
 | MicroZig revision | `00fde43fa3756790037b099baeafacc3e6bf9499` |
 | Baseline rollback source | `ab66f12`, Rollercole 34-key / four-layer profile |
-| Baseline rollback path | `.zig-cache/manual-session/rollback-ab66f12/zigmkay.uf2` |
+| Baseline rollback path | `.zig-cache/manual-session/rollback-ab66f12/zigmkay-rp2040.uf2` |
 | Baseline rollback size | 71,168 bytes |
-| Baseline rollback SHA-256 | `4924493306b302a7c2019e948ce04c79225c7d08dba1711eafc3cccbc32380e8` |
+| Baseline rollback SHA-256 | `c1ae70b5f442e0ece9a33d29e3b1db409a5e3da8bbd4131d59874b1ff71af232` |
 | Physical LK7 revision / controller recovery procedure | User verification pending |
 | macOS version / input-source ID / cable or hub | User session pending |
 | Overlay placement / opacity / focus settings | User session pending |
@@ -33,14 +33,20 @@ authorized session, start the matching GUI with
 matching collections are found. See [the overlay guide](../live-overlay.md).
 Recording requires an explicit `--capture` path and is bounded.
 Build/flash through `mise //:flash lk7`; rollback through
-`mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay.uf2`.
-The current firmware hash is unchanged by the tooling migration; the GUI was
+`mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay-rp2040.uf2`.
+The firmware was rebuilt with mandatory RP2040 family metadata at `2089219`;
+all ten UF2s now pass structural validation. The GUI was
 rebuilt from its standalone package with mise's pinned compiler. Automatic
 flash/restart behavior remains unresolved in the 04 handover. Do not interpret
 a successful utility write/sync as observed hardware acceptance.
 
-The rollback was freshly compiled offline from the unchanged implementation
-baseline. It has no hardware validation in this session. The cache copy is local
+The original rollback was compiled from the unchanged implementation baseline,
+but lacked the RP2040 family flag/ID. A cached Zig utility added only that header
+metadata to every block, preserving the firmware payload, and validated the
+complete transfer. The original `zigmkay.uf2` and hash
+`4924493306b302a7c2019e948ce04c79225c7d08dba1711eafc3cccbc32380e8`
+are retained for evidence and must not be used to flash. Neither corrected
+artifact has hardware acceptance in this session. The cache copy is local
 and may be removed by cache cleaning; rebuild from its source revision if absent.
 Confirm the controller's physical BOOTSEL/reset procedure and board wiring before
 manual flashing. Software BOOT combos are not the first recovery method.

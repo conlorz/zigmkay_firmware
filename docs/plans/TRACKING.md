@@ -69,7 +69,7 @@ against a protocol/export interface that has not been frozen.
 | Gate | Required evidence | Current state |
 | --- | --- | --- |
 | G01 | Accepted 01: versioned wire/API, identity, snapshot ordering, limits, fixtures and passing offline checks | Accepted `5b092ec`; check/check-full passed |
-| G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Accepted `4fd4c66`; 325 tests, all ten boards, parity and GUI smoke; worksheet ready |
+| G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Initial `4fd4c66`; superseded artifacts at `2089219` fix mandatory UF2 metadata; full checks and all ten UF2 validations pass; worksheet refreshed |
 | G04 | Actual passing typing/identity/snapshot/recovery worksheet from 04; optional overlay limits have explicit follow-ups | Pending user session |
 | G05 | Reviewed key assignments, shared selector/identity, compiled profiles and actual EurKEY Next typing checks | Pending |
 | G06 | Final architecture decision grounded in G05; alternatives/sources and 07/08 specifications | Pending |
@@ -140,6 +140,7 @@ reuse this result as evidence for later source changes.
 | 2026-10-04 | Accept integrated 02/03 and G-live-offline; release worker leases | `6c83623`, `4fd4c66`; 325 tests, check/check-full, ten boards, parity, offline GUI/replays passed; no hardware access |
 | 2026-10-04 | Prepare identified 04 artifacts and rollback; wait for user hardware session | Worksheet contains SHA-256, shared digest and recovery preparation; G04/G05 remain pending |
 | 2026-10-04 | User requested mise monorepo workflow; migrate terminal orchestration | [Tooling plan](10-mise-monorepo.md); package-owned tests, root integration-only Zig build, typed mise tasks/completion; offline full checks passed; hardware G04 remains pending |
+| 2026-10-04 | Diagnose stalled hardware flash and correct invalid UF2 metadata | `2089219`; missing RP2040 family flag/ID fixed and all artifacts validated; FSKit open syscall still stuck, user physical reconnect requested; G04 remains pending |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.

@@ -80,7 +80,7 @@ Only use these during an authorized device session:
 ```sh
 mise //:flash lk7                    # selected firmware build, then zig_flash
 mise //:flash lk7 --mount /Volumes/RPI-RP2
-mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay.uf2
+mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay-rp2040.uf2
 mise //:companion-run --live
 mise //:companion-run --live --capture /tmp/lk7.capture --capture-ms 30000
 mise //:companion-run --session-replay /tmp/lk7.capture   # offline
