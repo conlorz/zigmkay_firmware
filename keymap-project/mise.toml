@@ -1,0 +1,3 @@
+[tasks.test]
+description = "Test versioned project schema and lossless action validation offline"
+run = "zig build test -j4"

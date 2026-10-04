@@ -1,0 +1,11 @@
+.{
+    .name = .keymap_project,
+    .version = "0.1.0",
+    .fingerprint = 0xd37e8675cee40857,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .layout_model = .{ .path = "../layout-model" },
+        .device_protocol = .{ .path = "../device-protocol" },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "src", "README.md" },
+}
