@@ -25,6 +25,16 @@ Confirmed by the user on 2026-10-04:
   external code editor. Preserve source on save/export and show compiler errors.
 - Explicit editor Enter bootloader action over vendor HID is selected for 08;
   keep the physical board combo as recovery fallback.
+- Colored numbered/named layer selector reuses the companion palette: red, blue,
+  orange, lime, purple, teal, green, yellow and pink. Color complements names and
+  numbers; define additional distinguishable presentation for layers beyond nine.
+- Keyboard-model dropdown selects the project board/geometry. Connected firmware
+  identity remains separate and must agree before device operations; changing the
+  dropdown does not change or identify the physical device.
+- Full OS keyboard visualization, like macOS Keyboard Viewer, shows the active
+  input-source layout including function/number rows, punctuation, modifier keys,
+  space and arrows. Shift/Option previews update character labels. Keep this
+  standard OS keyboard separate from the editable LK7 physical geometry.
 
 Open a separate editor while retaining the small monitoring overlay. Choose LK7,
 clone an existing profile or create a project, select a layer and physical key,
@@ -180,3 +190,33 @@ in the UI process. A subprocess isolates crashes and mutable callback state; it
 is not a security sandbox for arbitrary Zig. Code may run at compile time as well
 as runtime. Opening, attaching and saving do not compile or execute source.
 Do not create an embedded source editor unless the user selects it.
+
+## Device keymap readback investigation
+
+The current HID protocol exposes identity/digest, live key/layer state and
+snapshots, not complete action assignments. A digest can locate an exact local
+project/build snapshot but cannot reconstruct an unknown map. Prefer this lookup
+for the simplest local workflow, explicitly showing when no matching project is
+available. Do not infer key assignments from observed keystrokes.
+
+Read-only keymap transfer over the existing vendor HID channel is feasible as a
+separate protocol extension: export a versioned portable action/metadata blob at
+build time and serve bounded requested chunks with total length, digest,
+session/request correlation, cancellation and capability negotiation. Pace reads
+so typing and recovery telemetry retain priority. It does not require dynamic
+remapping or EEPROM. Legacy firmware needs a first flash adding that capability.
+Board geometry can resolve from the local catalog; unknown versions must fail
+clearly. Report missing metadata rather than invent layer names.
+
+Compiled callback machine code cannot reconstruct original editable Zig source.
+Readback can preserve registered binding IDs/digests and action data; full project
+recovery also requires embedding the exact project metadata and attached source
+bundle in firmware, with an explicit storage-size budget. Without that bundle or
+a matching local callback module, imported custom behavior remains read-only or
+export-disabled. This feature is a researched option pending user selection;
+do not silently expand the accepted initial implementation scope.
+
+Primary transport precedent retrieved 2026-10-04:
+[QMK Raw HID](https://docs.qmk.fm/features/rawhid) documents bidirectional fixed
+32-byte reports. Our existing protocol already uses that transport shape; QMK is
+supporting precedent, not a dependency or proof of implemented readback here.
