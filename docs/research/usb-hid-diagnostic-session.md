@@ -133,9 +133,11 @@ macOS; Caps Lock/LED state is unverified because no binding is present.
 Windows/Linux live checks remain unavailable.
 
 Separately, the user confirms BOOTSEL through 0+4 (Q+B), successful reflashing
-and automatic keyboard reconnect. The artifact and transfer entry point of that
-user-operated reflash were not captured. It does not by itself accept R-flash or
-identify the currently running binary. No second coordinator flash was performed.
+and automatic keyboard reconnect using `mise run //:flash lk7`. Its current output
+UF2 SHA-256 matches the identified diagnostic candidate; no source changes
+intervened. This supports the root flash/restart path but is not running-device
+cryptographic readback or full R-flash acceptance. No second coordinator flash
+was performed.
 
 `mise //:check-full` passed for the complete `2e30e9d` source tree: package and
 integration tests, real pinned HID initialization, Cortex-M0+ probe, ten board

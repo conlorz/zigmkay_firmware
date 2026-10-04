@@ -38,10 +38,14 @@ controlled modifier/release checks passed; R-keyboard accepted on macOS.** Curre
 
 User confirmed all position-based input/modifier/release checks passed. Caps Lock
 is not bound; LED state and Windows/Linux remain unverified. User also confirms
-BOOTSEL 0+4, successful reflash and automatic keyboard reconnect; that reflash's
-artifact and transfer entry point were not captured.
+BOOTSEL 0+4 and successful `mise run //:flash lk7` with automatic keyboard
+reconnect. Current output hash matches the diagnostic candidate; this is not
+cryptographic running-device readback.
 
-Next: execute R4 inventory/contract and companion regression/live custom checks.
+R4 inventory/contract is in `usb-hid-custom-contract.md`; scoped firmware,
+protocol, companion-model and GUI tests pass. Companion binding placement is
+pending user preference. Existing gaming layer 4 is undefined and needs resolution.
+Next: integrate agreed controls and complete live custom checks.
 Do not repeat the diagnostic flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 
