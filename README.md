@@ -6,11 +6,12 @@ repository-wide work. Packages own their Zig builds; root Zig owns integration
 tests and the offline guard. No sibling clones or package directory changes are
 needed.
 
-**Direct next task:** [USB/HID recovery research and implementation](docs/plans/11-usb-hid-recovery.md).
-Read its [fresh-session handoff](docs/plans/handovers/11-usb-hid-recovery.md)
-and the [tracker](docs/plans/TRACKING.md). The user paused the remaining
-subagent roadmap. Offline milestones 01–03 passed, but the device still fails
-USB configuration; manual LK7 acceptance remains pending.
+**Current task:** [Editor architecture and requirements](docs/plans/06-editor-architecture-research.md).
+Read the [architecture research](docs/plans/06-architecture-research.md)
+and the [tracker](docs/plans/TRACKING.md). USB/HID recovery and manual LK7
+acceptance are complete for the agreed macOS baseline. The remaining order is
+06 → 07 → 08 → 05 → 09; the personal EurKEY profile will be created through
+the finished editor. Other platforms and boards retain separate acceptance gates.
 
 ## Setup and discovery
 
