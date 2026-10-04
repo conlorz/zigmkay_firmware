@@ -4,6 +4,7 @@ pub const registry = @import("generated/keyboard_registry.zig");
 pub const MicroBuild = microzig.MicroBuild(.{ .rp2xxx = true });
 
 pub const Shared = struct {
+    profile: ?[]const u8 = null,
     processor_root: std.Build.LazyPath,
     model: *std.Build.Module,
     protocol: *std.Build.Module,
@@ -19,6 +20,14 @@ pub fn publish(b: *std.Build, mb: *MicroBuild, root: std.Build.LazyPath, entry: 
         .root_source_file = root.path(b, entry.source),
     });
     const processor = @import("zigmkay").processor(b, shared.processor_root, shared.model, shared.protocol);
+    if (std.mem.eql(u8, entry.name, "lk7")) {
+        const profile = if (shared.profile) |path| blk: {
+            const selected = @import("keymap_project").selector.load(b, path, processor, shared.keycodes, shared.model) catch |err| @panic(b.fmt("Invalid LK7 export: {s}", .{@errorName(err)}));
+            if (!std.mem.eql(u8, &selected.manifest.board_id, &[_]u8{ 'l', 'k', '7', 0, 0, 0, 0, 0 })) @panic("Export board does not match LK7");
+            break :blk selected.module;
+        } else b.createModule(.{ .root_source_file = root.path(b, "my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = processor }, .{ .name = "zkeycodes", .module = shared.keycodes } } });
+        firmware.add_app_import("selected_profile", profile, .{});
+    }
     firmware.add_app_import("zigmkay", processor, .{ .depend_on_microzig = true });
     firmware.add_app_import("zkeycodes", shared.keycodes, .{});
     firmware.add_app_import("layout-model", shared.model, .{});

@@ -4,6 +4,8 @@ const protocol = @import("device-protocol");
 pub const snapshot = @import("snapshot.zig");
 pub const exporter = @import("export.zig");
 pub const adapter = @import("adapter.zig");
+pub const profiles = @import("profiles.zig");
+pub const sources = @import("sources.zig");
 
 pub const schema_version = 1;
 pub const Limits = struct {
@@ -286,4 +288,6 @@ pub fn canDeleteLayer(doc: Document, id: LayerId) ValidationError!void {
 
 test {
     _ = @import("tests.zig");
+    _ = profiles;
+    _ = sources;
 }

@@ -6,6 +6,28 @@ const model = @import("layout-model");
 pub const SourceBytes = struct { callback_index: usize, path: []const u8, bytes: []const u8 };
 /// Sources are caller-owned immutable bytes. Each declared file appears exactly once.
 pub const Snapshot = struct { document: p.Document, sources: []const SourceBytes };
+pub fn clone(gpa: std.mem.Allocator, snapshot: Snapshot) !Loaded {
+    const bytes = try p.serialize(gpa, snapshot.document);
+    defer gpa.free(bytes);
+    const document = try p.parse(gpa, bytes, null);
+    errdefer p.deinit(gpa, document);
+    var sources: std.ArrayList(SourceBytes) = .empty;
+    errdefer {
+        for (sources.items) |source| gpa.free(source.bytes);
+        sources.deinit(gpa);
+    }
+    for (snapshot.sources) |source| {
+        const data = try gpa.dupe(u8, source.bytes);
+        errdefer gpa.free(data);
+        var owned_path: ?[]const u8 = null;
+        if (source.callback_index >= document.callbacks.len) return error.UnexpectedSource;
+        for (document.callbacks[source.callback_index].sources) |entry| if (std.mem.eql(u8, entry.path, source.path)) {
+            owned_path = entry.path;
+        };
+        try sources.append(gpa, .{ .callback_index = source.callback_index, .path = owned_path orelse return error.UnexpectedSource, .bytes = data });
+    }
+    return .{ .snapshot = .{ .document = document, .sources = try sources.toOwnedSlice(gpa) }, .gpa = gpa };
+}
 
 fn addFramed(hash: *std.crypto.hash.sha2.Sha256, bytes: []const u8) void {
     var length: [8]u8 = undefined;

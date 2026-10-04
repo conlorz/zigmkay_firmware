@@ -7,6 +7,7 @@ pub fn build(b: *std.Build) void {
     _ = b.standardTargetOptions(.{});
     const core = b.dependency("zigmkay", .{});
     api.commands(b, b.path("."), b.dependency("microzig", .{}), .{
+        .profile = b.option([]const u8, "profile", "Absolute LK7 editor export directory (build only)"),
         .processor_root = core.path("."),
         .model = b.dependency("layout_model", .{}).module("layout-model"),
         .protocol = b.dependency("device_protocol", .{}).module("device-protocol"),

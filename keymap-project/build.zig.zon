@@ -5,6 +5,7 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zigmkay = .{ .path = "../zigmkay" },
+        .zkeycodes = .{ .path = "../zkeycodes" },
         .layout_model = .{ .path = "../layout-model" },
         .device_protocol = .{ .path = "../device-protocol" },
     },

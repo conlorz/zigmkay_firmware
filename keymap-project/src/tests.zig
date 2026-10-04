@@ -230,3 +230,69 @@ test "caller diagnostics retain their source after parse returns" {
     try std.testing.expectEqualStrings(".{ .unknown = true }", diagnostics.source.?);
     try std.testing.expectEqualStrings(diagnostics.source.?, diagnostics.parser.ast.source);
 }
+
+test "explicit owned export preserves callback bytes and refuses conflicting destination files" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    var project = try p.profiles.create(gpa, .danish);
+    defer project.deinit();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const manifest = try p.exporter.write(gpa, io, tmp.dir, project.snapshot, p.profiles.board);
+    defer std.zon.parse.free(gpa, manifest);
+    const bytes = try tmp.dir.readFileAlloc(io, "callback_0/rollercole.zig", gpa, .limited(p.Limits.source_bytes));
+    defer gpa.free(bytes);
+    try std.testing.expectEqualStrings(p.profiles.registered_source, bytes);
+    try tmp.dir.writeFile(io, .{ .sub_path = "keymap.zig", .data = "// user-owned file\n" });
+    try std.testing.expectError(error.ExportOwnershipConflict, p.exporter.write(gpa, io, tmp.dir, project.snapshot, p.profiles.board));
+    const retained = try tmp.dir.readFileAlloc(io, "keymap.zig", gpa, .limited(128));
+    defer gpa.free(retained);
+    try std.testing.expectEqualStrings("// user-owned file\n", retained);
+}
+
+test "document key layer combo and name capacity limits are exercised at their bounds" {
+    var arena: std.heap.ArenaAllocator = .init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    const ids = try a.alloc([]const u8, 127);
+    for (ids, 0..) |*id, index| id.* = try std.fmt.allocPrint(a, "key_{d}", .{index});
+    const sides = try a.alloc(@import("layout-model").Side, 127);
+    @memset(sides, .X);
+    const synthetic = p.Board{ .id = board.id, .physical_layout = "capacity", .key_ids = ids, .sides = sides };
+    const layers = try a.alloc(p.Layer, 15);
+    for (layers, 0..) |*layer, index| {
+        const actions = try a.alloc(?p.Action, 127);
+        @memset(actions, null);
+        layer.* = .{ .id = @intCast(index + 1), .name = try std.fmt.allocPrint(a, "Layer {d}", .{index}), .actions = actions };
+    }
+    const combos = try a.alloc(p.Combo, 1024);
+    var count: usize = 0;
+    outer: for (0..127) |first| for (first + 1..127) |second| {
+        combos[count] = .{ .key_ids = .{ ids[first], ids[second] }, .layer_id = 1, .timeout = .{ .ms = 65535 }, .action = .none };
+        count += 1;
+        if (count == combos.len) break :outer;
+    };
+    var doc = fixture;
+    doc.physical_layout = synthetic.physical_layout;
+    doc.key_ids = ids;
+    doc.layers = layers;
+    doc.combos = combos;
+    const name = try a.alloc(u8, p.Limits.name_bytes + 1);
+    @memset(name, 'N');
+    doc.name = name[0..p.Limits.name_bytes];
+    try p.validate(doc, synthetic);
+    doc.name = name;
+    try std.testing.expectError(error.InvalidName, p.validate(doc, synthetic));
+    doc.name = "Capacity";
+    const extra_combos = try a.alloc(p.Combo, 1025);
+    @memcpy(extra_combos[0..1024], combos);
+    extra_combos[1024] = combos[0];
+    doc.combos = extra_combos;
+    try std.testing.expectError(error.InvalidCombo, p.validate(doc, synthetic));
+    doc.combos = &.{};
+    const extra_layers = try a.alloc(p.Layer, 16);
+    @memcpy(extra_layers[0..15], layers);
+    extra_layers[15] = layers[0];
+    doc.layers = extra_layers;
+    try std.testing.expectError(error.InvalidDimensions, p.validate(doc, synthetic));
+}
