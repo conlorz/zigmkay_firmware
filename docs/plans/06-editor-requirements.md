@@ -7,6 +7,13 @@ The accepted tracker supersedes historical G05 prerequisites in 06A: hardware
 
 ## Proposed initial workflow
 
+Confirmed by the user on 2026-10-04:
+
+- Native editor in a separate companion window; retain the small live overlay.
+- First release exposes the full existing firmware feature set, including layers,
+  tap/hold, combos, timing, media/mouse and autofire.
+- Visual keyboard with searchable action inspector, layer tabs and copy/paste.
+
 Open a separate editor while retaining the small monitoring overlay. Choose LK7,
 clone an existing profile or create a project, select a layer and physical key,
 edit its actions, validate, save and reopen. Export and later build an identified
@@ -81,9 +88,24 @@ UI, browser, packaging, hardware or accessibility tests were performed.
 
 ## Decisions pending
 
-User questions issued: first-release feature breadth, preferred editing workflow,
-and whether browser access has a concrete priority over the native companion.
-Further decisions: bulk editing/layer tools, custom callback policy, offline
-testing/preview expectations, macros or other new runtime features, and project
-sharing/import scope. Answers must be recorded before the final 06B decision
-and concrete 07/08 revisions; no answer is inferred from silence.
+Follow-up questions issued: layer management/bulk editing, offline draft testing,
+and registered versus user-supplied callback modules. Further decisions include
+project sharing/import scope and whether any new runtime feature belongs in a
+later milestone. Full existing-feature support does not select new macro/tap-dance
+implementations. Answers must be recorded before the final 06B decision and
+concrete 07/08 revisions; no answer is inferred from silence.
+
+## Additional source findings
+
+`zigmkay/src/processing.zig` specializes `CreateProcessorType` at compile time
+for the keymap, dimensions, combos, callbacks and encoder actions. An accurate
+offline test area for arbitrary drafts therefore needs either a generated native
+test runner compiled from the frozen draft or a carefully tested processor change
+to accept runtime data. It cannot be promised as an immediate reuse of the current
+processor in the editor. Prefer the generated runner if testing is selected,
+subject to measured build latency; keep outputs in build caches.
+
+Existing callback examples use mutable module-level state and fixed layer indices.
+Test-runner isolation/reset and callback-bound layer constraints need explicit
+design. Layer renaming can remain metadata-only; reordering/deleting callback
+layers cannot be made safe merely by updating declarative layer references.
