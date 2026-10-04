@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const uf2 = @import("uf2.zig");
 
 fn validLabel(label: []const u8) bool {
     if (label.len == 0 or std.mem.eql(u8, label, ".") or std.mem.eql(u8, label, "..")) return false;
@@ -53,21 +54,19 @@ fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8) ![
         try std.Io.sleep(io, .fromMilliseconds(200), .awake);
     }
 }
-fn writeFirmware(io: std.Io, source_dir: std.Io.Dir, source: []const u8, destination_dir: std.Io.Dir, destination: []const u8) !void {
-    const input = try source_dir.openFile(io, source, .{});
-    defer input.close(io);
+fn writeFirmware(io: std.Io, contents: []const u8, destination_dir: std.Io.Dir, destination: []const u8) !void {
     // A UF2 volume is a device protocol, not ordinary file storage. Write the
     // final name directly and synchronize it before reporting completion.
     const output = try destination_dir.createFile(io, destination, .{});
     defer output.close(io);
-    var buffer: [4096]u8 = undefined;
-    var offset: u64 = 0;
-    while (true) {
-        const count = try input.readPositionalAll(io, &buffer, offset);
-        if (count == 0) break;
-        try output.writePositionalAll(io, buffer[0..count], offset);
+    std.log.info("Destination opened; writing firmware bytes", .{});
+    var offset: usize = 0;
+    while (offset < contents.len) {
+        const count = @min(4096, contents.len - offset);
+        try output.writePositionalAll(io, contents[offset..][0..count], offset);
         offset += count;
     }
+    std.log.info("Write complete; synchronizing destination", .{});
     try output.sync(io);
 }
 
@@ -81,14 +80,21 @@ pub fn main(init: std.process.Init) !void {
     // No implicit input: running the binary without arguments cannot start waiting for hardware.
     if (args.len < 2 or args.len > 3) return error.Usage;
     const source = args[1];
-    try std.Io.Dir.cwd().access(init.io, source, .{});
+    const contents = try std.Io.Dir.cwd().readFileAlloc(init.io, source, gpa, .limited(32 * 1024 * 1024));
+    uf2.validate(gpa, contents) catch |err| {
+        std.log.err("Invalid RP2040 UF2: {t}; no device file opened", .{err});
+        return err;
+    };
     const mount = if (args.len == 3) args[2] else "RPI-RP2";
     const path = if (std.fs.path.isAbsolute(mount)) mount else if (builtin.os.tag == .windows) try waitForWindowsLabel(gpa, init.io, mount) else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
     std.log.info("Waiting for volume at {s}", .{path});
     try waitForDrive(init.io, path);
+    std.log.info("Volume found; opening firmware.uf2 for writing", .{});
     try std.Io.sleep(init.io, .fromMilliseconds(500), .awake);
     const destination = try std.fs.path.join(gpa, &.{ path, "firmware.uf2" });
-    try writeFirmware(init.io, std.Io.Dir.cwd(), source, std.Io.Dir.cwd(), destination);
+    // Keep the exact validated input even if another build replaces the source
+    // while this command waits for BOOTSEL.
+    try writeFirmware(init.io, contents, std.Io.Dir.cwd(), destination);
     std.log.info("Firmware written and synchronized to {s}", .{destination});
 }
 test "direct firmware write replaces longer files and preserves all chunks" {
@@ -96,9 +102,8 @@ test "direct firmware write replaces longer files and preserves all chunks" {
     var temp = std.testing.tmpDir(.{});
     defer temp.cleanup();
     const bytes: [9217]u8 = @splat(0xa7);
-    try temp.dir.writeFile(io, .{ .sub_path = "input.uf2", .data = &bytes });
     try temp.dir.writeFile(io, .{ .sub_path = "firmware.uf2", .data = &(@as([10000]u8, @splat(0))) });
-    try writeFirmware(io, temp.dir, "input.uf2", temp.dir, "firmware.uf2");
+    try writeFirmware(io, &bytes, temp.dir, "firmware.uf2");
     const actual = try temp.dir.readFileAlloc(io, "firmware.uf2", std.testing.allocator, .limited(10000));
     defer std.testing.allocator.free(actual);
     try std.testing.expectEqualSlices(u8, &bytes, actual);

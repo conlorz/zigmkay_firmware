@@ -23,7 +23,7 @@ pub fn publish(b: *std.Build, mb: *MicroBuild, root: std.Build.LazyPath, entry: 
     firmware.add_app_import("zkeycodes", shared.keycodes, .{});
     firmware.add_app_import("layout-model", shared.model, .{});
     firmware.add_app_import("device-protocol", shared.protocol, .{});
-    const uf2 = firmware.get_emitted_bin(.{ .uf2 = .{} });
+    const uf2 = firmware.get_emitted_bin(.{ .uf2 = .{ .family_id = .RP2040 } });
     const install = b.addInstallFileWithDir(uf2, .prefix, destination);
     return .{ .uf2 = uf2, .install = &install.step };
 }

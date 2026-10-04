@@ -63,6 +63,7 @@ pub fn build(b: *std.Build) void {
     const headless = @import("apps/headless/build.zig").publish(b, b.path("apps/headless/main.zig"), keymap, protocol, companion);
     const checker_module = b.createModule(.{ .root_source_file = b.path("tools/check_local.zig"), .target = b.graph.host });
     checker_module.addAnonymousImport("board-catalog", .{ .root_source_file = b.path("keyboards/boards.zon") });
+    checker_module.addAnonymousImport("uf2-validator", .{ .root_source_file = b.path("zig-flash/src/uf2.zig") });
     const checker = b.addExecutable(.{ .name = "check-local", .root_module = checker_module });
     const sentinel = b.addExecutable(.{ .name = "offline-sentinel", .root_module = b.createModule(.{ .root_source_file = b.path("tools/sentinel.zig"), .target = b.graph.host }) });
     const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{
