@@ -112,6 +112,13 @@ UI, browser, packaging, hardware or accessibility tests were performed.
 
 ## Scope boundary
 
+Visual direction selected by the user: the clean
+[light layer-sidebar concept](mockups/editor-02-light-layer-sidebar.png), with
+vertical colored layer cards, central physical keyboard, right-hand inspector
+and full OS keyboard viewer below. Preserve this composition in dark mode too.
+Mockup text/key symbols remain illustrative; actual labels come from the active
+input source and action model.
+
 All issued feature questions have been answered and recorded above. Live LK7
 telemetry is not the draft test input. No embedded Zig editor is selected.
 Full existing-feature support does not select new macro/tap-dance implementations.
