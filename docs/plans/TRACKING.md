@@ -56,7 +56,7 @@ remains none. Exact active ownership is recorded below.
 | 07B | Planned | Editor UI and dedicated UI tests | G07-export, supported save/edit/export workflow; completes 07 criteria |
 | 08A | Planned | Build/flasher backend and dedicated fake tests | G05/G06/G07-export; no GUI/hardware; partial backend only |
 | 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
-| 09A | Active | Platform/board capability documents | Honest source-backed matrices; refresh after G04/G05, no support claims |
+| 09A | Accepted | Platform/board capability documents | `99c1dbe`; documentation only; refresh after G04/G05, no support claims |
 | 09B | Deferred | A selected target's new plan, then assigned source | User selects target/environment; own implementation and hardware gates |
 
 05 diagram/source preparation and 04 worksheet preparation may be separately
@@ -108,7 +108,7 @@ material architecture scope change require the user's decision before that work.
 | --- | --- | --- | --- | --- |
 | protocol / 01 | `device-protocol/src/root.zig`, `companion-model/src/root.zig`, `apps/headless/main.zig`, `tests/test_protocol_session.zig`, `docs/device-protocol.md`, `docs/plans/handovers/01-protocol.md` | `ab66f12` / baseline | Wire contract and literal fixtures before codec/model | Active |
 | architecture / 06A | `docs/plans/06-architecture-research.md`, `docs/plans/handovers/06-architecture.md` | `ab66f12` / baseline | Source-backed comparison; final decision pending G05 | Active |
-| inventory / 09A | `docs/plans/09-platform-capabilities.md`, `docs/plans/09-board-capabilities.md`, `docs/plans/09-setup-and-recovery.md`, `docs/plans/handovers/09-expansion.md` | `ab66f12` / baseline | Honest matrices and ordered gaps | Active |
+| inventory / 09A | Released; coordinator owns future refresh | `99c1dbe` / inventory v1 | Refresh after observed acceptance | Accepted |
 
 Coordinator records exact paths before dispatch; this table supersedes broad
 package suggestions in plans. Git/index, build/manifests, central docs, shared
@@ -127,6 +127,8 @@ reuse this result as evidence for later source changes.
 | --- | --- | --- |
 | 2026-10-04 | Subagent execution structure prepared; no implementation started | Start from the fresh-session prompt in the workflow |
 | 2026-10-04 | User authorized offline subagent execution and local commits; clean `ab66f12` inspected | Zig `/Users/clorz/.zvm/0.16.0/zig`; dispatch 01/06A/09A; no hardware access |
+| 2026-10-04 | Protocol wire proposal/literal fixture checkpoint committed | `c3db81a`; codec/recovery implementation active; G01 pending |
+| 2026-10-04 | 09A source-backed matrices accepted, ownership released | `99c1dbe`; no new target selected or hardware support claimed |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.

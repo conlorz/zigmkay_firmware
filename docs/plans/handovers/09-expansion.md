@@ -2,10 +2,12 @@
 
 ## 09A documentation result
 
-State: **Submitted**, 2026-10-04; not Accepted.
-Producer: inventory worker; reviewer: coordinator, review pending.
+State: **Accepted**, documentation-only 09A, 2026-10-04.
+Producer: inventory worker; reviewer: coordinator.
 Base revision: `ab66f12`; dispatch tracker revision: `ed14722`.
-Implementation/documentation commit IDs: pending coordinator integration.
+Documentation commit: `99c1dbe`. Coordinator reviewed all four documents,
+source-linked capability distinctions and local links; `git diff --check` passed.
+No source change requires a new Zig check for this documentation-only result.
 Contract/version: documentation inventory v1; no public API, wire, schema or
 identity changes. No upstream implementation handover was accepted at dispatch.
 
@@ -59,7 +61,7 @@ configuration, inspected publisher/USB/GUI/platform bridges, and checked linked
 local paths with scoped shell file-existence checks. No Zig build, hardware tool,
 Git/index operation, dependency install or new implementation language was used.
 Coordinator owns final diff/Markdown review and hardware-free integration checks;
-those results and commit references remain pending. Source findings are inspection
+review accepted the documentation at `99c1dbe`. Source findings are inspection
 evidence, not reproduced native failures.
 
 Manual evidence: none. Native Windows/Linux execution and all device results are
@@ -76,10 +78,9 @@ link/layout/AltGr/dead-key scope unverified. Existing bridge expansion/fixes nee
 explicit user permission for new or expanded C implementation under AGENTS;
 documentation alone authorizes none.
 
-Tracker gates released: none by this submission. Coordinator may accept 09A
-documentation after review; this does not accept 09B or parent live support.
-Worker stops editing all four submitted files for coordinator review. Coordinator
-owns the lease release and future matrix refresh assignment.
+Tracker deliverable released: 09A documentation accepted; this does not accept
+09B or parent live support. Worker ownership is released; coordinator owns future
+matrix refresh assignment. G01 and every hardware gate remain pending.
 
 ## 09B selected target result
 
