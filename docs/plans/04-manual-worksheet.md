@@ -1,5 +1,11 @@
 # LK7 manual acceptance worksheet
 
+Current recovery candidate and bounded run:
+[plan 11's diagnostic session](../research/usb-hid-diagnostic-session.md),
+implementation `2e30e9d`. Use its SHA-256 and stop criteria after explicit hardware
+authorization. R-keyboard does not automatically accept the original G04
+identity/session/overlay rows below; companion tests wait for R-keyboard.
+
 State: hardware troubleshooting in progress; G04 acceptance is pending.
 Flashing and automatic reboot work; USB configuration still awaits verification.
 Use this worksheet only after G-live-offline and an explicit user hardware
@@ -9,11 +15,11 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
 | Item | Value |
 | --- | --- |
-| Integrated implementation / firmware build / protocol | `4fd4c66` / descriptor serialization fix in the 04 handover / G01 `5b092ec`, v2 |
-| New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 93,184 bytes |
-| New firmware SHA-256 | `eee031c891b592740ddab62ee948728e329ecc7c2572eef184c33211de3caeb0` |
-| Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / `447efb8` / 42,245,536 bytes |
-| Companion SHA-256 | `25814eedbcff3249e247da90a9f6a4dda05c2796dc1a8b393db7cbf35bb12e94` |
+| Integrated implementation / firmware build / protocol | `2e30e9d` / USB recovery / G01 `5b092ec`, unchanged v2 |
+| New firmware path / size | `.zig-cache/manual-session/recovery-11/lk7-2e30e9d.uf2` / 130,560 bytes |
+| New firmware SHA-256 | `6b5df9e387fae46b2b995d82670ddd9c78c7563d09456ea75aaf00f6a41dc391` |
+| Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / integrated `2e30e9d` tree / 42,245,536 bytes |
+| Companion SHA-256 | `4c612468ce0c9aee29d669123c99eb20b6de988615da642176612a6b9dc00db0` |
 | Expected board / profile / digest | `lk7` / `danish` / `1ba43aa9b78a280faf77cdf41d0a42eb` (34 keys, 4 layers) |
 | Zig | 0.16.0 |
 | MicroZig revision | `00fde43fa3756790037b099baeafacc3e6bf9499` |
@@ -25,14 +31,16 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 | macOS version / input-source ID / cable or hub | User session pending |
 | Overlay placement / opacity / focus settings | User session pending |
 
-Offline acceptance: Zig 0.16.0 root 325/325 tests, check/check-full, all ten
-boards, standalone checks and LK7 UF2 byte parity passed. Companion offline,
+Offline recovery acceptance: Zig 0.16.0 scoped tests and check-full, all ten
+boards, actual USB artifact parsing and LK7 UF2 byte parity passed. Companion offline,
 legacy and timed-replay smoke runs each rendered three frames. On an explicitly
 authorized session, start the matching GUI with
 `mise //:companion-run --live`; use `--device-path` only if multiple
 matching collections are found. See [the overlay guide](../live-overlay.md).
 Recording requires an explicit `--capture` path and is bounded.
-Build/flash through `mise //:flash lk7`; rollback through
+For the first recovery run use the exact snapshot/command in the bounded session;
+do not start the companion before R-keyboard. Later build/flash uses
+`mise //:flash lk7`; baseline transfer uses
 `mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay-rp2040.uf2`.
 The firmware was rebuilt with mandatory RP2040 family metadata at `2089219`;
 all ten UF2s now pass structural validation. The GUI was
@@ -94,6 +102,7 @@ layer combinations. Do not type into sensitive applications during this session.
 | Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Pending |
 
 Start capture only when explicitly requested and keep it bounded and sanitized.
-If ordinary typing regresses, stop advanced tests and use the verified manual
-rollback procedure. Record the failing row and artifact identity; reproduce the
+If ordinary typing regresses, stop advanced tests and recover through physical
+BOOTSEL. The preserved baseline also failed configuration and is not a known-working
+rollback keyboard. Record the failing row and artifact identity; reproduce the
 defect offline before modifying firmware or keymap behavior.

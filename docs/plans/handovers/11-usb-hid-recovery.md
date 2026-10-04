@@ -1,6 +1,44 @@
 # Recovery handoff for a fresh session
 
-State: **Plan prepared; research and recovery not started.** User stopped the
+State: **Research accepted; offline R3 integrated; bounded hardware session
+prepared and waiting for explicit authorization.** Current implementation
+`2e30e9d`, with full offline checks passing. See
+[research decision](../../research/usb-hid-decision.md) and
+[identified diagnostic session](../../research/usb-hid-diagnostic-session.md).
+
+## Recovery execution, 2026-10-04
+
+- Started clean at `f953373`, canonical branch `local/monorepo`, Zig 0.16.0.
+- Three scoped research workers delivered primary-source specification,
+  platform and RP2040 evidence; all leases released, no worker remains active.
+- `2972bc6` records research and design. The target probe through the actual
+  pinned controller proved runtime endpoint/size corruption, independently of
+  the repaired host descriptor stream.
+- `c9ea3a1` materializes persistent driver descriptors from explicit wire bytes.
+  Real pinned HID initialization host test and Cortex-M0+ inspection cover it.
+- `2e30e9d` implements standard/HID request validation, EP0 status/ZLP/cancel,
+  address/reset/configuration lifecycle, eight-byte boot keyboard, relative mouse,
+  LED state, halt/alternate zero behavior, bounded RP2040 buffer ownership and
+  nonblocking ordered keyboard/secondary reports. Review findings and limits are
+  recorded in the decision. Vendor v2/shared identity remain unchanged.
+- `mise //:check-full` passed on the complete code tree: ten board builds,
+  actual emitted descriptor/report parsing, parity and no-hardware/source guards.
+- User reports Mac only, no SWD or USB analyzer. The session document identifies
+  the candidate/rollback hashes, questions, capture route, limits and stop criteria.
+  No hardware operation or flash was performed in this recovery session.
+- R-HID-design accepted offline; R-keyboard pending. R-custom and R-flash are
+  gated on observed keyboard acceptance. Do not resume original 05–09.
+- Important limits: no known-working rollback binary; B0/B1 abort fails closed;
+  no USB diagnostic retrieval after a hard hang or boundary fault; Mac diagnostic
+  string freshness unverified. Full tests do not prove live compatibility.
+
+Next: obtain explicit authorization for the concrete bounded LK7 session, run
+one identified candidate, record actual configuration/input and failure evidence.
+Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
+
+## Historical state before recovery execution
+
+User stopped the
 hardware retry loop on 2026-10-04 and requested a top-down research-led approach.
 Direct next task: [plan 11](../11-usb-hid-recovery.md). Original later milestone
 execution is paused by user direction. This file preserves evidence, not a pass.
@@ -86,7 +124,7 @@ These are facts to audit against specifications, not accepted design choices.
 Existing custom companion codes and v2 session behavior require inventory and a
 reviewed transport design after a working standard keyboard baseline.
 
-## Fresh-session starting prompt
+## Historical fresh-session starting prompt
 
 > Read AGENTS.md, docs/plans/TRACKING.md,
 > docs/plans/11-usb-hid-recovery.md and its recovery handoff. Execute plan 11
@@ -98,5 +136,5 @@ reviewed transport design after a working standard keyboard baseline.
 > prepare a bounded diagnostic session before requesting live hardware access.
 > Report observed evidence separately from hypotheses and support claims.
 
-The user must initiate that new session. This planning handoff authorizes no
-additional implementation or hardware retries in the current session.
+That offline session has now run, as recorded above. This historical prompt does
+not authorize new hardware retries; use the concrete bounded session next.

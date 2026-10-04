@@ -87,5 +87,42 @@ flash is rejected: capture must distinguish request handling from device hang.
    remain unverified unless actually tested. R-custom follows R-keyboard;
    R-flash follows custom behavior and requires verified running identity.
 
-R-HID-design records this reviewed source-backed approach; it is not a device
-pass. R-keyboard, R-custom, R-flash and original G04 remain pending.
+## Integrated result
+
+Research `2972bc6`, runtime initializer `c9ea3a1`, complete offline recovery
+`2e30e9d`. Endpoint status/halt, alternate zero reset, full Chapter 9/HID dispatch,
+EP0 transfer sequencing and bounded ownership waits are implemented. The
+first-party poll dispatcher retains pinned HAL endpoint I/O and gives reset
+priority, discards canceled EP0 completions, and acknowledges completion flags
+before callbacks. Both EP0 PIDs reset before the HAL flips them to DATA1.
+EP_ABORT_DONE is acknowledged with write-one-to-clear masks. B0/B1 cancellation
+fails closed, an explicit silicon compatibility limit.
+
+Changed input takes priority over idle repeats independently per interface.
+Keyboard command backpressure preserves ordered transitions. Consumer/mouse
+have independent bounded 16-report queues; overflow discards queued history and
+enqueues neutral then latest state, increments a counter and never blocks
+keyboard release. Relative motion history can be lost on secondary overflow.
+While disconnected, the executor consumes changes into current held state and
+does not replay obsolete taps. Reconfiguration restores held state. Legacy
+optional vendor signals are best effort; v2 remains on its existing bounded
+transport. No custom protocol or identity migration has been implemented at R3.
+
+All five declared keyboard LED bits are retained and queryable; physical LED
+mapping is board-specific and must not be claimed without a live test. The
+default reset-interface BOOTSEL command commits after status IN; unsupported
+reset options and reboot-to-flash are rejected rather than silently mapped to
+BOOTSEL. Diagnostic string 8 is an explicit descriptor amendment, with unchanged
+interface count/endpoint allocation and unchanged shared v2 identity.
+
+`mise //:check-full` passes, including actual UF2 report/configuration parsing,
+ten boards and parity. Full fake tests exercise production request/transfer and
+executor code; real pinned HID initialization is tested separately. RP2040
+register timing, hard panic recovery, host diagnostic string freshness and all
+live platform behavior remain unverified. USB diagnostics are unavailable after
+a hard hang or fail-closed boundary error with the user's Mac-only equipment.
+
+R-HID-design is accepted for this reviewed source-backed approach; it is not a
+device pass. R-keyboard, R-custom, R-flash and original G04 remain pending.
+The next concrete task is the [bounded session](usb-hid-diagnostic-session.md)
+after explicit hardware authorization. Do not implement R4/R5 ahead of their gates.

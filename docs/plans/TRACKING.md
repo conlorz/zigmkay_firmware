@@ -1,6 +1,25 @@
 # Central milestone tracker
 
-## Direct next task: research-led USB/HID recovery
+## Direct next task: bounded USB/HID recovery hardware session
+
+Recovery research/design accepted at `2972bc6`; runtime initializer `c9ea3a1`;
+offline R3 integrated at `2e30e9d`. Full offline checks pass, including ten board
+artifacts, actual USB wire/report parsing and root/standalone parity. The target
+probe demonstrated device-side aggregate corruption that the old host-facing
+serialization did not fix. No recovery-session hardware operation has run.
+
+| Recovery gate | State | Exact next work |
+| --- | --- | --- |
+| R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
+| R-keyboard | Waiting-user | Explicit authorization for [identified bounded LK7 session](../research/usb-hid-diagnostic-session.md); Mac only, no SWD/analyzer |
+| R-custom | Planned | Only after live keyboard gate; inventory/migration and companion regressions/live signals |
+| R-flash | Planned | Only after R-custom; bounded discovery/failure fixtures, identity/ambiguity and running verification |
+
+Research workers have stopped and released all leases. The coordinator owns
+all integration. Source remains Zig 0.16.0 with the immutable MicroZig pin;
+all commits are local. Original G04 and 05–09 remain unaccepted/deferred as before.
+
+### Historical reset instruction
 
 User decision on 2026-10-04: stop implementation/hardware retries in the current
 session, prepare a fresh-session plan, and pause the rest of the original
@@ -13,7 +32,7 @@ flashing. Original 04 acceptance and 05–09 continuation stay deferred until
 recovery acceptance and the user's request to resume. Research first; no new
 hardware run is authorized by reading these plans.
 
-Current implementation `637fd71` passes full offline checks. Its latest live
+Previous implementation `637fd71` passed full offline checks. Its latest live
 flash/restart succeeded and the malformed configuration bytes are repaired,
 as confirmed by Apple's USB diagnostic, but EP0 configuration still times out
 and no HID interfaces attach. G04 remains unaccepted. Earlier “pending retry”
@@ -149,6 +168,7 @@ reuse this result as evidence for later source changes.
 
 | Date | Event | Evidence / next action |
 | --- | --- | --- |
+| 2026-10-04 | Execute plan 11 offline research and USB recovery | `2972bc6`, `c9ea3a1`, `2e30e9d`; target runtime defect demonstrated/fixed; full checks pass; bounded Mac-only session prepared, explicit hardware authorization pending; R4/R5 gated |
 | 2026-10-04 | User stopped trial-and-error recovery and paused original workflow | Plan 11 and recovery handoff are the direct next task for a new session; research before standard input, custom codes and flashing; latest `637fd71` still fails live configuration |
 | 2026-10-04 | Subagent execution structure prepared; no implementation started | Start from the fresh-session prompt in the workflow |
 | 2026-10-04 | User authorized offline subagent execution and local commits; clean `ab66f12` inspected | Zig `/Users/clorz/.zvm/0.16.0/zig`; dispatch 01/06A/09A; no hardware access |

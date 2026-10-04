@@ -1,6 +1,11 @@
 # USB/HID recovery: research first, then keyboard, custom codes and flashing
 
-Status: **Direct next task for a new session.** User requested this reset on
+Status: **Research/design accepted and offline R3 integrated at `2e30e9d`;
+R-keyboard waiting for the identified bounded hardware session.** See the
+[decision](../research/usb-hid-decision.md) and
+[session preparation](../research/usb-hid-diagnostic-session.md).
+
+User requested this reset on
 2026-10-04. Stop the current trial-and-error hardware loop. This plan takes
 priority over the remaining milestone/subagent workflow, including 04–09.
 The next session starts with research, not another flash or speculative patch.
