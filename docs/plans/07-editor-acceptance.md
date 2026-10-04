@@ -115,3 +115,10 @@ records. The comparator accepts an identical capture with mean RGB delta 0 and
 zero significant pixels; a deliberately wrong-theme comparison fails with
 `GoldenImageMismatch` (mean 198.3196, 1,536,505 significant pixels). It never
 updates a baseline. Native dialog continuity was separately user-confirmed.
+
+Final acceptance on implementation `7168c13`: `mise //:check-full` passes all
+package/generated checks, ten boards, LK7 parity and the offline source/hardware
+guard. Companion tests pass 40/40. Both `editor-check` and the approved
+`editor-golden-check` pass all 64 captures and expanded semantic interactions.
+Native text/overlay/window probes pass. Full G07 is accepted; future 08B may
+consume the released GUI after accepted 08A and an explicit assignment.

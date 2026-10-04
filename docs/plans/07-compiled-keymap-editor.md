@@ -1,6 +1,8 @@
 # 07: Visual editing with validated compiled-keymap export
 
-Status: active. 07A accepted at `016cf7d`; 07B implementation in progress.
+Status: accepted. 07A frozen at `016cf7d`; 07B accepted at `7168c13`, with
+user-approved screenshots and passing offline/native/golden checks. See
+[the evidence](07-editor-acceptance.md) and [verification guide](07-editor-verification.md).
 Implement shared profile selection and identity plumbing here, using the accepted
 existing profile and representative QWERTY/EurKEY fixtures. The user's personal
 profile is created later in 05 through the finished editor; it is not an entry

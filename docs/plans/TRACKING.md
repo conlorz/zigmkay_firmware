@@ -1,6 +1,6 @@
 # Central milestone tracker
 
-## Recovery, G04, G06 and G07-export accepted; editor 07B is active
+## Recovery, G04, G06 and full G07 accepted
 
 07 implementation authorized on 2026-10-04, starting from clean planning HEAD
 `eef2c45`. G07-export is frozen at `016cf7d`: versioned schema, lossless
@@ -9,9 +9,14 @@ shared profile selection, bounded jobs and the native real-processor runner.
 Package checks and `mise //:check-full` passed, including ten-board artifacts,
 standalone/root LK7 parity and literal callback/action traces. See the
 [contract](../../keymap-project/README.md) and [handover](handovers/07-editor.md).
-Coordinator owns the 07B native spike/editor, integration and acceptance evidence;
-no parallel writers are active. Full G07 remains pending. Plan 12 and all
-hardware operations remain deferred.
+Full G07 is accepted at implementation `7168c13`: 40 companion tests, complete
+`check-full`, 64 state/theme/scale captures, semantic interactions and approved
+golden regression checks passed. Native EurKEY composition and independent-window
+checks passed; the user confirmed dialog telemetry continuity and explicitly
+approved the screenshots. See [evidence](07-editor-acceptance.md) and the
+[self-verification guide](07-editor-verification.md). No parallel writer is active.
+GUI ownership is released for future 08B after accepted 08A/explicit assignment.
+Plan 12 and all hardware operations remain deferred.
 
 Additional deferred milestone: [12 device keymap readback](12-device-keymap-readback.md).
 User requests complete layer/combo/configuration transfer in 12A; custom Zig
@@ -23,7 +28,7 @@ editor, full existing action set, named layers and bulk editing, offline draft
 runner with EurKEY text, attached externally edited Zig callbacks. See the
 [decision](06-editor-architecture-decision.md) and
 [requirements](06-editor-requirements.md). That decision accepted planning only;
-07A implementation now proceeds under the separate authorization above. No 08
+07 implementation is complete under the separate authorization above. No 08
 implementation or new hardware session has started.
 
 User-revised order: **04 → 06 → 07 → 08 → 05 → 09**. Build shared profile
@@ -118,7 +123,7 @@ remains none. Exact active ownership is recorded below.
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Accepted | Plan 11 baseline plus focused user session | All required baseline/highlight/snapshot/recovery checks passed; limits in handover | Coordinator with user / `0aa2ca7` implementation |
 | 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Accepted planning | G04; 06A already accepted | Consume final 06B; implementation checks assigned to 07 | Coordinator / final decision linked above |
-| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Active | G04 and G06 | Complete native editor and visual/workflow acceptance | Coordinator / 07A `016cf7d` |
+| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Accepted | G04 and G06 | Frozen contracts and approved native editor; future 08 integration | Coordinator / 07A `016cf7d`, 07B `7168c13` |
 | 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |
 | 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
 | 09 | [Expansion](09-platform-and-board-expansion.md) / [handover](handovers/09-expansion.md) | Planned | 09A may start now; target work needs selection and accepted baseline | Capability inventory and separately scoped target plans | Unassigned / none |
@@ -130,7 +135,7 @@ remains none. Exact active ownership is recorded below.
 | 06A | Accepted | Architecture research document; 06 handover | `2762d91`; sourced comparison; G04 now releases final editor decision |
 | 06B | Accepted | Architecture decision; revised 07/08 plans | Source-backed native decision and explicit user feature answers; planning only |
 | 07A | Accepted | Frozen model/export/source/selector/runner/jobs contract 1 | `016cf7d`; full offline matrix/parity and emitted traces; maintenance only |
-| 07B | Active | Coordinator: `zigmkay-companion/src/editor/`, editor build/mise integration and dedicated tests/evidence | Start bounded two-window/dialog/input spike; then faithful dark/light editor and workflow |
+| 07B | Accepted | Native editor, complete workflow and approved dark/light captures | `7168c13`; full checks, 40 tests, 64 captures and approved goldens; GUI lease released for future 08B |
 | 08A | Planned | Build/flasher backend and dedicated fake tests | G06/G07-export; no GUI/hardware; partial backend only |
 | 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
 | 09A | Accepted | Platform/board capability documents | `99c1dbe`; documentation only; refresh after G04/G05, no support claims |
@@ -151,7 +156,7 @@ against a protocol/export interface that has not been frozen.
 | G05 | Reviewed key assignments, shared selector/identity, compiled profiles and actual EurKEY Next typing checks | Pending |
 | G06 | Final architecture decision grounded in G04, existing profiles and editor requirements; alternatives/sources and 07/08 specifications | Accepted planning, 2026-10-04; 06B decision and revised plans |
 | G07-export | Accepted 07A: schema/version, action preservation, export/API/path ownership, existing identity/digest, errors and consumer instructions | Accepted `016cf7d`; [contract](../../keymap-project/README.md), full offline checks and native emitted traces |
-| G07 | All 07 offline/editor acceptance, including save/reopen/export and matching build behavior | Pending |
+| G07 | All 07 offline/editor acceptance, including save/reopen/export and matching build behavior | Accepted `7168c13`; [workflow/native/visual evidence](07-editor-acceptance.md), user-approved goldens and passing offline regression checks |
 | G08 | 08 offline integration plus explicit flash session, running identity and typing/overlay checks | Pending user session |
 
 Settled: Zig 0.16.0, LK7/macOS first, small overlay, Danish profile for 04,
@@ -229,3 +234,5 @@ On resume, reconcile tracker entries with HEAD/status and actual files. Treat
 old Active assignments as interrupted until the coordinator verifies their work;
 do not reset, stash, or overwrite it. Reassign only after preserving the partial
 result and documenting which check/contract still needs acceptance.
+
+| 2026-10-04 | Accept complete G07 | Frozen 07A `016cf7d`; native editor `7168c13`; full offline checks, 40 tests, 64 state captures/interactions and approved goldens pass; user confirms dialog continuity and approves both themes/scales; plan 12/hardware deferred |

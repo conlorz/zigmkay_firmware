@@ -1,6 +1,6 @@
 # 07 handover: schema/export contract and visual editing
 
-State: **07A Accepted; 07B active**. G07-export frozen at `016cf7d` on 2026-10-04.
+State: **07A and 07B Accepted; full G07 released**. G07-export frozen at `016cf7d` on 2026-10-04.
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
@@ -59,7 +59,7 @@ behavior; original latent Gaming callback is preserved without new acceptance;
 no cross-process writer locking or directory-sync power-loss claim; no arbitrary
 dynamic imports/non-Zig embedded assets. These are defined contract limits,
 not unfinished 07A consumers. Native OS text and visual/manual evidence belongs
-to 07B. G07-export released; full G07 remains pending. Coordinator retains
+to 07B. G07-export released; full G07 acceptance is recorded in the 07B section below. Coordinator retains
 schema maintenance ownership and owns the 07B UI spike/editor files exclusively.
 
 ### Historical first checkpoints
@@ -118,3 +118,51 @@ sync/power-loss durability and concurrent-writer protection are not claimed.
 accessibility or hardware evidence is claimed. Dark/light visual acceptance must
 follow the specification after G07-export. No gate released. Coordinator retains
 ownership for the next 07A checkpoint; plan 12 remains deferred.
+
+### Complete 07B implementation and acceptance
+
+Authoritative current evidence supersedes the historical pending lists above:
+[acceptance report](../07-editor-acceptance.md),
+[self-verification workflow](../07-editor-verification.md),
+[approved goldens](../goldens/07-editor/README.md).
+Local implementation commits `1e16484`, `206d9a0`, `8e4039f`, `7168c13`
+retain the frozen 07A schema/export/runner contract. No plan 08 or 12
+implementation, hardware access, push or PR occurred.
+
+The separate opaque/resizable editor owns a validated draft with 32-snapshot
+undo/redo history, bulk selection/copy/paste, stable named layer management,
+complete action forms and combo editing. LK7's encoder absence is explicit.
+Save/open and callback source refresh are validated/undoable; saving uses the
+07A atomic snapshot API. Export uses the same deterministic generator/manifest
+consumed by the real firmware and runner builds. Draft/export identity and a
+connected companion's verified running identity remain distinguishable; edited
+actions never repaint the running overlay as if flashed. Cached recoverable
+snapshots and dirty close choices preserve unsaved work.
+
+Prepare Test explicitly snapshots/exports/builds the real processor, Start
+creates a fresh bounded child and Stop/focus/source change resets it. Document
+and first-party build-input/compiler/target identity invalidate cached/prepared
+results. Output text uses native EurKEY dead-key translation; media/mouse/BOOT
+commands remain displayed data. Full emitted commands/events/signals/layers and
+compiler diagnostics are available in a bounded scrollable details drawer.
+Attached Zig checkout/open/check/refresh remains explicit, registered sources
+read-only, and callback bytes/imports are never interpreted as visual actions.
+
+The user approved both themes and their 1×/2× variants as regression goldens,
+and separately confirmed independent telemetry during native folder-dialog
+cancellation. All reference panel bounds match exactly. Catalog-correct geometry,
+actual host/action labels, inert offline/08 controls and typography differences
+are documented. The golden task is read-only and rejects a wrong-theme image;
+future replacement requires explicit screenshot approval. Default builds/tests
+retain the offline guard and do not regenerate those approved assets.
+
+Coordinator retains shared-schema maintenance; the editor GUI write lease is
+released for future 08B after accepted 08A and an explicit assignment. No worker
+or hardware session is active. 08 may consume the documented jobs/selector APIs
+and composition; personal profile 05 follows accepted 08. Plan 12 stays deferred.
+
+Final verification on `7168c13`: `mise //:check-full` passes, including ten-board
+artifacts, LK7 parity and source/hardware guard; companion 40/40 tests pass;
+`editor-check` and `editor-golden-check` pass all 64 captures plus expanded
+interactions. Native text, separate-window and offline overlay/editor probes
+pass. `zig fmt --check` and `git diff --check` pass. G07 is released.
