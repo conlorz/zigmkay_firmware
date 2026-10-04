@@ -1,225 +1,79 @@
+//! Shared physical identities and geometry; processing sides do not place keys.
 const std = @import("std");
-const core = @import("zigmkay").core;
-const zkeymap = @import("zkeymap");
-const keymap = @import("keymap");
-const Modifiers = core.Modifiers;
-
-const key_comp = @import("key.zig");
+const dvui = @import("dvui");
+const model = @import("layout-model");
+const physical = @import("lk7-physical");
 const cache = @import("cache.zig");
-const EncoderComponent = @import("encoder.zig").EncoderComponent;
-
-/// Represents the visual coordinates and grid-indices (rows/cols)
-/// for a single physical key or encoder within the keyboard overlay.
-pub const KeyPosition = struct {
-    x_offset: f32, // The Horizontal offset relative to the center of the application window.
-    y_offset: f32, // The Vertical offset relative to the calculated start_y of the layout block.
-    row: f32, // The physical row index this key currently inhabits.
-    col: f32, // The physical column index on its respective side (starts at 0 per side).
-    side: keymap.Side, // Side denomination extracted from the `sides` enum (e.g Left, Right, Encoder).
+const key = @import("key.zig");
+pub const Placement = struct { id: u16, key_index: u8, rect: dvui.Rect, rotation: f32 };
+pub const Fit = struct {
+    scale: f32,
+    offset_x: f32,
+    offset_y: f32,
+    pub fn place(self: Fit, item: model.physical_layout.Key) Placement {
+        return .{ .id = item.id, .key_index = item.key_index, .rotation = item.rotation * std.math.pi / 180, .rect = .{
+            .x = self.offset_x + item.x * self.scale,
+            .y = self.offset_y + item.y * self.scale,
+            .w = item.width * self.scale,
+            .h = item.height * self.scale,
+        } };
+    }
 };
-
-/// Layout container generated at `comptime` that sets parameters for the draw function.
-pub fn LayoutMap(comptime key_count: usize) type {
-    return struct {
-        positions: [key_count]KeyPosition,
-        total_height: f32,
-        key_size: f32,
-        spacing: f32,
-        scale: f32,
-    };
+/// Geometry rotation is degrees around the key center. Include rotated corners
+/// in fitted bounds, preserving non-square keys and arbitrary stable IDs.
+pub fn fit(items: []const model.physical_layout.Key, bounds: dvui.Rect) Fit {
+    var min_x: f32 = std.math.inf(f32);
+    var min_y = min_x;
+    var max_x: f32 = -min_x;
+    var max_y = max_x;
+    for (items) |item| {
+        const angle = item.rotation * std.math.pi / 180;
+        const half_w = (@abs(@cos(angle)) * item.width + @abs(@sin(angle)) * item.height) / 2;
+        const half_h = (@abs(@sin(angle)) * item.width + @abs(@cos(angle)) * item.height) / 2;
+        const cx = item.x + item.width / 2;
+        const cy = item.y + item.height / 2;
+        min_x = @min(min_x, cx - half_w);
+        max_x = @max(max_x, cx + half_w);
+        min_y = @min(min_y, cy - half_h);
+        max_y = @max(max_y, cy + half_h);
+    }
+    if (items.len == 0) return .{ .scale = 0, .offset_x = bounds.x, .offset_y = bounds.y };
+    const scale = @max(0, @min(bounds.w / (max_x - min_x), bounds.h / (max_y - min_y)));
+    return .{ .scale = scale, .offset_x = bounds.x + (bounds.w - (max_x - min_x) * scale) / 2 - min_x * scale, .offset_y = bounds.y + (bounds.h - (max_y - min_y) * scale) / 2 - min_y * scale };
 }
-
-/// Configuration options scaling and adjusting the way keys are drawn on screen.
-pub const LayoutOptions = struct {
-    scale: f32 = 2.0,
-    key_size: f32 = 45.0,
-    spacing: f32 = 8.0,
-    gap: f32 = 80.0,
-    thumb_cluster_gap: f32 = 10.0,
-};
-
-/// Generates a strict bounding map dynamically adjusting positional offsets for every key
-/// based strictly on a provided sequence of `keymap.Side` elements. Executed cleanly at `comptime`
-/// inside `main.zig` to keep runtime memory operations fully optimized.
-pub fn generateKeyPositions(
-    comptime key_count: usize,
-    comptime keys: [key_count]keymap.Side,
-    comptime options: LayoutOptions,
-) LayoutMap(key_count) {
-    @setEvalBranchQuota(10000);
-    const scale = options.scale;
-    const key_size = options.key_size * scale;
-    const spacing = options.spacing * scale;
-    const gap = options.gap * scale;
-    const thumb_cluster_gap = options.thumb_cluster_gap * scale;
-
-    var map = LayoutMap(key_count){
-        .positions = undefined,
-        .total_height = 0,
-        .key_size = key_size,
-        .spacing = spacing,
-        .scale = scale,
-    };
-
-    var current_row: f32 = 0;
-    var current_col: f32 = 0;
-    var last_key: keymap.Side = keys[0];
-
-    // Pre-Processing Phase: Iterate the entire `sides` mapping of the keymap once to count
-    // how many `.L` (Left Side) keys exist on any given row.
-    var row_l_counts: [20]f32 = [_]f32{0} ** 20;
-    var r: usize = 0;
-    for (0..key_count, keys) |i, key| {
-        if (key == .L or key == .TL) {
-            row_l_counts[r] += 1;
-        }
-
-        // We identify the start of a new row when the sequence transits from `.R` back to `.L`
-        if (i < key_count - 1 and keys[i] == .R and (keys[i + 1] == .L or keys[i + 1] == .TL)) {
-            r += 1;
-        }
-    }
-
-    var r_idx: usize = 0;
-    for (0..key_count, keys) |i, key| {
-        if (key == .E) {
-            map.positions[i] = .{
-                .x_offset = 0,
-                .y_offset = 0,
-                .row = current_row,
-                .col = current_col,
-                .side = key,
-            };
-            current_col += 1;
-            continue;
-        }
-
-        // Reset coordinates when we observe a transition between physical sides.
-        if (key != last_key) {
-            if (last_key == .R and (key == .L or key == .TL)) {
-                // Transitioning out of a Right Block -> Start a new Row!
-                current_row += 1;
-                r_idx += 1;
-            }
-            // reset col on transition
-            current_col = 0;
-            last_key = key;
-        }
-
-        const row_max_cols = row_l_counts[r_idx];
-
-        // Central Offset Logic: Left Keys calculate outwards right-to-left utilizing `row_l_counts`.
-        // Right Keys calculate outwards left-to-right based purely on `current_col` incrementations.
-        var x_offset: f32 = 0;
-        if (key == .L or key == .TL) {
-            x_offset = -(gap / 2.0) - (row_max_cols - current_col) * (key_size + spacing);
-        } else if (key == .R or key == .TR) {
-            x_offset = (gap / 2.0) + current_col * (key_size + spacing);
-        }
-
-        var y_offset: f32 = current_row * (key_size + spacing);
-        if (key == .TL or key == .TR) {
-            y_offset += thumb_cluster_gap;
-        }
-
-        map.positions[i] = .{
-            .x_offset = x_offset,
-            .y_offset = y_offset,
-            .row = current_row,
-            .col = current_col,
-            .side = key,
-        };
-
-        current_col += 1;
-    }
-
-    map.total_height = (current_row + 1) * key_size + current_row * spacing;
-    if (std.mem.indexOfScalar(keymap.Side, &keys, .TL) != null or std.mem.indexOfScalar(keymap.Side, &keys, .TR) != null) {
-        map.total_height += thumb_cluster_gap;
-    }
-    return map;
-}
-
-/// Main draw function that draws all keys and the encoder to the screen.
-pub fn drawKeysAndEncoder(
-    layout: *const LayoutMap(keymap.key_count),
-    label_cache: *const cache.LabelCache,
-    current_layer: usize,
-    active_keys: *[128]bool,
-    active_mods: Modifiers,
-    maybe_encoder_instance: ?EncoderComponent,
-    center_x: f32,
-    center_y: f32,
-    start_y: f32,
-) !void {
-    // Draw Keys
-    for (0..keymap.key_count) |i| {
-        const pos = layout.positions[i];
-
-        if (pos.side == .E) continue; // Skip encoders in the standard grid
-
-        const x = center_x + pos.x_offset;
-        const y = start_y + pos.y_offset;
-
-        const content = label_cache.lookup(current_layer, i, active_mods).*;
-        const active = active_keys[i];
-
-        try key_comp.drawKey(current_layer, i, x, y, layout.key_size, layout.scale, content, active);
-    }
-
-    if (maybe_encoder_instance) |encoder_instance| {
-        // Draw Encoder Wheel
-        const enc_y = (center_y * 1.1) + 10.0 * layout.scale;
-        try encoder_instance.draw(current_layer, label_cache, active_mods, center_x, enc_y, layout.key_size * 1.3, layout.scale);
+pub fn draw(label_cache: *const cache.LabelCache, layer: usize, pressed: *const [128]bool, mods: model.Modifiers, stale: bool, bounds: dvui.Rect) !void {
+    const fitted = fit(&physical.keys, bounds);
+    if (fitted.scale <= 0) return;
+    for (physical.keys) |item| {
+        const placed = fitted.place(item);
+        var rect = placed.rect;
+        const padding = @min(3, fitted.scale * 0.06);
+        rect.x += padding;
+        rect.y += padding;
+        rect.w -= padding * 2;
+        rect.h -= padding * 2;
+        try key.drawPhysicalKey(layer, placed.id, rect, placed.rotation, fitted.scale / 45, label_cache.lookup(layer, placed.key_index, mods).*, !stale and pressed[placed.key_index]);
     }
 }
-
-test "generateKeyPositions standard split" {
-    // zig fmt: off
-    const sides = [_]keymap.Side{
-        .L, .L, .L, .R, .R, .R,
-        .L, .L, .L, .R, .R, .R,
-        .TL,               .TR
-    };
-    // zig fmt: on
-    const layout = comptime generateKeyPositions(sides.len, sides, .{ .scale = 1.0 });
-
-    try std.testing.expectEqual(@as(f32, 3.0 * 45.0 + 2.0 * 8.0 + 10.0), layout.total_height);
-    try std.testing.expectEqual(keymap.Side.L, layout.positions[0].side);
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[0].row);
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[0].col);
-    try std.testing.expect(layout.positions[0].x_offset < 0);
-
-    try std.testing.expectEqual(keymap.Side.R, layout.positions[3].side);
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[3].row);
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[3].col);
-    try std.testing.expect(layout.positions[3].x_offset > 0);
-
-    try std.testing.expectEqual(keymap.Side.TL, layout.positions[12].side);
-    try std.testing.expectEqual(@as(f32, 2), layout.positions[12].row);
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[12].col);
-    // try std.testing.expect(layout.positions[12].x_offset > 0);
+test "shared physical identity thumbs and resized fitted bounds" {
+    try model.physical_layout.validateKeys(&physical.keys, .{ .key_count = 34, .layer_count = 2 });
+    for ([_]dvui.Rect{ .{ .x = 10, .y = 80, .w = 700, .h = 240 }, .{ .x = 0, .y = 0, .w = 340, .h = 160 } }) |bounds| {
+        const fitted = fit(&physical.keys, bounds);
+        for (physical.keys) |item| {
+            const placed = fitted.place(item);
+            try std.testing.expectEqual(item.id, placed.id);
+            try std.testing.expectEqual(item.key_index, placed.key_index);
+            try std.testing.expect(placed.rect.x >= bounds.x - 0.001 and placed.rect.y >= bounds.y - 0.001);
+            try std.testing.expect(placed.rect.x + placed.rect.w <= bounds.x + bounds.w + 0.001);
+            try std.testing.expect(placed.rect.y + placed.rect.h <= bounds.y + bounds.h + 0.001);
+        }
+    }
+    try std.testing.expectEqual(model.physical_layout.Group.thumb, physical.keys[30].group);
+    try std.testing.expectEqual(@as(u16, 0x280), physical.keys[32].id);
 }
-
-test "generateKeyPositions with encoder" {
-    const sides = [_]keymap.Side{
-        .L, .L, .R, .R,
-        .E, .E,
-    };
-    const layout = comptime generateKeyPositions(sides.len, sides, .{ .scale = 1.0 });
-
-    try std.testing.expectEqual(keymap.Side.E, layout.positions[4].side);
-}
-
-test "generateKeyPositions lopsided" {
-    // zig fmt: off
-    const sides = [_]keymap.Side{
-        .L, .L, .L, .L, .R, .R,
-        .L, .L, .L, .R, .R, .R, .R,
-    };
-    // zig fmt: on
-    const layout = comptime generateKeyPositions(sides.len, sides, .{ .scale = 1.0 });
-
-    try std.testing.expectEqual(@as(f32, 0), layout.positions[0].row);
-    try std.testing.expectEqual(@as(f32, 1), layout.positions[6].row);
+test "rotation and non-square geometry contribute to fitted bounds" {
+    const item = model.physical_layout.Key{ .id = 123, .key_index = 0, .x = 0, .y = 0, .width = 2, .height = 1, .rotation = 90, .hand = .neutral };
+    const fitted = fit(&.{item}, .{ .w = 100, .h = 100 });
+    try std.testing.expectApproxEqAbs(@as(f32, 50), fitted.scale, 0.01);
+    try std.testing.expectApproxEqAbs(@as(f32, std.math.pi / 2.0), fitted.place(item).rotation, 0.001);
 }

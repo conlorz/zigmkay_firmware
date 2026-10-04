@@ -107,6 +107,11 @@ pub fn drawLayerGrid(active_layer: usize, total_layers: usize, size: f32, scale:
 /// Renders a single keyboard key box with its associated label or icon.
 pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, scale: f32, content: CachedKeyContent, active: bool) !void {
     const rect = dvui.Rect{ .x = x, .y = y, .w = size, .h = size };
+    return drawPhysicalKey(current_layer, index, rect, 0, scale, content, active);
+}
+
+pub fn drawPhysicalKey(current_layer: usize, index: usize, rect: dvui.Rect, rotation: f32, scale: f32, content: CachedKeyContent, active: bool) !void {
+    const size = @min(rect.w, rect.h);
 
     const layer_color = if (current_layer < layer_colors.len) layer_colors[current_layer] else dvui.Color.white;
     const muted_layer_color = getMutedColor(layer_color);
@@ -119,6 +124,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
     var b = dvui.box(@src(), .{}, .{
         .id_extra = index,
         .rect = rect,
+        .rotation = rotation,
         .background = true,
         .color_fill = .{ .color = bg_color },
         .color_border = .{ .color = border_color },
@@ -141,7 +147,7 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
             dvui.label(@src(), "{s}", .{l}, .{
                 .id_extra = index,
                 .color_text = .{ .color = text_color },
-                .font = dvui.Font.theme(.body).larger(if (l.len <= 2) 12 else 6),
+                .font = dvui.Font.theme(.body).larger(if (l.len <= 2) 4 * scale else 0),
                 .gravity_x = 0.5,
                 .gravity_y = 0.5,
             });

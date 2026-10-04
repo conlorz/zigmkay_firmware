@@ -11,6 +11,7 @@
         .zkeymap = .{ .path = "../zkeymap" },
         .device_protocol = .{ .path = "../device-protocol" },
         .companion_model = .{ .path = "../companion-model" },
+        .layout_model = .{ .path = "../layout-model" },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src", "README.md" },
 }

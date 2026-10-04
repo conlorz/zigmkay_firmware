@@ -81,7 +81,14 @@ pub fn build(b: *std.Build) void {
     }) });
     test_step.dependOn(&b.addRunArtifact(gaming_test).step);
 
-    for ([_][]const u8{ "tests/test_lk7_trace.zig", "tests/test_observer_inputs.zig", "tests/test_telemetry_transport.zig" }) |source| {
+    const live_adapter = b.createModule(.{
+        .root_source_file = b.path("zigmkay-companion/src/live_adapter.zig"),
+        .imports = &.{
+            .{ .name = "device-protocol", .module = protocol },
+            .{ .name = "companion-model", .module = companion },
+        },
+    });
+    for ([_][]const u8{ "tests/test_lk7_trace.zig", "tests/test_observer_inputs.zig", "tests/test_telemetry_transport.zig", "tests/test_live_integration.zig" }) |source| {
         const trace_test = b.addTest(.{ .root_module = b.createModule(.{
             .root_source_file = b.path(source),
             .target = b.graph.host,
@@ -90,6 +97,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "lk7-keymap", .module = keymap },
                 .{ .name = "device-protocol", .module = protocol },
                 .{ .name = "companion-model", .module = companion },
+                .{ .name = "live-adapter", .module = live_adapter },
             },
         }) });
         test_step.dependOn(&b.addRunArtifact(trace_test).step);
@@ -143,7 +151,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     const gui_dep = b.dependency("gui", .{});
-    const gui = @import("gui").publish(b, gui_dep.path("."), gui_dep.builder, .{ .keymap = keymap, .core = firmware.module, .keycodes = keycodes.module, .keymap_native = native_map.module, .protocol = protocol, .companion = companion });
+    const gui = @import("gui").publish(b, gui_dep.path("."), gui_dep.builder, .{ .keymap = keymap, .core = firmware.module, .keycodes = keycodes.module, .keymap_native = native_map.module, .protocol = protocol, .companion = companion, .model = model.module, .physical = physical });
     test_step.dependOn(gui.tests);
     const companion_step = b.step("companion", "Build the selected desktop companion");
     const headless_step = b.step("companion-headless", "Build the selected offline replay executable");

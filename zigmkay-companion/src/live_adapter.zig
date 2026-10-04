@@ -2,6 +2,7 @@
 const std = @import("std");
 const protocol = @import("device-protocol");
 const companion = @import("companion-model");
+const capture = @import("session_capture.zig");
 
 pub const Candidate = struct {
     path: []const u8,
@@ -73,10 +74,14 @@ pub fn Driver(comptime Transport: type) type {
         transport_error: ?anyerror = null,
         signals: [2]protocol.SignalKind = undefined,
         signal_count: usize = 0,
+        key_events: [report_budget]protocol.KeyEvent = undefined,
+        key_event_count: usize = 0,
+        recording: ?*capture.Recorder = null,
         pub fn init(transport: Transport, expected: protocol.Identity, seed: u32, path: ?[]const u8) !Self {
             return .{ .transport = transport, .session = try companion.Session.init(expected), .nonces = .{ .value = seed }, .path = path };
         }
         pub fn disconnect(self: *Self, now: u64) void {
+            if (self.recording) |recording| recording.add(.disconnect, now, &.{});
             if (self.connected) self.transport.close();
             self.connected = false;
             self.session.disconnect();
@@ -103,6 +108,7 @@ pub fn Driver(comptime Transport: type) type {
                         return false;
                     };
                     const bytes = nativeWrite(report);
+                    if (self.recording) |recording| recording.add(.send, now, &bytes);
                     self.transport.write(&bytes) catch |err| {
                         self.fail(err, now);
                         return false;
@@ -118,6 +124,7 @@ pub fn Driver(comptime Transport: type) type {
         }
         pub fn poll(self: *Self, now: u64) void {
             self.signal_count = 0;
+            self.key_event_count = 0;
             if (!self.connected) {
                 if (now < self.retry_at) return;
                 const found = self.transport.discover(self.path) catch |err| {
@@ -131,6 +138,7 @@ pub fn Driver(comptime Transport: type) type {
                         self.status = .connected;
                         self.transport_error = null;
                         const nonce = self.fresh(now) orelse return;
+                        if (self.recording) |recording| recording.nonce(.connect, now, nonce);
                         const actions = self.session.connect(now, nonce) catch |err| {
                             self.fail(err, now);
                             return;
@@ -163,21 +171,36 @@ pub fn Driver(comptime Transport: type) type {
                 // Invalid native lengths enter the same malformed receive recovery
                 // path as invalid codec frames; no bytes are silently truncated.
                 const report = normalize(bytes[0..@min(count, bytes.len)]) catch {
-                    if (!self.execute(self.session.receive(&.{}, now), now)) return;
+                    if (!self.receive(&.{}, now)) return;
                     continue;
                 };
                 if (count > bytes.len) {
-                    if (!self.execute(self.session.receive(&.{}, now), now)) return;
+                    if (!self.receive(&.{}, now)) return;
                     continue;
                 }
-                if (!self.execute(self.session.receive(&report, now), now)) return;
+                if (!self.receive(&report, now)) return;
             }
             const nonce = if (self.session.exhausted and now >= self.session.deadline) (self.fresh(now) orelse return) else 0;
+            if (self.recording) |recording| recording.nonce(.tick, now, nonce);
             const actions = self.session.tick(now, nonce) catch |err| {
                 self.fail(err, now);
                 return;
             };
             _ = self.execute(actions, now);
+        }
+        fn receive(self: *Self, bytes: []const u8, now: u64) bool {
+            if (self.recording) |recording| recording.add(.receive, now, bytes);
+            const previous_sequence = self.session.state.last_sequence;
+            const actions = self.session.receive(bytes, now);
+            if (self.session.phase == .live and self.session.state.last_sequence != previous_sequence) {
+                if (protocol.decodePacket(bytes, self.session.state.dimensions, .device_to_host)) |packet| {
+                    if (packet.payload == .key and self.key_event_count < self.key_events.len) {
+                        self.key_events[self.key_event_count] = packet.payload.key;
+                        self.key_event_count += 1;
+                    }
+                } else |_| {}
+            }
+            return self.execute(actions, now);
         }
     };
 }
@@ -192,6 +215,7 @@ const Fake = struct {
     closed: bool = false,
     broken: bool = false,
     clock: u64 = 0,
+    clock_step: u64 = 0,
     fn discover(self: *Fake, _: ?[]const u8) !Discovery {
         self.closed = false;
         return self.discovery;
@@ -211,7 +235,9 @@ const Fake = struct {
         self.closed = true;
     }
     fn now(self: *Fake) u64 {
-        return self.clock;
+        const result = self.clock;
+        self.clock += self.clock_step;
+        return result;
     }
     fn queue(self: *Fake, packet: protocol.Packet, dimensions: @import("layout-model").KeymapDimensions) !void {
         self.frames[self.count] = try protocol.encodePacket(packet, dimensions, .device_to_host);
@@ -320,4 +346,23 @@ test "fake ambiguous discovery and nonce exhaustion never reuse a token" {
     var nonces = Nonces{ .value = std.math.maxInt(u32), .remaining = 1 };
     try std.testing.expectEqual(@as(u32, 1), try nonces.next());
     try std.testing.expectError(error.NonceExhausted, nonces.next());
+}
+
+test "fake elapsed drain budget returns UI and capture replays final state" {
+    var driver = try Driver(Fake).init(.{ .clock_step = 1 }, fixture(), 17, null);
+    driver.transport.count = 64;
+    for (&driver.transport.frames) |*frame| frame.* = @splat(0);
+    driver.poll(0);
+    try std.testing.expectEqual(@as(usize, 1), driver.transport.cursor);
+    var recorder = try capture.Recorder.init(std.testing.allocator);
+    defer recorder.deinit(std.testing.allocator);
+    var recorded = try Driver(Fake).init(.{}, fixture(), 18, null);
+    recorded.recording = &recorder;
+    try attach(&recorded, fixture(), true);
+    recorded.transport.broken = true;
+    recorded.poll(3);
+    const replayed = try capture.replay(recorder.encoded(), fixture());
+    try std.testing.expectEqual(recorded.session.phase, replayed.phase);
+    try std.testing.expectEqual(recorded.session.stale, replayed.stale);
+    try std.testing.expectEqual(recorded.session.state.pressed, replayed.state.pressed);
 }

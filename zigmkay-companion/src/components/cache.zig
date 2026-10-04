@@ -108,7 +108,7 @@ pub fn textKey(key: core.KeyCodeFire, physical_mods: Modifiers) zkeymap.KeyCodeF
     return .{ .tap_keycode = key.tap_keycode, .tap_modifiers = mods, .dead = key.dead };
 }
 
-pub fn computeKeyContent(km: *zkeymap.KeyMap, maybe_def: ?core.KeyDef, physical_mods: Modifiers, label_buf: *[64]u8) CachedKeyContent {
+pub fn computeKeyContent(km: anytype, maybe_def: ?core.KeyDef, physical_mods: Modifiers, label_buf: *[64]u8) CachedKeyContent {
     const def = maybe_def orelse return .{ .label = "---" };
     var maybe_key_code_fire: ?core.KeyCodeFire = null;
     var content = CachedKeyContent{};
@@ -250,7 +250,7 @@ pub fn computeKeyContent(km: *zkeymap.KeyMap, maybe_def: ?core.KeyDef, physical_
 /// # Memory Usage
 /// Approximately: layer_count * key_count * 256 * sizeof(CachedKeyContent) bytes
 /// plus arena allocations for label strings.
-pub fn buildLabelCache(allocator: std.mem.Allocator, km: *zkeymap.KeyMap) !LabelCache {
+pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
     const layer_count = keymap.keymap.len;
     const key_count = keymap.key_count;
     var cache = try LabelCache.init(allocator, layer_count, key_count);
@@ -426,4 +426,53 @@ test "LabelCache: lookup returns valid pointer for KC_A" {
     if (content.label) |label| {
         try testing.expect(label.len > 0);
     }
+}
+
+const FixtureLabels = struct {
+    alternate: bool = false,
+    fn keyToText(self: *FixtureLabels, input: zkeymap.KeyCodeFire) zkeymap.TextResult {
+        if (!zkeymap.isLayoutDependent(input.tap_keycode)) {
+            var r = zkeymap.TextResult{};
+            r.data[0..2].* = @bitCast(@as(u16, input.tap_keycode));
+            return r;
+        }
+        const mods = input.tap_modifiers;
+        if (input.dead) return .{ .data = .{ '^', 0, 0, 0 }, .len = 1 };
+        if (mods.left_alt or mods.right_alt) return .{ .data = .{ '@', 0, 0, 0 }, .len = 1 };
+        // Command participates in lookup but does not imply a physical press.
+        const upper = mods.left_shift or mods.right_shift;
+        return .{ .data = .{ if (self.alternate) 'z' else if (upper) 'A' else 'a', 0, 0, 0 }, .len = 1 };
+    }
+};
+test "label fixtures separate fixed Shift Option Command dead keys and source refresh" {
+    var fixture = FixtureLabels{};
+    var buffer: [64]u8 = undefined;
+    const base = core.KeyDef{ .tap_only = .{ .key_press = .{ .tap_keycode = @intFromEnum(zkeymap.ScanCode.KC_A) } } };
+    try testing.expectEqualStrings("a", computeKeyContent(&fixture, base, .{}, &buffer).label.?);
+    try testing.expectEqualStrings("A", computeKeyContent(&fixture, base, .{ .left_shift = true }, &buffer).label.?);
+    try testing.expectEqualStrings("@", computeKeyContent(&fixture, base, .{ .left_alt = true }, &buffer).label.?);
+    try testing.expectEqualStrings("a", computeKeyContent(&fixture, base, .{ .left_gui = true }, &buffer).label.?);
+    const dead = core.KeyDef{ .tap_only = .{ .key_press = .{ .tap_keycode = @intFromEnum(zkeymap.ScanCode.KC_A), .dead = true } } };
+    try testing.expectEqualStrings("^", computeKeyContent(&fixture, dead, .{}, &buffer).label.?);
+    try testing.expectEqualStrings("a", computeKeyContent(&fixture, base, .{}, &buffer).label.?);
+    fixture.alternate = true;
+    try testing.expectEqualStrings("z", computeKeyContent(&fixture, base, .{}, &buffer).label.?);
+    const fixed = core.KeyDef{ .tap_only = .{ .key_press = .{ .tap_keycode = @intFromEnum(zkeymap.ScanCode.KC_F1) } } };
+    try testing.expectEqualStrings("F1", computeKeyContent(&fixture, fixed, .{ .left_alt = true, .left_shift = true }, &buffer).label.?);
+}
+
+test "fixture label cache rebuild replaces source while keeping physical metadata" {
+    var source = FixtureLabels{};
+    var first = try buildLabelCache(testing.allocator, &source);
+    defer first.deinit();
+    source.alternate = true;
+    var second = try buildLabelCache(testing.allocator, &source);
+    defer second.deinit();
+    var changed: usize = 0;
+    for (first.entries, second.entries) |a, b| {
+        try testing.expectEqual(a.hid_code, b.hid_code);
+        try testing.expectEqual(a.hold_layer, b.hold_layer);
+        if (a.label != null and b.label != null and !std.mem.eql(u8, a.label.?, b.label.?)) changed += 1;
+    }
+    try testing.expect(changed > 0);
 }

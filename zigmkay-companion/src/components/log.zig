@@ -22,6 +22,7 @@ pub const TimedLogMessage = struct {
 pub const LogComponent = struct {
     events: [100]TimedLogMessage = [_]TimedLogMessage{.{}} ** 100,
     head: usize = 0,
+    count: usize = 0,
     last_event_timestamp: i64 = 0,
 
     /// Record an already validated protocol event on the UI thread.
@@ -38,12 +39,13 @@ pub const LogComponent = struct {
             .msg = log_msg,
         };
         self.head = (self.head + 1) % self.events.len;
+        self.count = @min(self.count + 1, self.events.len);
     }
 
     /// Renders the event ring buffer list UI inside the application loop.
-    pub fn draw(self: *LogComponent, km: *zkeymap.KeyMap, center_x: f32, start_y: f32, scale: f32) !void {
+    pub fn draw(self: *LogComponent, labels: *const @import("cache.zig").LabelCache, center_x: f32, start_y: f32, scale: f32) !void {
         const safe_log_y = @max(10.0 * scale, start_y - (160.0 * scale));
-        const safe_log_h = @min(160.0 * scale, start_y - 20.0 * scale);
+        const safe_log_h = @max(80, @min(160.0 * scale, start_y - 20.0 * scale));
         // Increase Box Width to 600.0 * scale
         const ui_w = 600.0 * scale;
         var log_box = dvui.box(@src(), .{}, .{
@@ -78,14 +80,14 @@ pub const LogComponent = struct {
 
             for (0..items_per_col) |row_idx| {
                 const j = (col_idx * items_per_col) + row_idx;
-                if (j >= count) continue; // Exceeds array size
+                if (j >= self.count) continue;
 
                 // Read backwards starting immediately before log_head
                 const backwards_offset = count - 1 - j;
                 const idx = (self.head + backwards_offset) % count;
                 const ev = self.events[idx];
 
-                if (ev.delta_ms != 0 or ev.msg.key_index != 0) { // filter out zero-filled slots except true first
+                {
                     var key_name_buf: [32]u8 = undefined;
                     var key_name: []const u8 = "???";
                     const mods = ev.msg.modifiers;
@@ -101,26 +103,19 @@ pub const LogComponent = struct {
                         }
 
                         if (maybe_kcf) |kcf| {
-                            const result = km.keyToText(@import("cache.zig").textKey(kcf, mods));
-                            if (result.isLabel()) {
-                                const lbl = result.getLabel();
+                            _ = kcf;
+                            const cached = labels.lookup(ev.msg.layer, ev.msg.key_index, mods).*;
+                            const result = cached.label orelse cached.icon_name;
+                            {
+                                const lbl = result;
                                 if (lbl.len < key_name_buf.len) {
                                     @memcpy(key_name_buf[0..lbl.len], lbl);
                                     key_name_buf[lbl.len] = 0;
                                     key_name = key_name_buf[0..lbl.len];
                                 }
-                            } else if (result.len > 0) {
-                                const slice = result.slice();
-                                if (slice.len >= 1 and slice[0] >= 32 and slice.len < key_name_buf.len) {
-                                    @memcpy(key_name_buf[0..slice.len], slice);
-                                    key_name_buf[slice.len] = 0;
-                                    key_name = key_name_buf[0..slice.len];
-                                }
                             }
                         }
                     }
-                    if (ev.msg.key_index == 38) key_name = "Encoder CW";
-                    if (ev.msg.key_index == 39) key_name = "Encoder CCW";
 
                     var mod_str_buf: [64]u8 = undefined;
                     var mod_str: []const u8 = "";

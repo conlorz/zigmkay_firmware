@@ -7,6 +7,7 @@ pub const ScanCode = keycodes.kc.basic;
 const zkcGetLabel = keycodes.getLabel;
 
 pub const KeyMap = @import("KeyMap.zig").KeyMap;
+pub const hid_to_platform = @import("hid_to_platform.zig");
 
 pub const TextResult = struct {
     /// UTF-8 encoded bytes, if key-label (e.g. "BACKSPACE", "F11"), we smuggle ScanCode in here
