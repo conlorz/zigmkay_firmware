@@ -10,5 +10,5 @@
         .device_protocol = .{ .path = "device-protocol" },
         .companion_model = .{ .path = "companion-model" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "zigmkay", "layout-model", "keymap-project", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model", "zkeymap", "zig-flash", "zigmkay-companion", "tools", "apps", ".zigversion", "README.md", "AGENTS.md" },
+    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "zigmkay", "layout-model", "keymap-project", "companion-jobs", "tests", "zkeycodes", "keyboards", "device-protocol", "companion-model", "zkeymap", "zig-flash", "zigmkay-companion", "tools", "apps", ".zigversion", "README.md", "AGENTS.md" },
 }

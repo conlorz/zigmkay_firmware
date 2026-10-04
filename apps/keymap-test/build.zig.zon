@@ -1,0 +1,14 @@
+.{
+    .name = .keymap_test,
+    .version = "0.1.0",
+    .fingerprint = 0x5dc91cda5f64c5cc,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .zigmkay = .{ .path = "../../zigmkay" },
+        .keymap_project = .{ .path = "../../keymap-project" },
+        .companion_jobs = .{ .path = "../../companion-jobs" },
+        .zkeycodes = .{ .path = "../../zkeycodes" },
+        .layout_model = .{ .path = "../../layout-model" },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "main.zig", "protocol.zig", "fixture.zig", "test_runner.zig", "callback_fixture.zig" },
+}

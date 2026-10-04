@@ -1,0 +1,3 @@
+[tasks.test]
+description = "Test bounded process jobs offline"
+run = "zig build test -j4"

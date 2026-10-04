@@ -2,7 +2,7 @@ min_version = "2026.9.14"
 monorepo_root = true
 
 [monorepo]
-config_roots = ["zigmkay", "layout-model", "device-protocol", "companion-model", "keymap-project", "zkeycodes", "zkeymap", "keyboards", "zigmkay-companion", "zig-flash", "apps/headless", "tools/registry"]
+config_roots = ["zigmkay", "layout-model", "device-protocol", "companion-model", "keymap-project", "companion-jobs", "zkeycodes", "zkeymap", "keyboards", "zigmkay-companion", "zig-flash", "apps/headless", "apps/keymap-test", "tools/registry"]
 
 [tools]
 zig = "0.16.0"
@@ -13,7 +13,7 @@ jobs = 2
 
 [tasks.test]
 description = "Run every package's own tests and root integration tests; no hardware"
-depends = ["//zigmkay:test", "//keyboards:usb-test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//keymap-project:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
+depends = ["//zigmkay:test", "//keyboards:usb-test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//keymap-project:test", "//companion-jobs:test", "//apps/keymap-test:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
 
 [tasks.integration-test]
 description = "Run cross-package traces, identity, session and build-boundary checks"
