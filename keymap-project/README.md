@@ -5,8 +5,8 @@ compile Zig, evaluate imports, execute callbacks, or access devices.
 
 Run `mise //keymap-project:test` from the monorepo. Root aggregate tests include
 this package. This is the first schema checkpoint; **G07-export is not frozen**.
-Persistence, curated adapters, source inventory verification, canonical identity,
-deterministic export, shared selection and native runner/jobs remain required
+Curated adapters, import/registry resolution, deterministic export, shared
+selection and native runner/jobs remain required
 before 07B starts. Schema/API changes remain possible until that gate.
 
 `src/root.zig` defines schema 1 and `parse`, `serialize`, `validate`,
@@ -39,7 +39,7 @@ IDs 1–252, source path/SHA-256 metadata, required layers and optional explicit
 index constraints. IDs 253–255 are built-in tap signals and cannot be registered
 or used as opaque hold callbacks. Paths reject traversal, absolute paths,
 backslashes and ambiguous components. Metadata does not prove source behavior;
-this checkpoint does not yet verify source bytes/imports or resolve registrations.
+source snapshot validation verifies bytes; import/registry resolution is pending.
 
 Deletion fails for the base layer, references from remaining actions/combos/
 encoders, required callback layers or declared affected indices. Unconstrained
@@ -51,3 +51,36 @@ Tests include literal lowering assertions, lossless serialization, rejection of
 executable/unknown/future data, malformed references, combo conflicts, unsafe
 callback deletion, invalid paths and timing. Tests use temporary/cache outputs
 only. No generated committed profile is changed.
+
+## Immutable snapshots and persistence
+
+`snapshot.zig` accepts a `Snapshot` with the document and caller-owned immutable
+`SourceBytes` for every declared source. Missing, mismatched, extra or duplicate
+entries fail. Total source bytes are bounded at 1 MiB. `identity` lowers actions
+and calls the existing `device-protocol.computeIdentity`; callback behavior
+declarations include ABI, binding and the ordered path/source digest. Both
+registered and attached source bytes therefore affect identity. `projectDigest`
+also hashes document metadata for job freshness. Neither is a build artifact
+hash: compiler/target/build inputs still need the runner/build contract.
+
+`save(allocator, io, project_dir, snapshot, board)` writes only `project.zon`
+and `.sources/<bundle SHA-256>/<relative source path>` inside the selected
+project directory. Relative file structure and raw bytes are preserved. It
+validates the complete snapshot before filesystem writes, atomically creates
+immutable source files, checks existing bundles byte-for-byte, synchronizes file
+contents, then atomically replaces the single document. The prior document is
+never deleted first. Failed saves may leave unreferenced bundles; they never
+replace referenced bundles. Directory metadata is not synchronized, so this
+does not yet claim power-loss durability. Concurrent writers must be serialized
+by the consumer; last successful document replacement wins.
+
+`load` reads the bounded document and all referenced bundle files, validates
+digests and returns an owned `Loaded`; call its `deinit`. It never compiles or
+executes source. Bundle paths are immutable storage, not external editing paths;
+the editable attachment workspace/import-snapshot workflow is still pending.
+Registered bindings are declarations until curated resolution is implemented.
+
+Tests cover save/reopen, repeated atomic replacement, rejected digest changes,
+filesystem failure with the previous project still readable, corrupted immutable
+bundles, source bounds and identity/freshness invalidation. This API remains
+provisional until the complete 07A contract passes G07-export.

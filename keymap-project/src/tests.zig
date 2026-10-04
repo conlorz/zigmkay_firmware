@@ -86,3 +86,103 @@ test "paths custom IDs and timing fail without discarding action fields" {
     try std.testing.expectError(error.InvalidTiming, p.lowerAction(fixture, .{ .tap_with_autofire = .{ .tap = .{}, .initial_delay = .{}, .repeat_interval = .{} } }));
     try std.testing.expectError(error.InvalidLayer, p.lowerHold(fixture, .{ .layer_id = 999 }));
 }
+
+fn withCallback() p.Document {
+    var doc = fixture;
+    doc.callbacks = &.{.{ .kind = .attached, .binding = "callback.zig", .ids = &.{1}, .required_layers = &.{20}, .sources = &.{.{ .path = "callback.zig", .digest = comptime sourceDigest("// opaque callback\n") }} }};
+    return doc;
+}
+fn sourceDigest(bytes: []const u8) [32]u8 {
+    @setEvalBranchQuota(10000);
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash(bytes, &digest, .{});
+    return digest;
+}
+test "atomic save reopen retains opaque callback bytes and prior snapshot on rejected save" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const snapshot = p.snapshot.Snapshot{ .document = withCallback(), .sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// opaque callback\n" }} };
+    try p.snapshot.save(gpa, io, tmp.dir, snapshot, board);
+    var loaded = try p.snapshot.load(gpa, io, tmp.dir, board);
+    defer loaded.deinit();
+    try std.testing.expectEqualStrings(snapshot.sources[0].bytes, loaded.snapshot.sources[0].bytes);
+    const original = try tmp.dir.readFileAlloc(io, "project.zon", gpa, .limited(p.Limits.document_bytes));
+    defer gpa.free(original);
+    var rejected = snapshot;
+    rejected.sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// changed externally\n" }};
+    try std.testing.expectError(error.SourceMismatch, p.snapshot.save(gpa, io, tmp.dir, rejected, board));
+    const unchanged = try tmp.dir.readFileAlloc(io, "project.zon", gpa, .limited(p.Limits.document_bytes));
+    defer gpa.free(unchanged);
+    try std.testing.expectEqualStrings(original, unchanged);
+    // A corrupted existing immutable bundle cannot be silently overwritten.
+    const path = try p.snapshot.sourceLocation(gpa, snapshot.document.callbacks[0], "callback.zig");
+    defer gpa.free(path);
+    try tmp.dir.writeFile(io, .{ .sub_path = path, .data = "corrupted" });
+    try std.testing.expectError(error.SourceMismatch, p.snapshot.save(gpa, io, tmp.dir, snapshot, board));
+    try std.testing.expectError(error.SourceMismatch, p.snapshot.load(gpa, io, tmp.dir, board));
+}
+test "callback source identity invalidates prepared results while layer rename is metadata only" {
+    const gpa = std.testing.allocator;
+    const original = p.snapshot.Snapshot{ .document = withCallback(), .sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// opaque callback\n" }} };
+    const identity = try p.snapshot.identity(gpa, original, board);
+    const digest = try p.snapshot.projectDigest(gpa, original, board);
+    var renamed = original;
+    var layers = fixture.layers[0..2].*;
+    layers[1].name = "Renamed";
+    renamed.document.layers = &layers;
+    try std.testing.expectEqual(identity.digest, (try p.snapshot.identity(gpa, renamed, board)).digest);
+    try std.testing.expect(!std.mem.eql(u8, &digest, &(try p.snapshot.projectDigest(gpa, renamed, board))));
+    var edited = original;
+    var callbacks = original.document.callbacks[0..1].*;
+    const sources = [_]p.Source{.{ .path = "callback.zig", .digest = sourceDigest("// changed callback\n") }};
+    callbacks[0].sources = &sources;
+    edited.document.callbacks = &callbacks;
+    edited.sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// changed callback\n" }};
+    try std.testing.expect(!std.mem.eql(u8, &identity.digest, &(try p.snapshot.identity(gpa, edited, board)).digest));
+}
+test "source inventory refuses missing extra duplicate and excessive callback bytes" {
+    const gpa = std.testing.allocator;
+    var snapshot = p.snapshot.Snapshot{ .document = withCallback(), .sources = &.{} };
+    try std.testing.expectError(error.MissingSource, p.snapshot.validate(snapshot, board));
+    const source = p.snapshot.SourceBytes{ .callback_index = 0, .path = "callback.zig", .bytes = "// opaque callback\n" };
+    snapshot.sources = &.{ source, source };
+    try std.testing.expectError(error.UnexpectedSource, p.snapshot.validate(snapshot, board));
+    const huge = try gpa.alloc(u8, p.Limits.source_bytes + 1);
+    defer gpa.free(huge);
+    snapshot.sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = huge }};
+    try std.testing.expectError(error.SourceLimit, p.snapshot.validate(snapshot, board));
+}
+
+test "source filesystem failure leaves the previous saved project readable" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try p.snapshot.save(gpa, io, tmp.dir, .{ .document = fixture, .sources = &.{} }, board);
+    try tmp.dir.writeFile(io, .{ .sub_path = ".sources", .data = "not a directory" });
+    const replacement = p.snapshot.Snapshot{ .document = withCallback(), .sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// opaque callback\n" }} };
+    if (p.snapshot.save(gpa, io, tmp.dir, replacement, board)) |_| {
+        return error.ExpectedSaveFailure;
+    } else |_| {}
+    var loaded = try p.snapshot.load(gpa, io, tmp.dir, board);
+    defer loaded.deinit();
+    try std.testing.expectEqual(@as(usize, 0), loaded.snapshot.document.callbacks.len);
+    try std.testing.expectEqualStrings("Test", loaded.snapshot.document.name);
+}
+
+test "atomic document replacement commits new metadata and reuses unchanged sources" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var snapshot = p.snapshot.Snapshot{ .document = withCallback(), .sources = &.{.{ .callback_index = 0, .path = "callback.zig", .bytes = "// opaque callback\n" }} };
+    try p.snapshot.save(gpa, io, tmp.dir, snapshot, board);
+    snapshot.document.name = "Saved again";
+    try p.snapshot.save(gpa, io, tmp.dir, snapshot, board);
+    var loaded = try p.snapshot.load(gpa, io, tmp.dir, board);
+    defer loaded.deinit();
+    try std.testing.expectEqualStrings("Saved again", loaded.snapshot.document.name);
+    try std.testing.expectEqualStrings("// opaque callback\n", loaded.snapshot.sources[0].bytes);
+}

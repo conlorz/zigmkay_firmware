@@ -1,6 +1,7 @@
 const std = @import("std");
 const model = @import("layout-model");
 const protocol = @import("device-protocol");
+pub const snapshot = @import("snapshot.zig");
 
 pub const schema_version = 1;
 pub const Limits = struct {
