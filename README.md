@@ -18,11 +18,14 @@ zig build                    # host tests, including GUI components
 zig build check              # tests, generated checks, source inventory guard
 zig build check-full         # all boards, standalone packages, artifact parity
 zig build list-keyboards
+zig build ls                 # alias for the board catalog
+zig build --help             # discover steps and options
 zig build firmware -Dkeyboard=lk7
 zig build firmware-all
 zig build companion -Dkeyboard=lk7
 zig build companion-headless -Dkeyboard=lk7
 zig build flash-tool          # compile only
+zig build flash -- --help     # utility help; no hardware access
 ```
 
 Firmware outputs are `zig-out/firmware/<id>/zigmkay.uf2`. Firmware defaults to
@@ -36,9 +39,26 @@ zig-out/bin/zigmkay_companion --replay tests/fixtures/lk7_trace.bin
 zig-out/bin/zigmkay_companion --smoke
 ```
 
+Build and run from this directory without entering individual packages:
+
+```sh
+zig build companion-run -Dkeyboard=lk7 -- --smoke
+zig build companion-run -Dkeyboard=lk7 -- --replay tests/fixtures/lk7_trace.bin
+# Explicit hardware commands, only during an authorized device session:
+zig build flash -Dkeyboard=lk7                 # build selected UF2, then flash
+zig build flash -Dkeyboard=lk7 -Dmount=/Volumes/RPI-RP2
+zig build flash -- path/to/firmware.uf2 /Volumes/RPI-RP2
+zig build companion-run -Dkeyboard=lk7 -- --live
+```
+
+Flash defaults to volume label `RPI-RP2`; it waits for BOOTSEL. It reports write
+and synchronization, which does not independently verify running firmware.
+Rollback/custom UF2 inputs use the explicit path form above. `flash` has no
+default board and is excluded from normal builds and checks.
+
 The GUI starts offline. `--live` explicitly enables the vendor telemetry HID
 interface; live device operation has not been validated. Tests and check steps
-never enumerate devices or flash firmware. Root `flash` remains disabled.
+never enumerate devices or flash firmware.
 The separately built `zig_flash` requires an explicit firmware input and is
 invoked manually when hardware work is authorized.
 

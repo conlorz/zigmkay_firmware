@@ -104,7 +104,7 @@ pub fn main(init: std.process.Init) !void {
     _ = try r.run(&.{args[3]}, false, "Usage:");
     _ = try r.run(&.{ args[6], args[7], args[5], args[7], scratch }, false, "Expected Zig 0.16.0, got 0.15.2");
     try std.testing.expectError(error.FileNotFound, dir.access(init.io, "hardware-tool-executed", .{}));
-    for ([_][]const u8{ "firmware", "companion", "companion-headless" }) |step| {
+    for ([_][]const u8{ "firmware", "companion", "companion-headless", "companion-run", "flash" }) |step| {
         _ = try r.run(&.{ args[4], "build", "-j4", step }, false, "Missing -Dkeyboard");
         _ = try r.run(&.{ args[4], "build", "-j4", step, "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");
     }
@@ -121,6 +121,8 @@ pub fn main(init: std.process.Init) !void {
         count += 1;
     }
     try std.testing.expectEqual(@as(usize, 10), count);
-    _ = try r.run(&.{ args[4], "build", "-j4", "flash", "-Dkeyboard=lk7" }, false, "flash is not implemented");
+    const alias_listing = try r.run(&.{ args[4], "build", "-j4", "ls" }, true, "lk7: companion=lk7 offline");
+    try std.testing.expectEqualStrings(listing, alias_listing);
+    _ = try r.run(&.{ args[4], "build", "-j4", "flash", "--", "--help" }, true, "Usage: zig_flash");
     std.debug.print("Offline executable and build-boundary checks passed\n", .{});
 }

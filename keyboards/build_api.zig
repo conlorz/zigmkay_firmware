@@ -49,9 +49,9 @@ pub fn selectionError(b: *std.Build, selection: ?[]const u8) ?[]const u8 {
 pub fn commands(b: *std.Build, root: std.Build.LazyPath, microzig_dep: *std.Build.Dependency, shared: Shared, selected: ?[]const u8, optimize: std.builtin.OptimizeMode) void {
     const chosen = b.step("firmware", "Compile and install the explicitly selected board");
     const all = b.step("firmware-all", "Compile and install every catalog entry");
-    b.step("flash", "Reserved for later hardware transport").dependOn(&b.addFail("flash is not implemented in phase 2").step);
     const list = b.addRunArtifact(b.addExecutable(.{ .name = "list-keyboards", .root_module = b.createModule(.{ .root_source_file = root.path(b, "list.zig"), .target = b.graph.host }) }));
     b.step("list-keyboards", "List sorted IDs and companion support").dependOn(&list.step);
+    b.step("ls", "Alias for list-keyboards").dependOn(&list.step);
     if (selectionError(b, selected)) |message| chosen.dependOn(&b.addFail(message).step);
     const mb = MicroBuild.init(b, microzig_dep) orelse return;
     for (registry.entries) |entry| {

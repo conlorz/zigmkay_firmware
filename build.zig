@@ -2,6 +2,7 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const selection = b.option([]const u8, "keyboard", "Select a firmware or companion board explicitly");
+    const flash_mount = b.option([]const u8, "mount", "Bootloader volume label or absolute mount path (default RPI-RP2)");
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Firmware optimization (default ReleaseSafe)") orelse .ReleaseSafe;
     _ = b.standardTargetOptions(.{});
     const model_dep = b.dependency("layout_model", .{});
@@ -121,6 +122,21 @@ pub fn build(b: *std.Build) void {
         .protocol = protocol,
         .keycodes = keycodes.module,
     }, selection, optimize);
+    const flash_step = b.step("flash", "Explicitly flash selected firmware or a supplied UF2 using zig_flash");
+    const flash_run = b.addRunArtifact(flash_tool.exe);
+    flash_run.has_side_effects = true;
+    if (b.args) |args| {
+        // Explicit UF2/mount arguments and --help use the utility's native CLI.
+        flash_run.addArgs(args);
+        flash_step.dependOn(&flash_run.step);
+    } else if (@import("keyboards").api.selectionError(b, selection)) |message| {
+        flash_step.dependOn(&b.addFail(message).step);
+    } else {
+        flash_run.step.dependOn(&b.top_level_steps.get("firmware").?.step);
+        flash_run.addArg(b.getInstallPath(.prefix, b.fmt("firmware/{s}/zigmkay.uf2", .{selection.?})));
+        if (flash_mount) |path| flash_run.addArg(path);
+        flash_step.dependOn(&flash_run.step);
+    }
     const registry_module = b.createModule(.{ .root_source_file = b.path("tools/registry/main.zig"), .target = b.graph.host });
     const registry_exe = b.addExecutable(.{ .name = "keyboard-registry", .root_module = registry_module });
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = registry_module })).step);
@@ -155,15 +171,21 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(gui.tests);
     const companion_step = b.step("companion", "Build the selected desktop companion");
     const headless_step = b.step("companion-headless", "Build the selected offline replay executable");
+    const companion_run_step = b.step("companion-run", "Run the selected companion; pass CLI arguments after --");
     if (@import("keyboards").api.selectionError(b, selection)) |message| {
         companion_step.dependOn(&b.addFail(message).step);
         headless_step.dependOn(&b.addFail(message).step);
+        companion_run_step.dependOn(&b.addFail(message).step);
     } else if (!@import("keyboards").api.find(selection.?).?.companion) {
         companion_step.dependOn(&b.addFail(b.fmt("Unsupported companion board '{s}'; supported companion IDs: lk7", .{selection.?})).step);
         headless_step.dependOn(&b.addFail(b.fmt("Unsupported companion board '{s}'; supported companion IDs: lk7", .{selection.?})).step);
+        companion_run_step.dependOn(&b.addFail("Unsupported companion board; supported companion IDs: lk7").step);
     } else {
         companion_step.dependOn(&b.addInstallArtifact(gui.exe, .{}).step);
         headless_step.dependOn(&b.addInstallArtifact(headless, .{}).step);
+        const run = b.addRunArtifact(gui.exe);
+        if (b.args) |args| run.addArgs(args);
+        companion_run_step.dependOn(&run.step);
     }
     const process_checks = b.addExecutable(.{ .name = "process-checks", .root_module = b.createModule(.{
         .root_source_file = b.path("tools/process_checks.zig"),
