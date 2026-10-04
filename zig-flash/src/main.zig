@@ -1,6 +1,12 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const uf2 = @import("uf2.zig");
+const volume = @import("volume.zig");
+const transfer = @import("transfer.zig");
+const discovery_ms = 30_000;
+fn now(io: std.Io) u64 {
+    return @intCast(std.Io.Clock.awake.now(io).toMilliseconds());
+}
 
 fn validLabel(label: []const u8) bool {
     if (label.len == 0 or std.mem.eql(u8, label, ".") or std.mem.eql(u8, label, "..")) return false;
@@ -15,8 +21,8 @@ fn mountedPath(gpa: std.mem.Allocator, os: std.Target.Os.Tag, user: ?[]const u8,
         else => error.AbsoluteMountPathRequired,
     };
 }
-fn waitForDrive(io: std.Io, path: []const u8) !void {
-    while (true) {
+fn waitForDrive(io: std.Io, path: []const u8, deadline: u64) !void {
+    while (now(io) < deadline) {
         var dir = std.Io.Dir.cwd().openDir(io, path, .{}) catch |err| switch (err) {
             error.FileNotFound => {
                 try std.Io.sleep(io, .fromMilliseconds(200), .awake);
@@ -27,15 +33,17 @@ fn waitForDrive(io: std.Io, path: []const u8) !void {
         dir.close(io);
         return;
     }
+    return error.DiscoveryTimeout;
 }
-fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8) ![]u8 {
+fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8, deadline: u64) ![]u8 {
     if (!validLabel(label)) return error.InvalidVolumeLabel;
     const win = struct {
         extern "kernel32" fn GetLogicalDrives() callconv(.winapi) u32;
         extern "kernel32" fn GetVolumeInformationW([*:0]const u16, [*]u16, u32, ?*u32, ?*u32, ?*u32, ?[*]u16, u32) callconv(.winapi) i32;
     };
-    while (true) {
+    while (now(io) < deadline) {
         const drives = win.GetLogicalDrives();
+        var selected: ?u8 = null;
         for (0..26) |index| {
             if (drives & (@as(u32, 1) << @intCast(index)) == 0) continue;
             const letter: u8 = 'A' + @as(u8, @intCast(index));
@@ -49,53 +57,116 @@ fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8) ![
                 matches = false;
                 break;
             };
-            if (matches) return gpa.dupe(u8, &.{ letter, ':', '\\' });
+            if (matches) {
+                if (selected != null) return error.AmbiguousVolumes;
+                selected = letter;
+            }
         }
+        if (selected) |letter| return gpa.dupe(u8, &.{ letter, ':', '\\' });
         try std.Io.sleep(io, .fromMilliseconds(200), .awake);
     }
+    return error.DiscoveryTimeout;
 }
 fn writeFirmware(io: std.Io, contents: []const u8, destination_dir: std.Io.Dir, destination: []const u8) !void {
     // A UF2 volume is a device protocol, not ordinary file storage. Write the
     // final name directly and synchronize it before reporting completion.
-    const output = try destination_dir.createFile(io, destination, .{});
-    defer output.close(io);
-    std.log.info("Destination opened; writing firmware bytes", .{});
-    var offset: usize = 0;
-    while (offset < contents.len) {
-        const count = @min(4096, contents.len - offset);
-        try output.writePositionalAll(io, contents[offset..][0..count], offset);
-        offset += count;
-    }
-    std.log.info("Write complete; synchronizing destination", .{});
-    try output.sync(io);
+    const Native = struct {
+        io: std.Io,
+        dir: std.Io.Dir,
+        name: []const u8,
+        output: ?std.Io.File = null,
+        pub fn now(self: *@This()) u64 {
+            return @intCast(std.Io.Clock.awake.now(self.io).toMilliseconds());
+        }
+        pub fn open(self: *@This()) !void {
+            self.output = try self.dir.createFile(self.io, self.name, .{});
+            std.log.info("Destination opened; writing firmware bytes", .{});
+        }
+        pub fn close(self: *@This()) void {
+            self.output.?.close(self.io);
+        }
+        pub fn checkCancellation(self: *@This()) !void {
+            try self.io.checkCancel();
+        }
+        pub fn write(self: *@This(), bytes: []const u8, offset: usize) !void {
+            try self.output.?.writePositionalAll(self.io, bytes, offset);
+        }
+        pub fn sync(self: *@This()) !void {
+            std.log.info("Write complete; synchronizing destination", .{});
+            try self.output.?.sync(self.io);
+        }
+    };
+    var backend = Native{ .io = io, .dir = destination_dir, .name = destination };
+    var stage: transfer.Stage = .opening;
+    transfer.run(Native, &backend, contents, &stage) catch |err| {
+        std.log.err("Transfer failed at {s}: {s}; completion is not confirmed", .{ @tagName(stage), @errorName(err) });
+        return err;
+    };
+}
+fn writeIdentifiedVolume(io: std.Io, contents: []const u8, dir: std.Io.Dir) !void {
+    try volume.validate(io, dir);
+    try writeFirmware(io, contents, dir, "firmware.uf2");
 }
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
     if (args.len == 2 and std.mem.eql(u8, args[1], "--help")) {
-        std.debug.print("Usage: zig_flash <firmware.uf2> [absolute mount path or volume label]\nDefault label: RPI-RP2.\n", .{});
+        std.debug.print("Usage: zig_flash <firmware.uf2> [mount or label] [--verify-lk7 <companion binary>]\nDefault label: RPI-RP2; discovery: 30s.\n", .{});
         return;
     }
     // No implicit input: running the binary without arguments cannot start waiting for hardware.
-    if (args.len < 2 or args.len > 3) return error.Usage;
+    if (args.len < 2 or args.len > 5) return error.Usage;
+    const verifier: ?[]const u8 = if (args.len == 5 and std.mem.eql(u8, args[3], "--verify-lk7")) args[4] else null;
+    if (args.len > 3 and verifier == null) return error.Usage;
+    if (verifier) |executable| {
+        const file = try std.Io.Dir.cwd().openFile(init.io, executable, .{});
+        file.close(init.io);
+    }
     const source = args[1];
     const contents = try std.Io.Dir.cwd().readFileAlloc(init.io, source, gpa, .limited(32 * 1024 * 1024));
     uf2.validate(gpa, contents) catch |err| {
         std.log.err("Invalid RP2040 UF2: {t}; no device file opened", .{err});
         return err;
     };
-    const mount = if (args.len == 3) args[2] else "RPI-RP2";
-    const path = if (std.fs.path.isAbsolute(mount)) mount else if (builtin.os.tag == .windows) try waitForWindowsLabel(gpa, init.io, mount) else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
+    const hash = std.crypto.hash.sha2.Sha256.hash;
+    var digest: [32]u8 = undefined;
+    hash(contents, &digest, .{});
+    std.log.info("Validated RP2040 artifact: {s}, {d} bytes, sha256={x}", .{ source, contents.len, digest });
+    const mount = if (args.len >= 3) args[2] else "RPI-RP2";
+    const deadline = now(init.io) +| discovery_ms;
+    var path = if (std.fs.path.isAbsolute(mount)) try gpa.dupe(u8, mount) else if (builtin.os.tag == .windows) try waitForWindowsLabel(gpa, init.io, mount, deadline) else try mountedPath(gpa, builtin.os.tag, init.environ_map.get("USER"), mount);
+    std.log.info("Discovering intended BOOTSEL volume {s}; deadline {d} ms", .{ mount, discovery_ms });
+    if (!std.fs.path.isAbsolute(mount) and builtin.os.tag != .windows) {
+        const root = std.fs.path.dirname(path).?;
+        while (now(init.io) < deadline) {
+            if (try volume.discover(gpa, init.io, root, mount)) |selected| {
+                path = selected;
+                break;
+            }
+            try std.Io.sleep(init.io, .fromMilliseconds(200), .awake);
+        }
+    }
     std.log.info("Waiting for volume at {s}", .{path});
-    try waitForDrive(init.io, path);
-    std.log.info("Volume found; opening firmware.uf2 for writing", .{});
-    try std.Io.sleep(init.io, .fromMilliseconds(500), .awake);
-    const destination = try std.fs.path.join(gpa, &.{ path, "firmware.uf2" });
+    try waitForDrive(init.io, path, deadline);
+    var destination_dir = try std.Io.Dir.cwd().openDir(init.io, path, .{});
+    defer destination_dir.close(init.io);
+    try volume.validate(init.io, destination_dir);
+    std.log.info("Identified RP2040 BOOTSEL volume at {s}; opening firmware.uf2", .{path});
+    std.log.warn("Filesystem open/write/sync can block in the kernel. Deadline checks cannot interrupt that call; use Ctrl-C once, then physical BOOTSEL reconnect if it remains stuck. Never start a second writer.", .{});
     // Keep the exact validated input even if another build replaces the source
     // while this command waits for BOOTSEL.
-    try writeFirmware(init.io, contents, std.Io.Dir.cwd(), destination);
-    std.log.info("Firmware written and synchronized to {s}", .{destination});
+    try writeIdentifiedVolume(init.io, contents, destination_dir);
+    std.log.info("Transfer completed and synchronized at {s}; restart is not yet verified", .{path});
+    if (verifier) |executable| {
+        var child = try std.process.spawn(init.io, .{ .argv = &.{ executable, "--verify-running" } });
+        const result = try child.wait(init.io);
+        switch (result) {
+            .exited => |code| if (code != 0) return error.RunningVerificationFailed,
+            else => return error.RunningVerificationFailed,
+        }
+        std.log.info("Running LK7 identity and coherent snapshot verified; no binary readback was performed", .{});
+    }
 }
 test "direct firmware write replaces longer files and preserves all chunks" {
     const io = std.testing.io;
@@ -118,4 +189,24 @@ test "volume labels cannot escape mount roots" {
     try std.testing.expectEqualStrings("/run/media/alice/RPI-RP2", linux);
     try std.testing.expectError(error.MissingUser, mountedPath(std.testing.allocator, .linux, null, "RPI-RP2"));
     try std.testing.expectError(error.AbsoluteMountPathRequired, mountedPath(std.testing.allocator, .windows, null, "RPI-RP2"));
+}
+
+test "wrong and missing boot identity never create destination; source snapshot survives replacement" {
+    const io = std.testing.io;
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    const original: [9217]u8 = @splat(0xa7);
+    try std.testing.expectError(error.FileNotFound, writeIdentifiedVolume(io, &original, temp.dir));
+    try temp.dir.writeFile(io, .{ .sub_path = "INFO_UF2.TXT", .data = "UF2 Bootloader v3.0\nModel: Other\nBoard-ID: RPI-RP2\n" });
+    try std.testing.expectError(error.UnexpectedBootloader, writeIdentifiedVolume(io, &original, temp.dir));
+    try std.testing.expectError(error.FileNotFound, temp.dir.openFile(io, "firmware.uf2", .{}));
+    try temp.dir.writeFile(io, .{ .sub_path = "source.uf2", .data = &original });
+    const snapshot = try temp.dir.readFileAlloc(io, "source.uf2", std.testing.allocator, .limited(10000));
+    defer std.testing.allocator.free(snapshot);
+    try temp.dir.writeFile(io, .{ .sub_path = "source.uf2", .data = "changed during discovery" });
+    try temp.dir.writeFile(io, .{ .sub_path = "INFO_UF2.TXT", .data = "UF2 Bootloader v3.0\nModel: Raspberry Pi RP2\nBoard-ID: RPI-RP2\n" });
+    try writeIdentifiedVolume(io, snapshot, temp.dir);
+    const result = try temp.dir.readFileAlloc(io, "firmware.uf2", std.testing.allocator, .limited(10000));
+    defer std.testing.allocator.free(result);
+    try std.testing.expectEqualSlices(u8, &original, result);
 }

@@ -8,6 +8,9 @@ fn word(bytes: []const u8, offset: usize) u32 {
 pub fn validate(gpa: std.mem.Allocator, bytes: []const u8) !void {
     if (bytes.len == 0 or bytes.len % 512 != 0) return error.InvalidUf2Length;
     const count = bytes.len / 512;
+    // Support a conservative 2 MiB transfer capacity; never infer physical
+    // capacity from the RP2040's larger 16 MiB XIP window.
+    if (count > 2 * 1024 * 1024 / 256) return error.Uf2ExceedsBoardFlash;
     var seen = try std.DynamicBitSetUnmanaged.initEmpty(gpa, count);
     defer seen.deinit(gpa);
     for (0..count) |index| {
@@ -15,14 +18,24 @@ pub fn validate(gpa: std.mem.Allocator, bytes: []const u8) !void {
         if (word(block, 0) != 0x0a324655 or word(block, 4) != 0x9e5d5157 or word(block, 508) != 0x0ab16f30) return error.InvalidUf2Magic;
         const flags = word(block, 8);
         if (flags & 0x2000 == 0 or word(block, 28) != 0xe48bff56) return error.MissingOrWrongRP2040Family;
-        if (flags & 1 != 0 or word(block, 16) != 256) return error.InvalidUf2FlashBlock;
+        if (flags != 0x2000 or word(block, 16) != 256) return error.InvalidUf2FlashBlock;
         const address = word(block, 12);
         if (address < 0x10000000 or address > 0x10ffff00 or address % 256 != 0) return error.InvalidUf2FlashAddress;
         const number = word(block, 20);
         if (word(block, 24) != count or number >= count) return error.IncompleteUf2Transfer;
         if (seen.isSet(number)) return error.DuplicateUf2Block;
+        if (address != 0x10000000 + number * 256) return error.InvalidUf2AddressOrder;
         seen.set(number);
     }
+}
+
+test "UF2 rejects aliased addresses and unsupported block flags" {
+    var bytes = fixture(0, 2) ++ fixture(1, 2);
+    @memcpy(bytes[512 + 12 ..][0..4], bytes[12..16]);
+    try std.testing.expectError(error.InvalidUf2AddressOrder, validate(std.testing.allocator, &bytes));
+    var single = fixture(0, 1);
+    single[8] |= 0x80;
+    try std.testing.expectError(error.InvalidUf2FlashBlock, validate(std.testing.allocator, &single));
 }
 
 fn fixture(number: u32, count: u32) [512]u8 {

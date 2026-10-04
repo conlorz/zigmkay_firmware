@@ -87,6 +87,7 @@ pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
     var smoke = false;
     var live = false;
+    var verify_running = false;
     var replay: ?[]const u8 = null;
     var timed_replay: ?[]const u8 = null;
     var path: ?[]const u8 = null;
@@ -101,7 +102,10 @@ pub fn main(init: std.process.Init) !void {
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
-        if (std.mem.eql(u8, arg, "--smoke")) smoke = true else if (std.mem.eql(u8, arg, "--live")) live = true else if (std.mem.eql(u8, arg, "--no-top")) top = false else if (std.mem.eql(u8, arg, "--unfocusable")) focusable = false else if (std.mem.eql(u8, arg, "--borderless")) borderless = true else if (std.mem.eql(u8, arg, "--click-through")) click_through = true else if (std.mem.eql(u8, arg, "--position") and i + 2 < args.len) {
+        if (std.mem.eql(u8, arg, "--verify-running")) {
+            verify_running = true;
+            live = true;
+        } else if (std.mem.eql(u8, arg, "--smoke")) smoke = true else if (std.mem.eql(u8, arg, "--live")) live = true else if (std.mem.eql(u8, arg, "--no-top")) top = false else if (std.mem.eql(u8, arg, "--unfocusable")) focusable = false else if (std.mem.eql(u8, arg, "--borderless")) borderless = true else if (std.mem.eql(u8, arg, "--click-through")) click_through = true else if (std.mem.eql(u8, arg, "--position") and i + 2 < args.len) {
             position = .{ .x = try std.fmt.parseInt(c_int, args[i + 1], 10), .y = try std.fmt.parseInt(c_int, args[i + 2], 10) };
             i += 2;
         } else if (i + 1 < args.len and (std.mem.eql(u8, arg, "--replay") or std.mem.eql(u8, arg, "--session-replay") or std.mem.eql(u8, arg, "--device-path") or std.mem.eql(u8, arg, "--capture") or std.mem.eql(u8, arg, "--capture-ms") or std.mem.eql(u8, arg, "--opacity"))) {
@@ -114,6 +118,26 @@ pub fn main(init: std.process.Init) !void {
     // SDL 3.4 defaults to game-controller collections and filters our vendor page.
     // Selection below still opens only the exact FAFA/00F0/FF31/0074 collection.
     if (live and !sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+    if (verify_running) {
+        if (capture_path != null) return error.IncompatibleModes;
+        var verification_seed: u32 = undefined;
+        try init.io.randomSecure(std.mem.asBytes(&verification_seed));
+        var verifier = try adapter.Driver(Native).init(.{ .io = init.io }, keymap.identity, verification_seed, path);
+        defer verifier.disconnect(verifier.transport.now());
+        const deadline = verifier.transport.now() +| 10_000;
+        while (verifier.transport.now() < deadline) {
+            verifier.poll(verifier.transport.now());
+            if (verifier.status == .multiple_devices) return error.AmbiguousRunningDevices;
+            if (verifier.session.phase == .incompatible) return error.RunningIdentityMismatch;
+            if (verifier.session.phase == .live and !verifier.session.stale) {
+                std.log.info("Verified running board/profile/layout identity and coherent snapshot: lk7/danish digest={x}", .{keymap.identity.digest});
+                return;
+            }
+            try std.Io.sleep(init.io, .fromMilliseconds(10), .awake);
+        }
+        std.log.err("Running verification timed out: connection={s}, phase={s}, transport={s}", .{ @tagName(verifier.status), @tagName(verifier.session.phase), if (verifier.transport_error) |err| @errorName(err) else "none" });
+        return error.RunningVerificationTimeout;
+    }
     var state = try companion.State.init(.{ .key_count = keymap.key_count, .layer_count = keymap.keymap.len });
     var replay_stale = false;
     var log = LogComponent{};

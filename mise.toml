@@ -106,17 +106,18 @@ flag "--optimize <mode>" default="ReleaseSafe" {
 }
 flag "--mount <path>" default="RPI-RP2" help="BOOTSEL volume label or absolute path"
 '''
-depends = [{task = "//:firmware", args = ["{{usage.keyboard}}", "--optimize", "{{usage.optimize}}"]}, "//zig-flash:build"]
-run = 'zig-out/bin/zig_flash "zig-out/firmware/$usage_keyboard/zigmkay.uf2" "$usage_mount"'
+depends = [{task = "//:firmware", args = ["{{usage.keyboard}}", "--optimize", "{{usage.optimize}}"]}, "//zig-flash:build", "//zigmkay-companion:build"]
+run = 'zig-out/bin/zig_flash "zig-out/firmware/$usage_keyboard/zigmkay.uf2" "$usage_mount" {% if usage.keyboard == "lk7" %}--verify-lk7 zig-out/bin/zigmkay_companion{% endif %}'
 
 [tasks.flash-file]
 description = "HARDWARE: flash an explicit UF2, including rollback images"
 usage = '''
 arg "<file>" help="UF2 input path"
 flag "--mount <path>" default="RPI-RP2"
+flag "--verify-lk7" help="Verify current LK7 board/profile/layout identity after transfer"
 '''
-depends = ["//zig-flash:build"]
-run = 'zig-out/bin/zig_flash "$usage_file" "$usage_mount"'
+depends = ["//zig-flash:build", "//zigmkay-companion:build"]
+run = 'zig-out/bin/zig_flash "$usage_file" "$usage_mount" {% if usage.verify_lk7 %}--verify-lk7 zig-out/bin/zigmkay_companion{% endif %}'
 
 [tasks.convert]
 description = "Explicitly convert one HJSON input; paths are relative to repo root"
