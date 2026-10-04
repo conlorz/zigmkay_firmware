@@ -358,3 +358,30 @@ fn on_event(event: core.ProcessorEvent, layers: *core.LayerActivations, output_q
 pub const custom_functions = core.CustomFunctions{
     .on_event = on_event,
 };
+
+/// Shared firmware/companion identity. Change a callback declaration when its
+/// behavior changes; function addresses cannot identify compiled actions.
+pub fn identity(comptime protocol: type) protocol.Identity {
+    @setEvalBranchQuota(500_000);
+    var flattened: [keymap.len * key_count]?core.KeyDef = undefined;
+    for (keymap, 0..) |layer, layer_index| {
+        for (layer, 0..) |action, key_index| {
+            flattened[layer_index * key_count + key_index] = action;
+        }
+    }
+    return protocol.computeIdentity(.{
+        .board_id = .{ 'l', 'k', '7', 0, 0, 0, 0, 0 },
+        .profile_id = .{ 'd', 'a', 'n', 'i', 's', 'h', 0, 0 },
+        .dimensions = dimensions,
+        .keys = &flattened,
+        .sides = &sides,
+        .combos = &combos,
+        .encoders = &.{},
+        .callbacks = &.{
+            .{ .id = 1, .behavior = "rollercole-v1:tap-enable-gaming;hold-left-layers-alt-release" },
+            .{ .id = 2, .behavior = "rollercole-v1:tap-disable-gaming-escape;hold-right-layers" },
+            .{ .id = 3, .behavior = "rollercole-v1:tap-space-colon-equals-space" },
+            .{ .id = 4, .behavior = "rollercole-v1:tap-hold-alt-tab" },
+        },
+    }) catch @panic("Invalid LK7 profile identity");
+}

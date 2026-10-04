@@ -60,3 +60,31 @@ No C expansion or upstream dependency edit is authorized.
 Ownership: worker paused at contract checkpoint awaiting coordinator review.
 Next action: freeze/review contract, commit literal fixture checkpoint, then
 release codec implementation. G01 remains pending.
+
+## Codec checkpoint
+
+State: Submitted; worker paused before Session implementation. Contract proposal
+commit `c3db81a` consumed. Production change: `device-protocol/src/root.zig` adds
+portable v2 framing, identity/snapshot bodies and fragment helpers, explicit
+validation/directions, and canonical semantic SHA-256 identity hashing. Dedicated
+tests/doc and this handover updated. Coordinator publication/build changes are
+separate owned integration prerequisites, not worker changes.
+
+Scoped checks on this working tree:
+
+- Zig 0.16.0 `zig test --dep device-protocol --dep layout-model
+  -Mroot=tests/test_protocol_session.zig --dep layout-model
+  -Mdevice-protocol=device-protocol/src/root.zig
+  -Mlayout-model=layout-model/src/root.zig`: 6 passed, including independent wire
+  fixtures, complete canonical byte stream plus literal digest, action/callback
+  changes, malformed data and exhaustive single-byte fixture mutations.
+- `zig test --dep device-protocol --dep layout-model --dep companion-model
+  -Mroot=tests/test_device_protocol.zig --dep layout-model
+  -Mdevice-protocol=device-protocol/src/root.zig
+  -Mlayout-model=layout-model/src/root.zig --dep layout-model --dep device-protocol
+  -Mcompanion-model=companion-model/src/root.zig`: existing 6 v1 tests passed.
+- `zig fmt device-protocol/src/root.zig tests/test_protocol_session.zig`: completed.
+
+All commands use `/Users/clorz/.zvm/0.16.0/zig`; no hardware accessed. Coordinator
+native/Wasm/LK7 publication checks pending. Session/recovery, replay, full acceptance
+and G01 remain pending. Next: coordinator review/commit codec, release reducer.

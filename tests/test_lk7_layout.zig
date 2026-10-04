@@ -3,6 +3,16 @@ const model = @import("layout-model");
 const geometry = model.physical_layout;
 const lk7 = @import("lk7-keymap");
 const physical = @import("lk7-physical");
+const protocol = @import("device-protocol");
+
+test "LK7 compiled identity matches runtime canonical computation" {
+    const compiled = comptime lk7.identity(protocol);
+    const runtime = lk7.identity(protocol);
+    try std.testing.expectEqualDeep(compiled, runtime);
+    try std.testing.expectEqualSlices(u8, "lk7", compiled.board_id[0..3]);
+    try std.testing.expectEqualSlices(u8, "danish", compiled.profile_id[0..6]);
+    try std.testing.expectEqualDeep(lk7.dimensions, compiled.dimensions);
+}
 
 test "real LK7 layout has a complete stable mapping and valid logical actions" {
     try std.testing.expectEqual(@as(usize, 34), physical.keys.len);

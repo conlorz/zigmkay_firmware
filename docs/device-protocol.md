@@ -87,7 +87,7 @@ never hashed. 05/07/08 reuse this digest; artifact hashes are separate.
 
 Canonical order: domain, board, profile, dimensions, key definitions, sides,
 combos, encoders, callback declarations. Each collection starts with u16 length.
-Key tags: none=0, tap_only=1, hold_only=2, tap_hold=3, autofire=4. Tap fields are
+Key tags: none=0, tap_only=1, hold_only=2, tap_hold=3, autofire=4, null=5. Tap fields are
 key_press, one_shot, custom, media_key, mouse_action in that order. KeyPress fields
 are keycode u8, modifiers u8, dead bool. Hold fields are modifiers u8, optional
 layer u8, optional custom u8. TapHold is tap, hold, term u16, retro bool; autofire
@@ -165,6 +165,23 @@ Headless default remains strict v1 replay. Explicit `--session` reads v2 reports
 against the compiled LK7 identity; it runs a deterministic clock (1 ms/report),
 prints session/stale state, and requires a live terminal state. It executes no
 transport/device I/O. Literal session fixtures reside in dedicated Zig tests.
+
+Codec checkpoint API: `IdentityInput` contains board_id/profile_id `[8]u8`,
+dimensions, keys `[]const ?model.KeyDef` in layer-major order, sides, combos,
+encoders and callbacks `[]const CallbackIdentity`. A callback is `{id:u8,
+behavior:[]const u8}`; combined tap/hold callbacks sharing an ID declare their
+combined behavior once. `computeIdentity` returns `ProtocolError!Identity`.
+`Packet` contains session, sequence, request, nonce and tagged payload; nonce is
+nonzero only for Hello, whose header session remains zero. `encodePacket` and
+`decodePacket` take dimensions and explicit `Direction`. `identityPackets` and
+`snapshotPackets` construct bounded fragments; `identityBody/decodeIdentityBody`
+allow atomic assembly validation. Canonical base test digest is
+`11b55962b87855f941de484392a96650` (independent complete bytes in the dedicated test).
+
+Session implementation must discard queued pre-cut deltas using the same modular
+order rule before validating post-cut contiguity. A malformed frame during live
+operation must itself produce a bounded recovery intent; an adapter must not be
+required to infer recovery solely from a returned decode error.
 
 ## Preserved v1 literals
 

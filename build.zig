@@ -25,16 +25,18 @@ pub fn build(b: *std.Build) void {
     const check_generated = b.step("check-generated", "Check committed generated sources");
     check_generated.dependOn(keycodes.check);
     b.default_step = test_step;
-    const codec_test = b.addTest(.{ .root_module = b.createModule(.{
-        .root_source_file = b.path("tests/test_device_protocol.zig"),
-        .target = b.graph.host,
-        .imports = &.{
-            .{ .name = "layout-model", .module = model.module },
-            .{ .name = "device-protocol", .module = protocol },
-            .{ .name = "companion-model", .module = companion },
-        },
-    }) });
-    test_step.dependOn(&b.addRunArtifact(codec_test).step);
+    for ([_][]const u8{ "tests/test_device_protocol.zig", "tests/test_protocol_session.zig" }) |source| {
+        const codec_test = b.addTest(.{ .root_module = b.createModule(.{
+            .root_source_file = b.path(source),
+            .target = b.graph.host,
+            .imports = &.{
+                .{ .name = "layout-model", .module = model.module },
+                .{ .name = "device-protocol", .module = protocol },
+                .{ .name = "companion-model", .module = companion },
+            },
+        }) });
+        test_step.dependOn(&b.addRunArtifact(codec_test).step);
+    }
     const portable = b.addObject(.{
         .name = "protocol-check",
         .root_module = b.createModule(.{
@@ -65,6 +67,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "layout-model", .module = model.module },
             .{ .name = "lk7-keymap", .module = keymap },
             .{ .name = "lk7-physical", .module = physical },
+            .{ .name = "device-protocol", .module = protocol },
         },
     }) });
     test_step.dependOn(&b.addRunArtifact(layout_test).step);
