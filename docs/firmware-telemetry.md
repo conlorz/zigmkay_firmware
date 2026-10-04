@@ -1,7 +1,8 @@
 # LK7 bounded telemetry transport
 
 USB/LK7 checkpoint against accepted G01 `5b092ec` and pure transport `b1af5aa`.
-Coordinator offline integration checks and hardware acceptance remain pending.
+Coordinator offline integration accepted at `4fd4c66`; hardware acceptance remains
+pending. Root tests pass 325/325; check/check-full, all ten boards and LK7 parity pass.
 
 `zigmkay.telemetry_transport.Transport` owns sixteen 32-byte delta slots, three
 32-byte response slots, a single decoded control mailbox and a recovery flag.
@@ -39,8 +40,10 @@ forgets token/traffic but retains authoritative state for the next handshake.
 Storage is fixed: 512 delta bytes, 96 response bytes, a 20-byte snapshot, one
 Packet mailbox and identity/indices/counters. Observer retains another 20-byte
 snapshot. Native aarch64 ABI totals measured with Zig 0.16.0: Transport 752 bytes,
-Observer 56 bytes, Gate one byte. There is no heap storage. Target ABI and firmware
-size/artifact hashes are coordinator integration outputs. One request dispatch
+Observer 56 bytes, Gate one byte. RP2040 Cortex-M0+ ABI: Transport 732 bytes and
+Observer 40 bytes, measured by Zig compile-time sizes. There is no heap storage.
+LK7 UF2 is 95,232 bytes; identities/hashes are recorded in the
+[manual worksheet](plans/04-manual-worksheet.md). One request dispatch
 and one endpoint attempt per runner tick;
 physical event work is constant per input and bounded by the existing input
 queue. Control floods use one mailbox; there is no unbounded pending work.

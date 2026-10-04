@@ -37,9 +37,9 @@ remains none. Exact active ownership is recorded below.
 | ID | Plan / handover | Status | Entry gate | Next concrete move | Owner / accepted revision |
 | --- | --- | --- | --- | --- | --- |
 | 01 | [Protocol](01-protocol-and-recovery.md) / [handover](handovers/01-protocol.md) | Accepted | Clean baseline inspected | Frozen v2 contract consumed by 02/03 | Coordinator / `5b092ec` |
-| 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Active | G01 | Queue/state and fake endpoint tests, then LK7 integration | firmware / none |
-| 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Active | G01 | Fake HID adapter/session integration, geometry and compact UI | overlay / none |
-| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Planned | G-live-offline; user starts session | Identify firmware/GUI/rollback and run the manual worksheet | Unassigned / none |
+| 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
+| 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
+| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Waiting-user | G-live-offline; user starts session | Run the identified manual worksheet after explicit hardware task | Coordinator with user / none |
 | 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G04; reviewed assignments | Review QWERTY diagram, add shared selector and profile, then manual tests | Unassigned / none |
 | 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Planned | 06A may start now; final decision needs G05 | Sourced comparison, then reconcile actual profile requirements | Unassigned / none |
 | 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G05 and G06 | Schema/export contract first, editor UI second | Unassigned / none |
@@ -69,7 +69,7 @@ against a protocol/export interface that has not been frozen.
 | Gate | Required evidence | Current state |
 | --- | --- | --- |
 | G01 | Accepted 01: versioned wire/API, identity, snapshot ordering, limits, fixtures and passing offline checks | Accepted `5b092ec`; check/check-full passed |
-| G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Pending |
+| G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Accepted `4fd4c66`; 325 tests, all ten boards, parity and GUI smoke; worksheet ready |
 | G04 | Actual passing typing/identity/snapshot/recovery worksheet from 04; optional overlay limits have explicit follow-ups | Pending user session |
 | G05 | Reviewed key assignments, shared selector/identity, compiled profiles and actual EurKEY Next typing checks | Pending |
 | G06 | Final architecture decision grounded in G05; alternatives/sources and 07/08 specifications | Pending |
@@ -102,13 +102,13 @@ material architecture scope change require the user's decision before that work.
 7. **Expansion:** refresh 09A matrices against observed results. Only a selected,
    separately scoped 09B target begins implementation; others remain deferred.
 
-## Active leases and integration queue
+## Completed leases and integration queue
 
 | Agent / task | Exact writable paths | Base / contract revision | Next checkpoint | State |
 | --- | --- | --- | --- | --- |
 | protocol / 01 | Released to coordinator; frozen contract | `5b092ec` / v2 | Consumers request amendments | Accepted |
-| firmware / 02 | `zigmkay/src/telemetry.zig`, `telemetry_transport.zig`, `usb_control.zig`, `usb_if.zig`, `usb_command_executor.zig`, `loops.zig`, `processing.zig`, `core.zig`, `root.zig` (all under `zigmkay/src/`); `keyboards/my_keyboards/rollercole/leonardo_keycaprio_0_7.zig`; `tests/test_telemetry_transport.zig`; `docs/firmware-telemetry.md`; `docs/plans/handovers/02-firmware.md` | `5b092ec` / G01 | Pure transport checkpoint; then USB and LK7 integration | Active |
-| overlay / 03 | `zigmkay-companion/src/main.zig`, `lk7_keymap.zig`, `live_adapter.zig`, `session_capture.zig`, `input_source.zig` (all under `zigmkay-companion/src/`); `zigmkay-companion/src/components/layout.zig`, `cache.zig`, `key.zig`, `log.zig` (all components); `docs/live-overlay.md`; `docs/plans/handovers/03-overlay.md` | `5b092ec` / G01 | Fake adapter checkpoint; then geometry/UI/labels/capture | Active |
+| firmware / 02 | Released to coordinator; exact changed paths in handover | `4fd4c66` / G-live-offline | Manual 04 only after user starts hardware task | Accepted |
+| overlay / 03 | Released to coordinator; exact changed paths in handover | `4fd4c66` / G-live-offline | Manual 04 only after user starts hardware task | Accepted |
 | architecture / 06A | Released; coordinator owns future 06B dispatch | `2762d91` / research | Final decision pending G05 | Accepted |
 | inventory / 09A | Released; coordinator owns future refresh | `99c1dbe` / inventory v1 | Refresh after observed acceptance | Accepted |
 
@@ -117,7 +117,9 @@ package suggestions in plans. Git/index, build/manifests, central docs, shared
 fixtures, and final checks remain coordinator-owned unless explicitly reassigned.
 Ownership transfers require the previous owner to stop writing first.
 
-Integration queue: 02/03 checkpoints pending. Global check/install lane:
+Integration queue: 02/03 accepted; both workers stopped and released all listed
+source leases to coordinator. The historical lease rows above describe their
+completed assignment scope. No worker is active. Global check/install lane:
 **coordinator-owned**, workers run only scoped checks against frozen dependencies.
 Planning-only validation on 2026-10-04: local Markdown links resolve,
 `git diff --check` and `zig build check` pass; source inventory is unchanged and
@@ -135,6 +137,8 @@ reuse this result as evidence for later source changes.
 | 2026-10-04 | 06A architecture comparison accepted, ownership released | `2762d91`; native recommendation provisional; G06 awaits G05 |
 | 2026-10-04 | G01 accepted; codec/session/replay and shared LK7 identity integrated | `c15d182`, `5b092ec`; check/check-full passed; no hardware access |
 | 2026-10-04 | Dispatch 02 firmware and 03 overlay against frozen G01 | Exact disjoint leases above; coordinator owns build glue and stable joint checks |
+| 2026-10-04 | Accept integrated 02/03 and G-live-offline; release worker leases | `6c83623`, `4fd4c66`; 325 tests, check/check-full, ten boards, parity, offline GUI/replays passed; no hardware access |
+| 2026-10-04 | Prepare identified 04 artifacts and rollback; wait for user hardware session | Worksheet contains SHA-256, shared digest and recovery preparation; G04/G05 remain pending |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.

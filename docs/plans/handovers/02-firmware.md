@@ -1,7 +1,7 @@
 # 02 handover: LK7 firmware transport
 
-State: **USB/LK7 checkpoint submitted for review**. Pure machinery committed as
-`b1af5aa`; final coordinator integration and offline acceptance are pending.
+State: **Accepted offline** at integrated revision `4fd4c66`.
+Pure machinery `b1af5aa`; USB/LK7 implementation `6c83623`.
 Producer: firmware worker. Reviewer: coordinator.
 Plan: [02](../02-firmware-telemetry.md). Rules: [handover format](README.md).
 
@@ -34,7 +34,13 @@ build/identity ownership; firmware source lease is released at the checkpoint.
 
 ## Integrated result
 
-Pending. Complete the [result template](README.md) at submission/integration.
+Coordinator accepted 02/03 at `4fd4c66`: root 325/325 tests, check/check-full,
+all ten boards, standalone packages, portable Wasm checks and matching LK7 UF2
+bytes passed. The joint processor/firmware/adapter test covers held attach,
+backpressure, overflow recovery and disconnect/reconnect without hardware.
+RP2040 ABI: Transport 732 bytes, Observer 40. UF2 95,232 bytes (baseline 71,168).
+Artifact hash/identity and rollback are in the [worksheet](../04-manual-worksheet.md).
+No hardware operation ran. Source ownership released to coordinator. Next is 04.
 
 ## Pure transport checkpoint
 

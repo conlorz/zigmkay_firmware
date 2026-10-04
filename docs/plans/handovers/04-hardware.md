@@ -1,6 +1,8 @@
 # 04 handover: observed LK7 live acceptance
 
-State: **Not produced**. No hardware session has occurred for this milestone.
+State: **Waiting-user**. Offline entry gate accepted at `4fd4c66`;
+the [worksheet](../04-manual-worksheet.md) identifies firmware, GUI, shared
+identity and rollback. No hardware session has occurred for this milestone.
 Producer: coordinator with the user. Reviewer: coordinator records observed results.
 Plan: [04](../04-lk7-hardware-acceptance.md). Rules: [handover format](README.md).
 

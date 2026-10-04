@@ -9,7 +9,9 @@ Start planning/execution from the [central tracker](docs/plans/TRACKING.md) and
 [subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). The
 [roadmap](docs/plans/README.md) covers LK7 live monitoring, the QWERTY/EurKEY Next
 Mac profile, editor research, and later build/flash integration. The next
-implementation milestone is [protocol and recovery](docs/plans/01-protocol-and-recovery.md).
+milestone is [manual LK7 acceptance](docs/plans/04-lk7-hardware-acceptance.md).
+Protocol, firmware and overlay offline criteria have passed; the
+[manual worksheet](docs/plans/04-manual-worksheet.md) identifies the artifacts.
 
 ```sh
 zig build                    # host tests, including GUI components
@@ -67,4 +69,6 @@ zig run tools/registry/main.zig -- keyboards/boards.zon keyboards keyboards/gene
 That command also works if the committed registry is missing. Append `--check`
 to compare without writing. To regenerate keycodes, run `zig build convert-all`
 in `zkeycodes`. Ordinary builds and checks never regenerate committed sources.
-See [development](docs/development.md) and [the protocol](docs/device-protocol.md).
+See [development](docs/development.md), [the protocol](docs/device-protocol.md),
+[firmware telemetry](docs/firmware-telemetry.md), and the
+[overlay guide](docs/live-overlay.md) for live selection and timed capture/replay.

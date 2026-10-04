@@ -1,6 +1,7 @@
 # LK7 manual acceptance worksheet
 
-State: preparation only. No device has been accessed, flashed, or accepted.
+State: ready for user session; G-live-offline accepted at `4fd4c66`.
+No device has been accessed, flashed, or accepted.
 Use this worksheet only after G-live-offline and an explicit user hardware
 session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
@@ -8,10 +9,12 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
 | Item | Value |
 | --- | --- |
-| Integrated source revision / protocol contract | Pending 02/03 acceptance |
-| New firmware path / size / SHA-256 | Pending joint build |
-| Companion path / source revision | Pending joint build |
-| Expected board / profile / digest | Pending shared identity publication |
+| Integrated source revision / protocol contract | `4fd4c66` / G01 `5b092ec`, v2 |
+| New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 95,232 bytes |
+| New firmware SHA-256 | `0b9284b423f4918fcb6f769fc0132f33e03e30e8cbd554b16bf55d132c213bda` |
+| Companion path / source revision / size | `zig-out/bin/zigmkay_companion` / `4fd4c66` / 42,232,320 bytes |
+| Companion SHA-256 | `8741fbbf8d060f858707d6502d61923742c1c6b3be37d1ab44ad38e7a1968b68` |
+| Expected board / profile / digest | `lk7` / `danish` / `1ba43aa9b78a280faf77cdf41d0a42eb` (34 keys, 4 layers) |
 | Zig | 0.16.0 |
 | MicroZig revision | `00fde43fa3756790037b099baeafacc3e6bf9499` |
 | Baseline rollback source | `ab66f12`, Rollercole 34-key / four-layer profile |
@@ -21,6 +24,14 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 | Physical LK7 revision / controller recovery procedure | User verification pending |
 | macOS version / input-source ID / cable or hub | User session pending |
 | Overlay placement / opacity / focus settings | User session pending |
+
+Offline acceptance: Zig 0.16.0 root 325/325 tests, check/check-full, all ten
+boards, standalone checks and LK7 UF2 byte parity passed. Companion offline,
+legacy and timed-replay smoke runs each rendered three frames. On an explicitly
+authorized session, start the matching GUI with
+`zig-out/bin/zigmkay_companion --live`; use `--device-path` only if multiple
+matching collections are found. See [the overlay guide](../live-overlay.md).
+Recording requires an explicit `--capture` path and is bounded.
 
 The rollback was freshly compiled offline from the unchanged implementation
 baseline. It has no hardware validation in this session. The cache copy is local

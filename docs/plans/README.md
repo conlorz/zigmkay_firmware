@@ -1,13 +1,13 @@
 # Next-step roadmap
 
-Status: planned. User priorities agreed on 2026-10-04. This roadmap describes
-future work; creating these plans does not implement or hardware-validate it.
+Status: offline milestones 01–03 accepted on 2026-10-04. Manual milestone 04
+awaits the user session; later implementation remains gated.
 
 Execution starts from the [central tracker](TRACKING.md), which owns status,
 assignments, dependencies, and accepted evidence. Read the
 [subagent workflow](SUBAGENT-WORKFLOW.md) for parallel waves, shared-checkout
 ownership, and the fresh-session starting prompt. Each plan has a durable
-[handover](handovers/README.md); all initial records are pending, not accepted.
+[handover](handovers/README.md); consult the tracker for accepted evidence.
 
 ## Starting point and decisions
 
@@ -41,18 +41,15 @@ The user's decisions are:
 - First-party implementation and tests remain Zig. Any new non-Zig code requires
   explicit user permission; existing native C bridges may be retained.
 
-## Current gaps
+## Original gaps and current boundary
 
-`zigmkay/src/telemetry.zig` provides an optional observer, but the LK7 runner does
-not attach a production sink. `usb_command_executor.zig` still delivers legacy
-RawHID signals through the keyboard output queue. The companion expects the new
-32-byte codec, and its current `--live` path lacks handshake, initial snapshot,
-reconnection, and recovery. Do not claim that current firmware and GUI already
-communicate correctly.
-
-The GUI also computes display positions from legacy side tags instead of using
-the existing physical-layout geometry. Firmware and companion keymaps are
-currently fixed imports. These are concrete work items below.
+Milestones 01–03 implemented the versioned session, shared identity, snapshots,
+recovery, bounded firmware USB transport, native companion adapter and shared
+physical geometry. At integrated revision `4fd4c66`, 325 tests, all ten board
+builds, standalone checks and LK7 artifact parity pass. Native GUI offline and
+replay smoke runs pass. Actual USB, typing, labels and window behavior await 04;
+no device has been accessed. Firmware and companion profiles remain fixed until
+the accepted hardware baseline and reviewed 05 assignments permit changes.
 
 ## Milestones and order
 

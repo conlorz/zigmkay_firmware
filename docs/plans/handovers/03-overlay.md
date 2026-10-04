@@ -1,6 +1,6 @@
 # 03 handover: macOS live overlay
 
-State: **Not produced**. No implementation commits or checks are recorded.
+State: **Accepted offline** at integrated revision `4fd4c66`.
 Producer: companion worker. Reviewer: coordinator.
 Plan: [03](../03-macos-live-overlay.md). Rules: [handover format](README.md).
 
@@ -30,7 +30,14 @@ Release companion ownership before profile/editor integration changes its files.
 
 ## Integrated result
 
-Pending. Complete the [result template](README.md) at submission/integration.
+Coordinator accepted 02/03 at `4fd4c66`: 325 root tests, check/check-full,
+all boards, standalone checks and artifact parity passed. Companion 32 tests
+and actual three-frame offline/v1/timed replay smoke runs passed. The joint
+processor/firmware/adapter test verifies held attach, recovery and reconnect.
+Artifact hash and manual environment rows are in the
+[worksheet](../04-manual-worksheet.md). No HID operation ran. Source ownership
+released; real macOS USB/labels/window acceptance remains 04, with documented
+click-through fallback and synchronous native write latency.
 
 ## Portable adapter checkpoint
 
