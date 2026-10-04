@@ -136,3 +136,9 @@ Physical test instructions use the two thumbs nearest the center gap (left Enter
 and right Space), held for one second. Right home-row far-right Y toggles overlay;
 left bottom-row innermost V toggles log; right bottom-row far-right Z closes last.
 Release thumbs after each action. These replace index-only instructions.
+
+The full capture also exposed a file-reader boundary: reading at exactly the
+recorder maximum returned StreamTooLong before probing EOF. Replay loading now
+permits one extra byte for the EOF probe; replay still rejects oversized input.
+A full-capacity file round-trip regression passes, and the actual recorded
+session successfully replays through the GUI's three-frame offline smoke mode.

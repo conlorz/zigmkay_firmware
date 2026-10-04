@@ -2,6 +2,21 @@
 const std = @import("std");
 const protocol = @import("device-protocol");
 const companion = @import("companion-model");
+
+test "full bounded capture survives file read and replay" {
+    var recorder = try Recorder.init(std.testing.allocator);
+    defer recorder.deinit(std.testing.allocator);
+    for (0..max_records) |index| recorder.nonce(.tick, index, 0);
+    try std.testing.expectEqual(max_bytes, recorder.encoded().len);
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    try temp.dir.writeFile(std.testing.io, .{ .sub_path = "full.bin", .data = recorder.encoded() });
+    const bytes = try temp.dir.readFileAlloc(std.testing.io, "full.bin", std.testing.allocator, .limited(max_bytes + 1));
+    defer std.testing.allocator.free(bytes);
+    const identity = protocol.Identity{ .board_id = .{ 'l', 'k', '7', 0, 0, 0, 0, 0 }, .profile_id = .{ 't', 0, 0, 0, 0, 0, 0, 0 }, .digest = @splat(1), .dimensions = .{ .key_count = 1, .layer_count = 1 } };
+    const session = try replay(bytes, identity);
+    try std.testing.expectEqual(companion.Phase.disconnected, session.phase);
+}
 pub const magic = "ZMKCAP01";
 pub const record_size = 48;
 pub const max_records = 4096;

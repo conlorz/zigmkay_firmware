@@ -124,7 +124,9 @@ pub fn main(init: std.process.Init) !void {
         while (offset < bytes.len) : (offset += protocol.report_size) try receive(&state, &log, init.io, bytes[offset..][0..protocol.report_size]);
     }
     if (timed_replay) |file| {
-        const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, file, init.arena.allocator(), .limited(capture.max_bytes));
+        // Allow an EOF probe at the exact recorder capacity; replay enforces
+        // the logical size limit before accepting any records.
+        const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, file, init.arena.allocator(), .limited(capture.max_bytes + 1));
         const session = try capture.replay(bytes, keymap.identity);
         state = session.state;
         replay_stale = session.stale;
