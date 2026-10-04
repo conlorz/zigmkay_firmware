@@ -53,6 +53,24 @@ fn waitForWindowsLabel(gpa: std.mem.Allocator, io: std.Io, label: []const u8) ![
         try std.Io.sleep(io, .fromMilliseconds(200), .awake);
     }
 }
+fn writeFirmware(io: std.Io, source_dir: std.Io.Dir, source: []const u8, destination_dir: std.Io.Dir, destination: []const u8) !void {
+    const input = try source_dir.openFile(io, source, .{});
+    defer input.close(io);
+    // A UF2 volume is a device protocol, not ordinary file storage. Write the
+    // final name directly and synchronize it before reporting completion.
+    const output = try destination_dir.createFile(io, destination, .{});
+    defer output.close(io);
+    var buffer: [4096]u8 = undefined;
+    var offset: u64 = 0;
+    while (true) {
+        const count = try input.readPositionalAll(io, &buffer, offset);
+        if (count == 0) break;
+        try output.writePositionalAll(io, buffer[0..count], offset);
+        offset += count;
+    }
+    try output.sync(io);
+}
+
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
@@ -70,8 +88,20 @@ pub fn main(init: std.process.Init) !void {
     try waitForDrive(init.io, path);
     try std.Io.sleep(init.io, .fromMilliseconds(500), .awake);
     const destination = try std.fs.path.join(gpa, &.{ path, "firmware.uf2" });
-    try std.Io.Dir.cwd().copyFile(source, std.Io.Dir.cwd(), destination, init.io, .{});
-    std.log.info("Firmware copied to {s}", .{destination});
+    try writeFirmware(init.io, std.Io.Dir.cwd(), source, std.Io.Dir.cwd(), destination);
+    std.log.info("Firmware written and synchronized to {s}", .{destination});
+}
+test "direct firmware write replaces longer files and preserves all chunks" {
+    const io = std.testing.io;
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    const bytes: [9217]u8 = @splat(0xa7);
+    try temp.dir.writeFile(io, .{ .sub_path = "input.uf2", .data = &bytes });
+    try temp.dir.writeFile(io, .{ .sub_path = "firmware.uf2", .data = &(@as([10000]u8, @splat(0))) });
+    try writeFirmware(io, temp.dir, "input.uf2", temp.dir, "firmware.uf2");
+    const actual = try temp.dir.readFileAlloc(io, "firmware.uf2", std.testing.allocator, .limited(10000));
+    defer std.testing.allocator.free(actual);
+    try std.testing.expectEqualSlices(u8, &bytes, actual);
 }
 test "volume labels cannot escape mount roots" {
     for ([_][]const u8{ "", ".", "..", "../RPI-RP2", "x/y", "x\\y", "a'b" }) |label| try std.testing.expectError(error.InvalidVolumeLabel, mountedPath(std.testing.allocator, .macos, null, label));

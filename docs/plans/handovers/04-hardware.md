@@ -31,3 +31,15 @@ leases and targeted offline tests before the user reflashes.
 ## Integrated result
 
 Pending user session. Complete the [result template](README.md) with actual evidence.
+
+## Flash investigation, 2026-10-04
+
+User observed that the bootloader volume remains after flashing. Original utility
+reported copy success but USB still enumerated RP2 Boot. After sync/eject and
+physical reconnect, user reports keyboard operation and a combo returning it to
+BOOTSEL; this does not identify which firmware is running. Revised utility uses
+direct final-name writes plus file sync instead of Zig atomic copy/rename.
+Offline chunk/truncation tests and five-platform compilation passed. Live retry
+reported successful write/sync, but RP2 Boot and its mount remained immediately
+afterward. Automatic reboot and installed firmware identity remain unresolved;
+do not release G04 or attribute this conclusively to macOS caching.
