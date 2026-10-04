@@ -102,6 +102,10 @@ pub fn main(init: std.process.Init) !void {
         try std.testing.expectError(error.FileNotFound, dir.access(init.io, "output.zig", .{}));
     }
     _ = try r.run(&.{args[3]}, false, "Usage:");
+    const good_input = try std.Io.Dir.cwd().readFileAlloc(init.io, "zkeycodes/test_data/keycodes_0.0.1_basic.hjson", gpa, .limited(1024 * 1024));
+    try dir.writeFile(init.io, .{ .sub_path = "keycodes_0.0.1_basic.hjson", .data = good_input });
+    _ = try r.run(&.{ "mise", "run", "//:convert", input, output }, true, "");
+    try dir.access(init.io, "output.zig", .{});
     _ = try r.run(&.{ args[6], args[7], args[5], args[7], scratch }, false, "Expected Zig 0.16.0, got 0.15.2");
     try std.testing.expectError(error.FileNotFound, dir.access(init.io, "hardware-tool-executed", .{}));
     _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "firmware" }, false, "Missing -Dkeyboard");

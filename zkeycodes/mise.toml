@@ -1,3 +1,7 @@
+[tasks.build]
+description = "Compile the Zig HJSON converter into root zig-out"
+run = "zig build install -j4 -p ../zig-out"
+
 [tasks.test]
 description = "Run keycode generation and label tests"
 run = "zig build test -j4"

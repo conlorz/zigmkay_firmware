@@ -85,7 +85,11 @@ depends = ["//apps/headless:build"]
 [tasks.replay]
 description = "Replay a device trace offline; optional --session selects v2"
 dir = "{{config_root}}"
-run = "zig build --build-file apps/headless/build.zig run -j4 --"
+usage = '''
+arg "<file>" help="Device trace path, relative to monorepo root"
+flag "--session" help="Use v2 deterministic device-report replay"
+'''
+run = 'zig build --build-file apps/headless/build.zig run -j4 -- {% if usage.session %}--session{% endif %} "$usage_file"'
 
 [tasks.flash-tool]
 description = "Build zig_flash into root zig-out without device access"
@@ -116,7 +120,12 @@ run = 'zig-out/bin/zig_flash "$usage_file" "$usage_mount"'
 
 [tasks.convert]
 description = "Explicitly convert one HJSON input; paths are relative to repo root"
-run = "zig build --build-file zkeycodes/build.zig convert -j4 --"
+usage = '''
+arg "<input>" help="Input HJSON path"
+arg "<output>" help="Output Zig path"
+'''
+depends = ["//zkeycodes:build"]
+run = 'zig-out/bin/zkeycodes "$usage_input" "$usage_output"'
 
 [tasks.convert-all]
 description = "Explicitly regenerate committed keycodes"
