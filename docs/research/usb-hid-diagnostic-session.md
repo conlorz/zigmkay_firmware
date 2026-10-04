@@ -1,6 +1,7 @@
 # Bounded LK7 recovery session
 
-Prepared 2026-10-04. **Not run; hardware authorization still pending.**
+Prepared and run 2026-10-04 with explicit user authorization.
+**Configuration/HID attachment succeeded; modifier/release checks remain pending.**
 User confirmed a Mac only, with no SWD probe or USB protocol analyzer.
 Implementation `2e30e9d`; research decision `2972bc6`; Zig 0.16.0.
 All offline checks below passed before preparing this session.
@@ -106,6 +107,29 @@ or original G04 from this diagnostic session alone.
 
 ## Offline result and remaining gates
 
+## Live evidence, 2026-10-04
+
+Mac17,9, macOS 26.6.2 (25G83), Mac only. Exactly one RPI-RP2 volume
+was identified: RP2 Boot VID 2e8a/PID 0003, bootloader v3.0, board RPI-RP2.
+The companion was absent and Brave was closed for the baseline. The identified
+candidate hash matched; one authorized mise transfer completed discovery/open/
+write/sync in 3.88 seconds. No second flash was attempted.
+
+At 17:48:19 local time macOS enumerated FAFA/00F0 at 12 Mbps and selected
+configuration 1. IORegistry attached the keyboard HID/event driver plus consumer,
+mouse and raw HID drivers. One Apple usbdiagnose parsed the 146-byte configuration,
+five interfaces, eight endpoints, and the keyboard's 71-byte descriptor with
+eight-byte input and one-byte output. Reset string 8 returned USBREC1; its
+freshness is not established. Raw captures remain in the ignored session cache.
+
+The user entered `WRRRRasta/n`; that is evidence of input, not yet a controlled
+repeat/release test. They reported typing works after the single unplug/replug.
+Post-reconnect IORegistry again reports configuration 1. The unfamiliar layout
+prevented modifier testing; exact position-based instructions are being supplied.
+Caps Lock has no binding in this candidate; its host LED state is still unverified.
+R-keyboard remains waiting for controlled input/modifier observations. R-custom
+and R-flash remain gated. Windows/Linux live checks remain unavailable.
+
 `mise //:check-full` passed for the complete `2e30e9d` source tree: package and
 integration tests, real pinned HID initialization, Cortex-M0+ probe, ten board
 UF2s, independent parsing of their actual configuration/report payloads,
@@ -114,7 +138,7 @@ inspection confirms the initializer uses contiguous serialized endpoint bytes
 instead of the defective nested constant. It is not target runtime execution.
 
 R-HID-design is recorded/accepted offline. R3 offline work is integrated;
-R-keyboard awaits this run and user-observed input. R-custom is gated on
+R-keyboard awaits the remaining user-observed input/modifier checks. R-custom is gated on
 R-keyboard. R-flash is gated on R-custom and still needs bounded discovery,
 device ambiguity/identity, cancellation/failure fixtures and running verification.
 Windows/Linux live checks are conditional on availability and remain unverified.

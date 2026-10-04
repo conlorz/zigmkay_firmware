@@ -1,7 +1,8 @@
 # Recovery handoff for a fresh session
 
 State: **Research accepted; offline R3 integrated; bounded hardware session
-prepared and waiting for explicit authorization.** Current implementation
+run with explicit authorization; configuration/HID and reconnect input succeeded;
+controlled modifier/release checks pending.** Current implementation
 `2e30e9d`, with full offline checks passing. See
 [research decision](../../research/usb-hid-decision.md) and
 [identified diagnostic session](../../research/usb-hid-diagnostic-session.md).
@@ -25,15 +26,18 @@ prepared and waiting for explicit authorization.** Current implementation
   actual emitted descriptor/report parsing, parity and no-hardware/source guards.
 - User reports Mac only, no SWD or USB analyzer. The session document identifies
   the candidate/rollback hashes, questions, capture route, limits and stop criteria.
-  No hardware operation or flash was performed in this recovery session.
+  One authorized candidate flash completed in 3.88 seconds; macOS selected
+  configuration 1 and attached all four HID drivers. Apple parsed the eight-byte
+  keyboard input. User reports typing after one reconnect; controlled modifier/
+  release and LED observations remain pending. See the session evidence.
 - R-HID-design accepted offline; R-keyboard pending. R-custom and R-flash are
   gated on observed keyboard acceptance. Do not resume original 05–09.
 - Important limits: no known-working rollback binary; B0/B1 abort fails closed;
   no USB diagnostic retrieval after a hard hang or boundary fault; Mac diagnostic
   string freshness unverified. Full tests do not prove live compatibility.
 
-Next: obtain explicit authorization for the concrete bounded LK7 session, run
-one identified candidate, record actual configuration/input and failure evidence.
+Next: supply the unfamiliar layout's exact test positions and record the remaining
+controlled modifier/release and LED observations. Do not repeat the flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 
 ## Historical state before recovery execution

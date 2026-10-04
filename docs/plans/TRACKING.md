@@ -6,12 +6,14 @@ Recovery research/design accepted at `2972bc6`; runtime initializer `c9ea3a1`;
 offline R3 integrated at `2e30e9d`. Full offline checks pass, including ten board
 artifacts, actual USB wire/report parsing and root/standalone parity. The target
 probe demonstrated device-side aggregate corruption that the old host-facing
-serialization did not fix. No recovery-session hardware operation has run.
+serialization did not fix. One authorized candidate flash succeeded: macOS
+configured the device and attached all four HID interfaces; reconnect typing
+works per user. Controlled modifier/release checks remain pending.
 
 | Recovery gate | State | Exact next work |
 | --- | --- | --- |
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
-| R-keyboard | Waiting-user | Explicit authorization for [identified bounded LK7 session](../research/usb-hid-diagnostic-session.md); Mac only, no SWD/analyzer |
+| R-keyboard | Waiting-user | [Live configuration/reconnect evidence](../research/usb-hid-diagnostic-session.md); exact layout instructions for remaining modifier/release checks; Mac only |
 | R-custom | Planned | Only after live keyboard gate; inventory/migration and companion regressions/live signals |
 | R-flash | Planned | Only after R-custom; bounded discovery/failure fixtures, identity/ambiguity and running verification |
 

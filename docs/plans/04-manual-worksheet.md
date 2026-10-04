@@ -7,7 +7,9 @@ authorization. R-keyboard does not automatically accept the original G04
 identity/session/overlay rows below; companion tests wait for R-keyboard.
 
 State: hardware troubleshooting in progress; G04 acceptance is pending.
-Flashing and automatic reboot work; USB configuration still awaits verification.
+One authorized recovery flash, automatic reboot, configuration 1 and all four HID
+attachments succeeded. User reports typing after reconnect; controlled modifier/
+release checks and host LED state remain pending.
 Use this worksheet only after G-live-offline and an explicit user hardware
 session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
@@ -28,7 +30,7 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 | Baseline rollback size | 71,168 bytes |
 | Baseline rollback SHA-256 | `c1ae70b5f442e0ece9a33d29e3b1db409a5e3da8bbd4131d59874b1ff71af232` |
 | Physical LK7 revision / controller recovery procedure | User verification pending |
-| macOS version / input-source ID / cable or hub | User session pending |
+| macOS version / input-source ID / cable or hub | 26.6.2 (25G83), Mac17,9 / input source and cable or hub unverified |
 | Overlay placement / opacity / focus settings | User session pending |
 
 Offline recovery acceptance: Zig 0.16.0 scoped tests and check-full, all ten
