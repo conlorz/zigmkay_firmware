@@ -46,7 +46,13 @@ const Native = struct {
         if (requested != null and selected == null) return .path_not_found;
         if (requested == null and count > 1) return .multiple_devices;
         if (selected) |path| {
-            self.device = sdl.SDL_hid_open_path(path) orelse return error.HidOpenFailed;
+            sdl.SDL_ClearError();
+            self.device = sdl.SDL_hid_open_path(path) orelse {
+                const detail = std.mem.span(sdl.SDL_GetError());
+                std.log.err("Cannot open vendor HID collection {s}: {s}", .{ std.mem.span(path), if (detail.len == 0) "SDL provided no native error detail" else detail });
+                return error.HidOpenFailed;
+            };
+            std.log.info("Opened vendor HID collection {s}", .{std.mem.span(path)});
             return .selected;
         }
         return .no_device;

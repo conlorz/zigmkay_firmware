@@ -97,3 +97,13 @@ completed write/sync in 4.10 seconds. IORegistry subsequently reports ZigMkay,
 configuration 1. Matching GUI started with explicit live access and a five-minute
 bounded test capture at `.zig-cache/manual-session/recovery-11/custom-session.bin`.
 Actual session identity and user-observed control/input results remain pending.
+
+User reports `disconnected / STALE`; custom controls are not accepted. The saved
+200-byte capture has four disconnect records and no connect, send or receive
+records. The driver records connect immediately after successful collection open,
+so failure occurs in discovery/open before protocol negotiation. IORegistry still
+shows configuration 1 and vendor page FF31/usage 0074, with 32-byte reports.
+Exact lower Connection/Transport text is requested. The pinned SDL backend uses
+nonexclusive macOS HID opens; no permission change or firmware reflash is justified
+by this capture alone. Added first-party native open-path/error logging for a
+host-only retry. R4 remains active; R5 implementation remains gated.
