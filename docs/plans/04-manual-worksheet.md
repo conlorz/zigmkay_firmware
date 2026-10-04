@@ -99,14 +99,14 @@ layer combinations. Do not type into sensitive applications during this session.
 | Ordinary typing before monitoring | Baseline tap/hold/combo behavior remains usable | Passed in plan 11: controlled taps/modifiers/releases and user typing |
 | Boot / identity | Keyboard works and expected board/profile/digest is negotiated | Passed in plan 11: root flash/headless identity and coherent snapshot |
 | Single keys 0–33, separately | Correct physical index highlights on press and clears on release | Passed: user checked all 34 positions, correct highlight/release |
-| Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Layers passed: left Enter 2, right Space 1, both 3, release 0; modifier display pending |
+| Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Passed: layers 2/1/3/0; Option 04, Control 01, Shift 02, Command 08, all release to 00 |
 | Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Pending |
 | Attach while key 3 is held | Initial snapshot highlights key 3 without a fresh press | Pending |
 | Companion restart | Typing continues; restarted companion synchronizes current state | Fresh companion sessions/typing passed in plan 11; held-state attach still pending |
 | USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Normal reconnect typing passed in plan 11; overlay/held-key case pending |
 | Firmware restart | Old-session traffic discarded; new state synchronized | Passed in plan 11: fresh running session/snapshot and post-flash controls/input |
-| Safe burst / explicit diagnostic loss | Typing remains responsive; recovery clears any obsolete press | Pending |
-| Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Pending |
+| Safe burst / explicit diagnostic loss | Typing remains responsive; recovery clears any obsolete press | Rapid typing passed: highlights clear, typing normal; deliberate loss not injected (no diagnostic mode) |
+| Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Movement/resize passed: usable diagram and responsive app; input-source switch pending |
 
 Start capture only when explicitly requested and keep it bounded and sanitized.
 If ordinary typing regresses, stop advanced tests and recover through physical
