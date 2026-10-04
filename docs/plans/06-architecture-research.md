@@ -1,6 +1,6 @@
 # 06A: editor architecture research
 
-State: Submitted research; provisional recommendation. Inspected 2026-10-04.
+State: Accepted 06A research; provisional recommendation. Inspected 2026-10-04.
 Repository input: `ab66f12`; dispatch record: `ed14722`. This is a source audit,
 not a browser, OS integration, packaging, performance, or hardware test.
 No spike, new dependency, source implementation, or device operation was performed.

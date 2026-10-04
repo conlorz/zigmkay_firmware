@@ -50,7 +50,7 @@ remains none. Exact active ownership is recorded below.
 
 | Task | Initial status | Writable scope | Acceptance / release |
 | --- | --- | --- | --- |
-| 06A | Active | Architecture research document; 06 handover | Sources, constraints, open questions; does not choose the final editor |
+| 06A | Accepted | Architecture research document; 06 handover | `2762d91`; sourced comparison; final editor decision awaits G05 |
 | 06B | Planned | Architecture decision; revised 07/08 plan proposals | G05, source-backed decision, coordinator acceptance within agreed scope |
 | 07A | Planned | New schema/export Zig source and dedicated tests | G05/G06, lossless format/API and G07-export accepted |
 | 07B | Planned | Editor UI and dedicated UI tests | G07-export, supported save/edit/export workflow; completes 07 criteria |
@@ -107,7 +107,7 @@ material architecture scope change require the user's decision before that work.
 | Agent / task | Exact writable paths | Base / contract revision | Next checkpoint | State |
 | --- | --- | --- | --- | --- |
 | protocol / 01 | `device-protocol/src/root.zig`, `companion-model/src/root.zig`, `apps/headless/main.zig`, `tests/test_protocol_session.zig`, `docs/device-protocol.md`, `docs/plans/handovers/01-protocol.md` | `ab66f12` / baseline | Wire contract and literal fixtures before codec/model | Active |
-| architecture / 06A | `docs/plans/06-architecture-research.md`, `docs/plans/handovers/06-architecture.md` | `ab66f12` / baseline | Source-backed comparison; final decision pending G05 | Active |
+| architecture / 06A | Released; coordinator owns future 06B dispatch | `2762d91` / research | Final decision pending G05 | Accepted |
 | inventory / 09A | Released; coordinator owns future refresh | `99c1dbe` / inventory v1 | Refresh after observed acceptance | Accepted |
 
 Coordinator records exact paths before dispatch; this table supersedes broad
@@ -129,6 +129,7 @@ reuse this result as evidence for later source changes.
 | 2026-10-04 | User authorized offline subagent execution and local commits; clean `ab66f12` inspected | Zig `/Users/clorz/.zvm/0.16.0/zig`; dispatch 01/06A/09A; no hardware access |
 | 2026-10-04 | Protocol wire proposal/literal fixture checkpoint committed | `c3db81a`; codec/recovery implementation active; G01 pending |
 | 2026-10-04 | 09A source-backed matrices accepted, ownership released | `99c1dbe`; no new target selected or hardware support claimed |
+| 2026-10-04 | 06A architecture comparison accepted, ownership released | `2762d91`; native recommendation provisional; G06 awaits G05 |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.

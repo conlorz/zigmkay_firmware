@@ -1,13 +1,14 @@
 # 06 handover: editor architecture decision
 
-06A state: **Submitted**. 06B state: **Not produced**.
+06A state: **Accepted**, research only. 06B state: **Not produced**.
 Producer: architecture worker. Reviewer: coordinator; user decides material scope changes.
 Plan: [06](../06-editor-architecture-research.md). Rules: [handover format](README.md).
 
 ## 06A submitted result
 
-Base revision: `ab66f12`; dispatch record: `ed14722`. Integration commit and
-coordinator review date: pending coordinator review. No frozen implementation
+Base revision: `ab66f12`; dispatch record: `ed14722`. Integration commit:
+`2762d91`; coordinator reviewed source-backed comparison on 2026-10-04.
+`git diff --check` and worker relative-link checks passed. No frozen implementation
 API/schema or architecture contract was created.
 
 Changed paths:
@@ -51,9 +52,9 @@ usability, platform permissions, browser file/volume behavior and firmware/devic
 acceptance are untested. Native recommendation remains provisional. No gate is
 released; **G06 remains pending**. Research acceptance does not accept milestone 06.
 
-Worker stopped writing both submitted paths for coordinator review. Coordinator
+Worker ownership released after accepted research review. Coordinator
 owns commits, review/acceptance, tracker and any revised plans. Next action:
-review/commit 06A, then revisit as 06B after accepted 03/04/05; request a separate
+revisit as 06B after accepted 03/04/05; request a separate
 Zig offline spike only if a material unresolved question needs one.
 
 ## 06B final input and output
