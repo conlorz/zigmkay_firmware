@@ -13,6 +13,10 @@ Confirmed by the user on 2026-10-04:
 - First release exposes the full existing firmware feature set, including layers,
   tap/hold, combos, timing, media/mouse and autofire.
 - Visual keyboard with searchable action inspector, layer tabs and copy/paste.
+- Named layers with add/duplicate/delete; multi-key selection and copy/paste.
+- Draft testing also includes sample text using EurKEY output in the editor.
+- Advanced workflow for attaching the user's own Zig callback module, alongside
+  named registered callbacks for existing profiles.
 
 Open a separate editor while retaining the small monitoring overlay. Choose LK7,
 clone an existing profile or create a project, select a layer and physical key,
@@ -22,14 +26,16 @@ firmware artifact. Flash is a separate explicit action in milestone 08.
 Proposed editor essentials: searchable action inspector, named layers, visible
 tap/hold assignments, undo/redo, key copy/paste, duplicate profile, dirty-state
 indicator, recoverable drafts, validation at the affected key, and keyboard
-navigation. Layer duplication and bulk assignment are candidates to discuss.
+navigation. Layer duplication and multi-key editing are selected requirements.
+Layer reordering is not selected for the initial release. Deletion must diagnose
+references and callback constraints; duplicate layers get distinct identities.
 Board geometry and wiring remain board-owned unless geometry editing is selected.
 
 Preview should distinguish HID usage and modifier chord from host input-source
 labels. Show transparent inheritance separately from explicit no-action. Edited
-preview must remain distinct from the verified running device profile. Consider
-an offline processor test area for representative tap/hold and combo sequences;
-this is a candidate feature, not yet a committed simulator requirement.
+preview must remain distinct from the verified running device profile. Draft
+testing includes a text area for EurKEY output. The input method and whether this
+includes a full unflashed processor simulation are being clarified below.
 
 ## Existing feature boundary
 
@@ -48,13 +54,13 @@ an advanced section.
 | Media and mouse | Defined media enum, mouse buttons and wheel | Expose actual supported enum entries |
 | Encoders | Tap action definition | Preserve; expose where selected board provides an encoder |
 | Companion/recovery controls | Reserved built-in codes/custom signals | Named built-ins; keep user custom IDs distinct |
-| Custom callback logic | Native Zig callback module | Prefer registered named bindings; never silently drop logic |
+| Custom callback logic | Native Zig callback module | Registered bindings plus attached source modules; preserve all logic |
 | Macros, tap dance, app-triggered layers | No general representation established by this audit | Discuss separately; require firmware/model scope investigation |
 
-Arbitrary Zig source import cannot be promised. Prefer curated adapters for
-existing profiles and registered callback modules; a new user profile can use
-ordinary declarative actions. Callback-dependent layer indices need an explicit
-binding contract before allowing layer reordering/deletion.
+Arbitrary Zig keymap source import cannot be promised. Use curated adapters for
+existing profiles; attach callback source without attempting to convert it into
+visual forms. Callback-dependent layer indices need an explicit binding contract
+before allowing layer deletion. Standard declarative profiles need no callback.
 
 ## Research observations
 
@@ -88,12 +94,12 @@ UI, browser, packaging, hardware or accessibility tests were performed.
 
 ## Decisions pending
 
-Follow-up questions issued: layer management/bulk editing, offline draft testing,
-and registered versus user-supplied callback modules. Further decisions include
-project sharing/import scope and whether any new runtime feature belongs in a
-later milestone. Full existing-feature support does not select new macro/tap-dance
-implementations. Answers must be recorded before the final 06B decision and
-concrete 07/08 revisions; no answer is inferred from silence.
+The user selected the additional features above. Two concrete questions remain:
+whether draft testing uses virtual/mapped physical inputs, live LK7 telemetry, or
+ordinary macOS text input; and whether attached modules are edited externally or
+need an embedded source editor. Full existing-feature support does not select new
+macro/tap-dance implementations. Answers must be recorded before the final 06B
+decision and concrete 07/08 revisions; no answer is inferred from silence.
 
 ## Additional source findings
 
@@ -109,3 +115,62 @@ Existing callback examples use mutable module-level state and fixed layer indice
 Test-runner isolation/reset and callback-bound layer constraints need explicit
 design. Layer renaming can remain metadata-only; reordering/deleting callback
 layers cannot be made safe merely by updating declarative layer references.
+
+## EurKEY text test design proposal
+
+Source inspected: `zigmkay-companion/src/input_source.zig`,
+`zkeymap/src/platform/macos.zig`, existing imported `macos.c`, and
+`zigmkay/src/core.zig`. Overlay labels use an isolated state and no-dead-keys
+translation. The existing native bridge has stateful translation, but its
+four-byte result and explicit `dead` handling are not sufficient evidence for
+arbitrary composed output. Processor output contains key presses/releases and
+modifier changes; the action's `dead` flag does not survive as a distinct output
+event. Translate the resulting key/modifier sequence according to the input
+source, rather than inventing an output dead-key flag.
+
+For simulated text, add a Zig-owned translation session calling existing macOS
+framework APIs, separate from labels. Preserve composition state between output
+key presses, handle UTF-16/multiple-scalar results with bounded buffers, and reset
+on test restart or input-source change. Identify the active input source and
+layout; show an explicit mismatch when EurKEY is not selected. Initially use the
+installed active layout, without bundling upstream layout data or changing the
+system input source automatically. Display non-text actions and shortcuts in an
+event log. Ordinary text entry tests the active OS layout, but by itself cannot
+validate an unflashed draft's key assignments or timing.
+
+Simulated output stays within the test area: media, mouse, BOOTSEL and companion
+signals are displayed as events. This proposal does not require system-wide key
+injection or live hardware. A telemetry-driven test mode would need a separately
+scoped hardware workflow and must address the keyboard's simultaneous real output.
+
+Primary sources retrieved 2026-10-04:
+
+- [Apple UCKeyTranslate](https://developer.apple.com/documentation/coreservices/1390584-uckeytranslate)
+  documents stateful dead-key translation and bounded output.
+- [EurKEY Next README](https://github.com/felixfoertsch/EurKEY-Next/blob/main/README.md)
+  documents installed layout variants and dead-key composition. Record the actual
+  selected layout/version during acceptance; no installed version was audited here.
+
+## Attached callback design proposal
+
+Use a project directory containing a versioned typed ZON document and owned
+callback source files. Attaching a module copies its bytes into that directory;
+save/reopen/export preserves the bytes and records their digest. Editing callback
+source invalidates prior build/test results. Missing files or digest mismatches
+produce actionable diagnostics; never replace a callback with a no-op.
+
+Define a Zig module ABI based on existing `CustomFunctions`, plus binding metadata
+for named tap/hold custom IDs, reserved-ID restrictions, and required layer indices.
+Metadata is data; source is opaque until an explicit build/test. Treat metadata as
+a declared contract, not proof of arbitrary code behavior. Unconstrained attached
+modules conservatively lock layer deletion that would renumber existing indices.
+Surface compiler file/line diagnostics. Keep imported first-party callback files
+inside the monorepo project area; pin any separately approved external dependency
+through `build.zig.zon`. Reject unresolved imports with a useful error.
+
+Offline callback tests use a generated native runner process, allowing reset by
+restarting it and capturing bounded events/errors without running callback code
+in the UI process. A subprocess isolates crashes and mutable callback state; it
+is not a security sandbox for arbitrary Zig. Code may run at compile time as well
+as runtime. Opening, attaching and saving do not compile or execute source.
+Do not create an embedded source editor unless the user selects it.
