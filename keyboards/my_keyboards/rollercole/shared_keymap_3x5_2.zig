@@ -48,8 +48,8 @@ AF_slow(dk.AT),   ALT(dk.LCBR), CTL(dk.LPRN), SFT(dk.RPRN), T(dk.RCBR),         
         // BOTH
     .{
     MEDIA(.VolumeUp), T(us.F7),   T(us.F8),   T(us.F9), T(us.F10),            T(dk.TILD),  T(us.SPACE),  T(us.SPACE),  T(us.SPACE), T(dk.GRV),
-    MEDIA(.VolumeDown), T(us.F4), CTL(us.F5), SFT(us.F6), T(us.F11),             T(dk.DLR), SFT(us.BSPC), CTL(us.BSPC), ALT(us.BSPC),   _______,
-    _______,            T(us.F1),   T(us.F2),   T(us.F3), T(us.F12),            T(dk.CIRC),    T(us.DEL),    T(us.DEL),    T(us.DEL),_______,
+    MEDIA(.VolumeDown), T(us.F4), CTL(us.F5), SFT(us.F6), T(us.F11),             T(dk.DLR), SFT(us.BSPC), CTL(us.BSPC), ALT(us.BSPC), TC(core.CUSTOM_ID_COMPANION_TOGGLE),
+    T(us.F12),           T(us.F1),   T(us.F2),   T(us.F3), TC(core.CUSTOM_ID_COMPANION_LOG_TOGGLE), T(dk.CIRC), T(us.DEL), T(us.DEL), T(us.DEL), TC(core.CUSTOM_ID_COMPANION_SHUTDOWN),
                                                   _______,  _______,              T(dk.N0), _______
     }
 };

@@ -2,6 +2,8 @@
 const protocol = @import("device-protocol");
 pub const Message = protocol.Message;
 pub const Event = protocol.Event;
+pub const Signal = protocol.Signal;
+pub const SignalKind = protocol.SignalKind;
 pub const Sink = struct {
     context: *anyopaque,
     /// Must be nonblocking; false indicates a dropped event.

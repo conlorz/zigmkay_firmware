@@ -16,7 +16,7 @@ User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconn
 | --- | --- | --- |
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
 | R-keyboard | Accepted | [Live configuration/input/modifier/release/reconnect evidence](../research/usb-hid-diagnostic-session.md); Mac only, no Caps Lock binding |
-| R-custom | Waiting-user | [Inventory/contract](../research/usb-hid-custom-contract.md), scoped tests pass; companion binding placement pending, then integration/live signals |
+| R-custom | Integrated | [Inventory/contract and prepared live run](../research/usb-hid-custom-contract.md); agreed bindings, matching consumers and full offline checks pass; actual custom actions pending |
 | R-flash | Planned | Only after R-custom; bounded discovery/failure fixtures, identity/ambiguity and running verification |
 
 Research workers have stopped and released all leases. The coordinator owns
