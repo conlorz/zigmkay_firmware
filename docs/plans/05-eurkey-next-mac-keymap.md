@@ -1,7 +1,10 @@
 # 05: Compiled LK7 QWERTY profile for EurKEY Next on macOS
 
-Status: planned. Depends on 04. The user has selected EurKEY Next, QWERTY
-letters, and Mac shortcuts. This profile must be usable before the editor exists.
+Status: planned after 07/08, before 09. The user has selected EurKEY Next, QWERTY
+letters and Mac shortcuts, and wants to create this profile in the finished
+editor. Use its save/export/build/flash workflow; do not implement the personal
+profile as a prerequisite for the editor. Shared selector/identity plumbing
+belongs to 07/08. Older prerequisite wording in this plan is superseded here.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [05 handover](handovers/05-keymap.md). Diagram/source preparation may be assigned

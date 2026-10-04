@@ -1,9 +1,10 @@
 # Next-step roadmap
 
-Status: user paused the remaining roadmap on 2026-10-04. The **direct next task**
-is [11: USB/HID recovery](11-usb-hid-recovery.md), starting with deep research.
-Read its [handoff](handovers/11-usb-hid-recovery.md). Offline milestones 01–03
-remain accepted; live USB configuration/typing fails and G04 is unaccepted.
+Status: plan 11 recovery is accepted on macOS/LK7. Original milestone 04 still
+needs its remaining overlay/recovery checks. User reordered the remaining work:
+**04 → 06 → 07 → 08 → 05 → 09**. The personal QWERTY/EurKEY Next profile will be
+created through the finished editor, not hand-built before it. This supersedes
+the original G05 prerequisites for 06–08. Reordering does not start hardware work.
 
 Execution starts from the [central tracker](TRACKING.md), which owns status,
 assignments, dependencies, and accepted evidence. Read the
@@ -62,10 +63,10 @@ the accepted hardware baseline and reviewed 05 assignments permit changes.
 | 02 | [Firmware telemetry](02-firmware-telemetry.md) | 01 | Nonblocking LK7 delivery through the vendor HID interface |
 | 03 | [macOS live overlay](03-macos-live-overlay.md) | 01; integrate with 02 | Small overlay with correct geometry and resilient connection handling |
 | 04 | [LK7 hardware acceptance](04-lk7-hardware-acceptance.md) | 02, 03 | User-verified typing and live monitoring on real hardware |
-| 05 | [EurKEY Next Mac keymap](05-eurkey-next-mac-keymap.md) | 04 | Selectable compiled QWERTY profile with Mac shortcuts |
-| 06 | [Editor architecture research](06-editor-architecture-research.md) | Research may start now; final decision after 05 | Evidence-backed native/browser decision |
-| 07 | [Compiled keymap editor](07-compiled-keymap-editor.md) | 05, 06 | Validated edit/save/export workflow; architecture conditional on 06 |
+| 06 | [Editor architecture research](06-editor-architecture-research.md) | 04; existing profiles and agreed editor requirements | Evidence-backed native/browser decision |
+| 07 | [Compiled keymap editor](07-compiled-keymap-editor.md) | 04, 06 | Validated edit/save/export workflow and shared profile selection |
 | 08 | [Build and flash workflow](08-build-and-flash-workflow.md) | Backend after accepted 07A; GUI after full 07 | Selected keymap builds and deliberate, identifiable firmware flashing |
+| 05 | [EurKEY Next Mac keymap](05-eurkey-next-mac-keymap.md) | 07, 08; reviewed assignments | User creates and validates their QWERTY/Mac profile in the finished editor |
 | 09 | [Platforms and boards](09-platform-and-board-expansion.md) | Inventory may start now; target work separately gated | Staged Windows/Linux and additional-board support |
 
 The original sequence below is paused by user direction. Recovery plan 11 has

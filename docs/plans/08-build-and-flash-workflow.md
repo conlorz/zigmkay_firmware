@@ -1,8 +1,11 @@
 # 08: Companion build and deliberate firmware flashing
 
-Status: planned. 08A backend depends on accepted 05/06 and 07A export contract;
+Status: planned. 08A backend depends on accepted 06 and 07A export contract;
 08B GUI integration depends on full 07 and accepted 08A. Manual flashing in 04/05
-remains sufficient until this integration is implemented.
+remains sufficient until this integration is implemented. Plan 05 now follows
+this milestone: the user creates their profile through the finished editor.
+Reuse plan 11's accepted terminal flasher/verification boundary; this milestone
+adds project manifests, selected exported-profile builds and GUI integration.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [08 handover](handovers/08-build-flash.md). 08A may run beside 07B with fake process/

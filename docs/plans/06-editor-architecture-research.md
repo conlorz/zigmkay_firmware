@@ -1,7 +1,9 @@
 # 06: Research the visual editor architecture
 
 Status: planned. 06A research may start from the current baseline; final 06B
-decision needs the accepted live baseline and 05's concrete profile requirements.
+decision needs G04, existing profile/action inventory and agreed editor requirements.
+05 now follows 08: the user's personal profile is created in the finished editor
+and is not an architecture prerequisite. Older G05 references below are superseded.
 The current preference is extending the native companion.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and

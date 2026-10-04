@@ -1,6 +1,7 @@
 # 04: Joint LK7 hardware acceptance on macOS
 
-Status: planned. Depends on 02 and 03. The user has an LK7 and will flash and
+Status: largely covered by accepted plan 11 recovery evidence; remaining focused
+overlay/recovery validation pending. Depends on 02 and 03. The user has an LK7 and will flash and
 verify it with the agent. This is an interactive hardware milestone.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
@@ -83,6 +84,14 @@ stand in for a required device test.
 Autonomous flashing, remote BOOTSEL requests, unrestricted drive copying,
 Windows/Linux validation, other boards, and keymap editing are outside this
 session. The next usability milestone is 05's QWERTY/EurKEY Next Mac profile.
+
+User-revised sequence is 04 → 06 → 07 → 08 → 05 → 09. Reuse plan 11's typing,
+modifier/release, identity/snapshot, normal reconnect, companion restart/control
+and final flash/persistence evidence instead of repeating that baseline. Remaining
+manual work is all-key highlight coverage, layer display, attach with a held key,
+held-key reconnect/recovery, safe burst and overlay resize/input-source behavior.
+If no defect appears, expect one focused session of approximately 15–30 minutes;
+this is a validation estimate, not a promise of fix duration.
 
 Incoming: accepted [02](handovers/02-firmware.md)/[03](handovers/03-overlay.md)
 at the integrated checked revision. Outgoing: actual environment/artifact/manual

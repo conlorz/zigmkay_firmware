@@ -2,6 +2,12 @@
 
 ## Recovery complete; original roadmap remains deferred
 
+User-revised order: **04 → 06 → 07 → 08 → 05 → 09**. Build shared profile
+selection in 07/08; use existing profiles and representative fixtures for editor
+acceptance. The user's actual EurKEY Next profile is created in the finished
+editor during 05. This supersedes older G05 dependencies for 06–08 and execution
+wave text below. No new hardware session is started by this reorder.
+
 Recovery research/design accepted at `2972bc6`; runtime initializer `c9ea3a1`;
 offline R3 integrated at `2e30e9d`. Full offline checks pass, including ten board
 artifacts, actual USB wire/report parsing and root/standalone parity. The target
@@ -86,10 +92,10 @@ remains none. Exact active ownership is recorded below.
 | 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Waiting-user | G-live-offline; user starts session | Run the identified manual worksheet after explicit hardware task | Coordinator with user / none |
-| 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G04; reviewed assignments | Review QWERTY diagram, add shared selector and profile, then manual tests | Unassigned / none |
-| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Planned | 06A may start now; final decision needs G05 | Sourced comparison, then reconcile actual profile requirements | Unassigned / none |
-| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G05 and G06 | Schema/export contract first, editor UI second | Unassigned / none |
-| 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G05, G06, G07-export; 08B: G07 | Fake-tested backend, then serialized GUI integration/manual acceptance | Unassigned / none |
+| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Planned | G04; 06A already accepted | Finalize architecture using existing profiles and editor requirements | Unassigned / none |
+| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G04 and G06 | Schema/export/shared selector first, editor UI second | Unassigned / none |
+| 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |
+| 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
 | 09 | [Expansion](09-platform-and-board-expansion.md) / [handover](handovers/09-expansion.md) | Planned | 09A may start now; target work needs selection and accepted baseline | Capability inventory and separately scoped target plans | Unassigned / none |
 
 ## Partial deliverables for parallel dispatch
