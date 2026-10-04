@@ -301,6 +301,12 @@ pub fn main(init: std.process.Init) !void {
                 },
                 else => return error.NativeEditorWindowUnavailable,
             }
+            if (live) {
+                editor.?.connection_text = if (driver.session.phase == .incompatible) "Device identity differs" else if (driver.status != .connected) "No device · draft only" else if (driver.session.phase != .live or driver.session.stale) "Device · verifying" else blk: {
+                    const draft_identity = try @import("keymap-project").snapshot.identity(init.gpa, editor.?.model.current.snapshot, @import("keymap-project").profiles.board);
+                    break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
+                };
+            }
             editor.?.draw() catch |err| editor.?.report(err);
             if (editor.?.should_close) editor_open = false;
         }

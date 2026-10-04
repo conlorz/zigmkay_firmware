@@ -131,3 +131,11 @@ mise //:convert input.hjson output.zig
 See [development](docs/development.md), [mise migration](docs/plans/10-mise-monorepo.md),
 [protocol](docs/device-protocol.md), [firmware telemetry](docs/firmware-telemetry.md),
 and [overlay guide](docs/live-overlay.md).
+
+The separate native LK7 draft editor is available through
+`mise //zigmkay-companion:editor`. Follow the
+[plan 07 self-verification guide](docs/plans/07-editor-verification.md) for
+editing, atomic save/reopen, deterministic export and isolated draft testing.
+`mise //zigmkay-companion:editor-golden-check` checks the user-approved dark/light
+captures without refreshing them. These editor workflows remain offline;
+Build/Flash integration belongs to plan 08 and plan 12 remains deferred.
