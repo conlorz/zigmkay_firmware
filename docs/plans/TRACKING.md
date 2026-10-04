@@ -1,5 +1,24 @@
 # Central milestone tracker
 
+## Direct next task: research-led USB/HID recovery
+
+User decision on 2026-10-04: stop implementation/hardware retries in the current
+session, prepare a fresh-session plan, and pause the rest of the original
+subagent workflow. **Start [plan 11](11-usb-hid-recovery.md) next**, with
+[this handoff](handovers/11-usb-hid-recovery.md). No worker is active.
+
+Priority order: evidence/primary-source HID research across macOS, Windows and
+Linux → standard keyboard baseline → custom codes/companion → verified mise
+flashing. Original 04 acceptance and 05–09 continuation stay deferred until
+recovery acceptance and the user's request to resume. Research first; no new
+hardware run is authorized by reading these plans.
+
+Current implementation `637fd71` passes full offline checks. Its latest live
+flash/restart succeeded and the malformed configuration bytes are repaired,
+as confirmed by Apple's USB diagnostic, but EP0 configuration still times out
+and no HID interfaces attach. G04 remains unaccepted. Earlier “pending retry”
+entries are historical; use the recovery handoff for actual current evidence.
+
 Updated: 2026-10-04. Offline execution started from clean `ab66f12` on
 `local/monorepo`; coordinator owns integration and local commits.
 The last inspected implementation baseline is `0ab641c`; the initial nine plans
@@ -130,6 +149,7 @@ reuse this result as evidence for later source changes.
 
 | Date | Event | Evidence / next action |
 | --- | --- | --- |
+| 2026-10-04 | User stopped trial-and-error recovery and paused original workflow | Plan 11 and recovery handoff are the direct next task for a new session; research before standard input, custom codes and flashing; latest `637fd71` still fails live configuration |
 | 2026-10-04 | Subagent execution structure prepared; no implementation started | Start from the fresh-session prompt in the workflow |
 | 2026-10-04 | User authorized offline subagent execution and local commits; clean `ab66f12` inspected | Zig `/Users/clorz/.zvm/0.16.0/zig`; dispatch 01/06A/09A; no hardware access |
 | 2026-10-04 | Protocol wire proposal/literal fixture checkpoint committed | `c3db81a`; codec/recovery implementation active; G01 pending |

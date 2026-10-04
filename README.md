@@ -6,9 +6,11 @@ repository-wide work. Packages own their Zig builds; root Zig owns integration
 tests and the offline guard. No sibling clones or package directory changes are
 needed.
 
-Start execution from the [tracker](docs/plans/TRACKING.md) and
-[subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). Offline milestones 01–03
-passed; [manual LK7 acceptance](docs/plans/04-manual-worksheet.md) remains pending.
+**Direct next task:** [USB/HID recovery research and implementation](docs/plans/11-usb-hid-recovery.md).
+Read its [fresh-session handoff](docs/plans/handovers/11-usb-hid-recovery.md)
+and the [tracker](docs/plans/TRACKING.md). The user paused the remaining
+subagent roadmap. Offline milestones 01–03 passed, but the device still fails
+USB configuration; manual LK7 acceptance remains pending.
 
 ## Setup and discovery
 

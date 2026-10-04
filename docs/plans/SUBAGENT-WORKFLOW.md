@@ -1,5 +1,13 @@
 # Fresh-session subagent workflow
 
+**Current precedence, 2026-10-04:** the user stopped hardware retries and paused
+the remaining original workflow. The direct next task is
+[plan 11](11-usb-hid-recovery.md) and its
+[research/recovery handoff](handovers/11-usb-hid-recovery.md). Start that task
+offline with research. Do not resume original milestone dispatch waves merely
+because this workflow contains a continuation prompt. Its ownership and local
+commit rules still apply to any authorized recovery delegation.
+
 This is a planning document, not an instruction to start implementation merely
 by reading it. The user will initiate execution in a new session. Use the
 [central tracker](TRACKING.md) for all status, gate, and assignment changes.

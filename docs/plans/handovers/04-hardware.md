@@ -1,5 +1,11 @@
 # 04 handover: observed LK7 live acceptance
 
+**Latest status:** user stopped retries and requested a research-led reset.
+See [recovery handoff](11-usb-hid-recovery.md) and [plan 11](../11-usb-hid-recovery.md).
+Latest `637fd71` flash/restart and descriptor parsing succeed, but configuration
+still times out and no HID interfaces attach. G04 remains unaccepted. Do not
+continue the retry instructions below; they are investigation history.
+
 State: **Waiting-user**. Offline entry gate accepted at `4fd4c66`;
 the [worksheet](../04-manual-worksheet.md) identifies firmware, GUI, shared
 identity and rollback. Hardware troubleshooting has started; acceptance is pending.

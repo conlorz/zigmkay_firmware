@@ -1,7 +1,9 @@
 # Next-step roadmap
 
-Status: offline milestones 01–03 accepted on 2026-10-04. Manual milestone 04
-awaits the user session; later implementation remains gated.
+Status: user paused the remaining roadmap on 2026-10-04. The **direct next task**
+is [11: USB/HID recovery](11-usb-hid-recovery.md), starting with deep research.
+Read its [handoff](handovers/11-usb-hid-recovery.md). Offline milestones 01–03
+remain accepted; live USB configuration/typing fails and G04 is unaccepted.
 
 Execution starts from the [central tracker](TRACKING.md), which owns status,
 assignments, dependencies, and accepted evidence. Read the
@@ -48,13 +50,14 @@ recovery, bounded firmware USB transport, native companion adapter and shared
 physical geometry. At integrated revision `4fd4c66`, 325 tests, all ten board
 builds, standalone checks and LK7 artifact parity pass. Native GUI offline and
 replay smoke runs pass. Actual USB, typing, labels and window behavior await 04;
-no device has been accessed. Firmware and companion profiles remain fixed until
+hardware troubleshooting has occurred without live acceptance. Firmware and companion profiles remain fixed until
 the accepted hardware baseline and reviewed 05 assignments permit changes.
 
 ## Milestones and order
 
 | ID | Plan | Depends on | Result |
 | --- | --- | --- | --- |
+| 11 | [USB/HID recovery — direct next task](11-usb-hid-recovery.md) | User starts new research session | Researched platform contract, working standard input, custom codes, verified mise flashing |
 | 01 | [Protocol and recovery](01-protocol-and-recovery.md) | Current baseline | Tested session, identity, snapshot, and recovery contract |
 | 02 | [Firmware telemetry](02-firmware-telemetry.md) | 01 | Nonblocking LK7 delivery through the vendor HID interface |
 | 03 | [macOS live overlay](03-macos-live-overlay.md) | 01; integrate with 02 | Small overlay with correct geometry and resilient connection handling |
@@ -65,7 +68,11 @@ the accepted hardware baseline and reviewed 05 assignments permit changes.
 | 08 | [Build and flash workflow](08-build-and-flash-workflow.md) | Backend after accepted 07A; GUI after full 07 | Selected keymap builds and deliberate, identifiable firmware flashing |
 | 09 | [Platforms and boards](09-platform-and-board-expansion.md) | Inventory may start now; target work separately gated | Staged Windows/Linux and additional-board support |
 
-Implementation starts with 01, while independent 06A research and 09A inventory
+The original sequence below is paused by user direction. Recovery plan 11 has
+priority; do not dispatch later milestones until it is accepted and the user
+requests resumption.
+
+The original implementation started with 01, while independent 06A research and 09A inventory
 can run in parallel. After its contract is accepted, 02 firmware and 03 overlay
 can run concurrently. Later, accepted 07A export allows 07B UI and 08A backend
 work in parallel. See the tracker for exact partial-task gates and owner leases.
