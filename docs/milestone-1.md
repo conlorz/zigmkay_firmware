@@ -1,5 +1,9 @@
 # Milestone 1: tested LK7 integration foundation
 
+Historical results from before monorepo consolidation. Checkout paths and tooling
+below describe that session. Use the [current roadmap](plans/README.md) and
+[root README](../README.md) for new work.
+
 Completed locally on `local/integration`, starting from
 `c5580be52119bb028588a3cc8329fe4fdecfbd27`. The unfinished companion checkout and
 research worktrees remain intact. All implementation commits are local.

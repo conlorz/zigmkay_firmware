@@ -1,5 +1,9 @@
 # Milestone 2: Zig 0.16 root graph and offline companion
 
+Historical results from before monorepo consolidation. Checkout paths and tooling
+below describe that session. Use the [current roadmap](plans/README.md) and
+[root README](../README.md) for new work.
+
 Completed locally on `local/phase-2`, based on `e754f5c` (`local/integration`);
 phase 1's verified source baseline is `e76611c`. Implementation commits are local.
 The other worktrees and their unfinished work are preserved. The two pre-existing

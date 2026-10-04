@@ -1,5 +1,9 @@
 # Phase 2 handoff: Zig 0.16 root build and board registry
 
+Historical record from before monorepo consolidation. Worktree and tooling
+instructions below are superseded by the [current roadmap](plans/README.md) and
+[root README](../README.md); do not recreate the old environments.
+
 Status: completed locally on `local/phase-2`. See [milestone-2.md](milestone-2.md) and `docs/evidence/phase-2/` for the validation results. The original handoff instructions below describe the starting state inspected on 2026-10-03.
 
 ## Objective and scope
