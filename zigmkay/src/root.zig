@@ -13,3 +13,4 @@ pub const microzig = @import("microzig");
 pub const telemetry = @import("telemetry.zig");
 pub const telemetry_transport = @import("telemetry_transport.zig");
 pub const usb_control = @import("usb_control.zig");
+pub const usb_descriptor_bytes = @import("usb_descriptor_bytes.zig");

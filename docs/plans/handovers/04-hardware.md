@@ -85,3 +85,21 @@ returns the actual configuration byte for a valid query and completes its OUT
 status stage. A regression checks unconfigured/configured/deconfigured values
 and malformed-query delegation. Host logs do not identify the timed-out request
 number, so this remains a compatibility candidate until live verification.
+
+Live retry of `43a5ff7` again completed flash/reboot but produced the same EP0
+timeouts. Apple's `usbdiagnose` provided the missing evidence: the configuration
+has padding after its nine-byte header, interface records and inside HID
+records, and terminates with `Illegal Descriptor: Length of 0`. A minimal Zig
+0.16.0 Cortex-M0+ object reproduces the padding in nested extern constants with
+align(1) words despite the logical structure sizes. The compiler/layout issue
+is independent of Finder's disk notification and telemetry.
+
+The first-party USB boundary now generates configuration and HID descriptor
+byte arrays from typed values at compile time, without copying aggregate
+memory. It uses the same MicroZig descriptor allocator, driver options and
+endpoint numbering as the controller. GET_DESCRIPTOR serves these bytes with
+host length limits and upstream multi-packet progression. Tests cover nested
+unaligned words, contiguous records, configuration prefixes, packet splitting
+and HID interface selection. `mise //:check-full` passes. A cached Zig inspection
+of the actual LK7 UF2 finds the contiguous 146-byte configuration with all five
+interfaces, eight endpoints and four HID descriptors. Live retry is pending.

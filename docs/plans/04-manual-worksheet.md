@@ -1,7 +1,7 @@
 # LK7 manual acceptance worksheet
 
-State: ready for user session; G-live-offline accepted at `4fd4c66`.
-No device has been accessed, flashed, or accepted.
+State: hardware troubleshooting in progress; G04 acceptance is pending.
+Flashing and automatic reboot work; USB configuration still awaits verification.
 Use this worksheet only after G-live-offline and an explicit user hardware
 session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
@@ -9,9 +9,9 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
 | Item | Value |
 | --- | --- |
-| Integrated implementation / firmware build / protocol | `4fd4c66` / UF2 correction `2089219` / G01 `5b092ec`, v2 |
-| New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 95,232 bytes |
-| New firmware SHA-256 | `551dfa4cb41159545638a70bf147ee0a8e78f342db7d10da02db41e18f748a30` |
+| Integrated implementation / firmware build / protocol | `4fd4c66` / descriptor serialization fix in the 04 handover / G01 `5b092ec`, v2 |
+| New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 93,184 bytes |
+| New firmware SHA-256 | `eee031c891b592740ddab62ee948728e329ecc7c2572eef184c33211de3caeb0` |
 | Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / `447efb8` / 42,245,536 bytes |
 | Companion SHA-256 | `25814eedbcff3249e247da90a9f6a4dda05c2796dc1a8b393db7cbf35bb12e94` |
 | Expected board / profile / digest | `lk7` / `danish` / `1ba43aa9b78a280faf77cdf41d0a42eb` (34 keys, 4 layers) |
@@ -37,7 +37,7 @@ Build/flash through `mise //:flash lk7`; rollback through
 The firmware was rebuilt with mandatory RP2040 family metadata at `2089219`;
 all ten UF2s now pass structural validation. The GUI was
 rebuilt from its standalone package with mise's pinned compiler. Automatic
-flash/restart behavior remains unresolved in the 04 handover. Do not interpret
+flash/restart behavior is observed; typing remains unresolved in the 04 handover. Do not interpret
 a successful utility write/sync as observed hardware acceptance.
 
 The original rollback was compiled from the unchanged implementation baseline,

@@ -256,8 +256,8 @@ const FakeUsb = struct {
         written: [64]u8 = @splat(0),
         written_length: usize = 0,
         pub fn ep_writev(self: *@This(), _: Num, data: []const []const u8) usize {
-            self.written_length = data[0].len;
-            @memcpy(self.written[0..self.written_length], data[0]);
+            self.written_length = @min(self.written.len, data[0].len);
+            @memcpy(self.written[0..self.written_length], data[0][0..self.written_length]);
             return self.written_length;
         }
         pub fn ep_listen(self: *@This(), _: Num, length: usize) void {
@@ -445,6 +445,36 @@ test "GetConfiguration returns current configuration and completes its OUT statu
     try std.testing.expectEqual(@as(usize, 0), base.setup_count);
     query.length.value = 2;
     controller.on_setup_req(&device, &query);
+    try std.testing.expectEqual(@as(usize, 1), base.setup_count);
+}
+
+test "configuration and HID descriptor requests use wire bytes with host length limits" {
+    var base = FakeBase{ .configured = false };
+    var device = FakeUsb.DeviceInterface{};
+    const configuration: [146]u8 = @splat(0x55);
+    const hid = [_][9]u8{.{ 9, 0x21, 0x11, 1, 0, 1, 0x22, 65, 0 }};
+    var controller = zigmkay.usb_control.Controller(FakeUsb, FakeBase){
+        .base = &base,
+        .configuration_descriptor = &configuration,
+        .hid_descriptors = &hid,
+        .hooks = .{ .prepare = HookCapture.prepare, .reject = HookCapture.reject },
+    };
+    var request = setupPacket(0x80, 0x0200, 0, 9);
+    request.request = 6;
+    controller.on_setup_req(&device, &request);
+    try std.testing.expectEqual(@as(usize, 9), device.written_length);
+    try std.testing.expectEqual(@as(usize, 0), base.tx_slice.?.len);
+    request.length.value = 255;
+    controller.on_setup_req(&device, &request);
+    try std.testing.expectEqual(@as(usize, 64), device.written_length);
+    try std.testing.expectEqual(@as(usize, 82), base.tx_slice.?.len);
+    request.request_type.raw = 0x81;
+    request.value.value = 0x2100;
+    controller.on_setup_req(&device, &request);
+    try std.testing.expectEqualSlices(u8, &hid[0], device.written[0..device.written_length]);
+    try std.testing.expectEqual(@as(usize, 0), base.setup_count);
+    request.index.value = 1;
+    controller.on_setup_req(&device, &request);
     try std.testing.expectEqual(@as(usize, 1), base.setup_count);
 }
 

@@ -203,7 +203,7 @@ const RawHid = usb.drivers.hid.InterruptDriver(.{
 
 pub var usb_device: USB_Device = undefined;
 
-pub const ControllerType = usb.DeviceController(.{
+const usb_config: usb.Config = .{
     .bcd_usb = .v2_00,
     .device_triple = .unspecified,
     .vendor = .{ .id = 0xFAFA, .str = "OpenKeyboardCollective" },
@@ -222,17 +222,61 @@ pub const ControllerType = usb.DeviceController(.{
             reset: rp2xxx.usb.ResetDriver(null, 0),
         },
     }},
-}, .{.{
+};
+const usb_args: usb_config.DriverArgs() = .{.{
     .keyboard = .{ .itf_string = "Keyboard", .poll_interval = 1 },
     .consumer = .{ .itf_string = "Consumer Control", .poll_interval = 10 },
     .mouse = .{ .itf_string = "Mouse", .poll_interval = 1 },
     .rawhid = .{ .itf_string = "RawHID", .poll_interval = 1 },
     .reset = "",
-}});
+}};
+
+pub const ControllerType = usb.DeviceController(usb_config, usb_args);
+
+const wire = @import("usb_descriptor_bytes.zig");
+const wire_descriptors = blk: {
+    @setEvalBranchQuota(20000);
+    const config = usb_config.configurations[0];
+    var alloc: usb.DescriptorAllocator = .init(usb_config.unique_endpoints);
+    _ = alloc.string(usb_config.vendor.str);
+    _ = alloc.string(usb_config.product.str);
+    _ = alloc.string(usb_config.serial);
+    const name = alloc.string(config.name);
+    const fields = @typeInfo(config.Drivers).@"struct".fields;
+    var length = wire.size(usb.descriptor.Configuration);
+    for (fields) |field| length += wire.size(field.type.Descriptor);
+    var bytes: [length]u8 = undefined;
+    var hid: [4][9]u8 = undefined;
+    var hid_count: usize = 0;
+    var offset: usize = wire.size(usb.descriptor.Configuration);
+    for (fields) |field| {
+        const descriptors = field.type.Descriptor.create(&alloc, usb_config.max_supported_packet_size, @field(usb_args[0], field.name)).descriptor;
+        wire.append(&bytes, &offset, descriptors);
+        if (@hasField(@TypeOf(descriptors), "hid")) {
+            hid[hid_count] = wire.encode(descriptors.hid);
+            hid_count += 1;
+        }
+    }
+    var start: usize = 0;
+    wire.append(&bytes, &start, @as(usb.descriptor.Configuration, .{
+        .total_length = .from(length),
+        .num_interfaces = alloc.next_itf_num,
+        .configuration_value = 1,
+        .configuration_s = name,
+        .attributes = config.attributes,
+        .max_current = .from_ma(config.max_current_ma),
+    }));
+    std.debug.assert(offset == length);
+    break :blk .{ .configuration = bytes, .hid = hid };
+};
 
 pub var usb_controller: ControllerType = .init;
+const configuration_bytes = wire_descriptors.configuration;
+const hid_bytes = wire_descriptors.hid;
 var vendor_controller = control.Controller(usb, ControllerType){
     .base = &usb_controller,
+    .configuration_descriptor = &configuration_bytes,
+    .hid_descriptors = &hid_bytes,
     .hooks = .{ .prepare = prepare_vendor_control, .reject = reject_vendor_control },
 };
 

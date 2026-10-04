@@ -36,6 +36,8 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
         control_owned: bool = false,
         status_out_pending: bool = false,
         configuration_reply: [1]u8 = .{0},
+        configuration_descriptor: ?[]const u8 = null,
+        hid_descriptors: []const [9]u8 = &.{},
         hooks: Hooks,
         const Self = @This();
 
@@ -48,6 +50,23 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             // not reset these buffers or discard its pending descriptor slice.
             self.hooks.prepare();
             self.base.tx_slice = null;
+            const request_type: u8 = @bitCast(packet.request_type);
+            if (packet.request == 6) {
+                const value = packet.value.into();
+                const response: ?[]const u8 = if (request_type == 0x80 and value == 0x0200)
+                    self.configuration_descriptor
+                else if (request_type == 0x81 and value == 0x2100 and packet.index.into() < self.hid_descriptors.len)
+                    &self.hid_descriptors[packet.index.into()]
+                else
+                    null;
+                if (response) |bytes| {
+                    const limited = bytes[0..@min(bytes.len, packet.length.into())];
+                    const sent = device.ep_writev(.ep0, &.{limited});
+                    self.base.tx_slice = limited[sent..];
+                    self.status_out_pending = limited.len != 0;
+                    return;
+                }
+            }
             // The pinned controller enumerates GetConfiguration but does not
             // implement it. Hosts may query the active configuration before or
             // after selecting one; leaving it unanswered times out EP0.
