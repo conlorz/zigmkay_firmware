@@ -14,6 +14,11 @@ source inventory/digest and frozen project snapshot. External callback edits
 invalidate earlier artifacts; compiler errors retain file/line context. A failed
 test or firmware build cannot promote an older artifact to current status.
 
+08B follows the [selected visual specification](06-editor-visual-specification.md)
+for toolbar, device actions and job/error presentation. Extend the accepted 07B
+screenshots/scenarios for build/bootloader/flash states without changing the
+layer-sidebar composition.
+
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [08 handover](handovers/08-build-flash.md). 08A may run beside 07B with fake process/
 volume boundaries and no GUI/hardware. Transfer GUI ownership before 08B starts.

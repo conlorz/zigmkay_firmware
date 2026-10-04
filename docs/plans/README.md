@@ -118,6 +118,10 @@ bring a concrete result and explain the choice rather than inventing a preferenc
 
 ## Open details and deferred work
 
+Editor appearance is specified in the
+[visual specification](06-editor-visual-specification.md), with linked dark/light
+mockups and a native Zig screenshot/interaction comparison plan for 07B/08B.
+
 [12: Complete device keymap readback](12-device-keymap-readback.md) is an
 additional deferred milestone. 12A retrieves layers, combos and complete
 declarative configuration; 12B later recovers custom Zig source. It does not

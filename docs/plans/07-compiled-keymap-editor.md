@@ -12,6 +12,12 @@ layer management, bulk editing, EurKEY draft testing and attached Zig callbacks.
 
 ## Selected implementation additions
 
+07B must closely reproduce the selected layer-sidebar layout described in the
+[visual specification](06-editor-visual-specification.md). Deliver deterministic
+offline screenshot/scenario support in Zig, dark/light reference-size captures,
+region comparisons and native-window checks. Record intentional correctness
+deviations from generated labels/geometry; do not silently redesign the layout.
+
 07A owns `keymap-project` and the immutable export/test-runner contracts described
 in 06B. Freeze schema/bounds, registered and attached callback policies, canonical
 identity adapter, shared selector, save/source snapshot consistency and literal
@@ -94,6 +100,9 @@ Flashing is integrated in 08; runtime device remapping is not required.
   Export/build API changes also pass `check-full`.
 - The user can save, reopen, and export a concrete LK7 modification without
   hardware access. A compiled artifact alone is not marked flashed or accepted.
+- Visual acceptance follows the linked specification: close panel proportions,
+  colored sidebar, full OS viewer, readable inspector and both themes. Actual
+  captures and documented deviations precede approval of regression goldens.
 
 ## Commit checkpoints and handoff
 

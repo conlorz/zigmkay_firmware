@@ -78,6 +78,10 @@ Compiler version and build inputs belong in artifact metadata, not display label
 
 ## Editor and test behavior
 
+Follow the [visual specification](06-editor-visual-specification.md): the selected
+colored layer sidebar, close reference composition in dark/light themes, and
+app-owned Zig screenshot/scenario verification before visual acceptance.
+
 Implement visual geometry, layer tabs, searchable inspectors for every existing
 action, multi-key selection, copy/paste, add/duplicate/delete layers, undo/redo,
 dirty state, validation and save/reopen/export. Keep board wiring immutable.

@@ -112,6 +112,10 @@ UI, browser, packaging, hardware or accessibility tests were performed.
 
 ## Scope boundary
 
+The detailed [visual specification and comparison workflow](06-editor-visual-specification.md)
+defines close reproduction, both themes, panel measurements and screenshot
+acceptance for the selected mockup.
+
 Visual direction selected by the user: the clean
 [light layer-sidebar concept](mockups/editor-02-light-layer-sidebar.png), with
 vertical colored layer cards, central physical keyboard, right-hand inspector
