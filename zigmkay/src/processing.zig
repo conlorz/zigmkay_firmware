@@ -51,7 +51,6 @@ pub fn CreateProcessorType(
         }
 
         fn observe_state(self: *Self) void {
-            if (self.observer.sink == null) return;
             var active: u16 = 1;
             for (1..keymap_dimensions.layer_count) |layer| {
                 if (self.layers_activations.is_layer_active(@intCast(layer)))

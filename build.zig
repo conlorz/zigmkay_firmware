@@ -81,7 +81,7 @@ pub fn build(b: *std.Build) void {
     }) });
     test_step.dependOn(&b.addRunArtifact(gaming_test).step);
 
-    for ([_][]const u8{ "tests/test_lk7_trace.zig", "tests/test_observer_inputs.zig" }) |source| {
+    for ([_][]const u8{ "tests/test_lk7_trace.zig", "tests/test_observer_inputs.zig", "tests/test_telemetry_transport.zig" }) |source| {
         const trace_test = b.addTest(.{ .root_module = b.createModule(.{
             .root_source_file = b.path(source),
             .target = b.graph.host,
