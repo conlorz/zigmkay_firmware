@@ -1,12 +1,13 @@
 # 04 handover: observed LK7 live acceptance
 
-**Latest status:** user stopped retries and requested a research-led reset.
-See [recovery handoff](11-usb-hid-recovery.md) and [plan 11](../11-usb-hid-recovery.md).
-Latest `637fd71` flash/restart and descriptor parsing succeed, but configuration
-still times out and no HID interfaces attach. G04 remains unaccepted. Do not
-continue the retry instructions below; they are investigation history.
+**Latest status:** plan 11 recovery accepted; focused 04 session active.
+All 34 highlights/releases, layers, modifier display, rapid typing, move/resize,
+fresh held-key attach and held-key cable reconnect passed per user. Safe existing
+combo/autofire and input-source refresh checks are pending. See the
+[worksheet](../04-manual-worksheet.md) and [recovery handoff](11-usb-hid-recovery.md).
+Earlier flash investigation below is history, not current device behavior.
 
-State: **Waiting-user**. Offline entry gate accepted at `4fd4c66`;
+State: **Active**. Offline entry gate accepted at `4fd4c66`;
 the [worksheet](../04-manual-worksheet.md) identifies firmware, GUI, shared
 identity and rollback. Hardware troubleshooting has started; acceptance is pending.
 Producer: coordinator with the user. Reviewer: coordinator records observed results.
@@ -36,7 +37,18 @@ leases and targeted offline tests before the user reflashes.
 
 ## Integrated result
 
-Pending user session. Complete the [result template](README.md) with actual evidence.
+Current accepted implementation `0aa2ca7`, firmware SHA-256
+`c402a55066505d338162e120eac4f038a621d0cee925ca0618f17efe48492263`,
+LK7/Danish digest `bbf087c054cfb061e04b9dd9e232e0a3`; macOS 26.6.2/25G83,
+Mac17,9, EurKEY Next selected (-31468). No firmware write in this focused 04
+session. Production/offline checks from recovery remain valid; source unchanged.
+
+User confirmed all physical positions, layers 0/1/2/3, modifier values and releases,
+responsive rapid typing, usable move/resize, fresh process snapshot while P already
+held, and unplug/replug while holding P: stale during absence, correct held state
+after fresh session, clean release and normal typing. Required connection-loss
+recovery has real evidence; deliberate packet-overflow injection is unavailable.
+Remaining checks are recorded above. New order after G04 is 06 → 07 → 08 → 05 → 09.
 
 ## Flash investigation, 2026-10-04
 

@@ -103,7 +103,7 @@ layer combinations. Do not type into sensitive applications during this session.
 | Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Pending |
 | Attach while key 3 is held | Initial snapshot highlights key 3 without a fresh press | Passed: new process opened while user held left top-row P; immediately highlighted, cleared on release |
 | Companion restart | Typing continues; restarted companion synchronizes current state | Fresh companion sessions/typing passed in plan 11; held-state attach still pending |
-| USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Normal reconnect typing passed in plan 11; overlay/held-key case pending |
+| USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Passed: held P across three-second unplug/replug; stale while absent, live/held highlight restored, release clears, typing works |
 | Firmware restart | Old-session traffic discarded; new state synchronized | Passed in plan 11: fresh running session/snapshot and post-flash controls/input |
 | Safe burst / explicit diagnostic loss | Typing remains responsive; recovery clears any obsolete press | Rapid typing passed: highlights clear, typing normal; deliberate loss not injected (no diagnostic mode) |
 | Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Movement/resize passed: usable diagram and responsive app; input-source switch pending |
