@@ -1,6 +1,7 @@
 # Central milestone tracker
 
-Updated: 2026-10-04. Planning complete; implementation has not started.
+Updated: 2026-10-04. Offline execution started from clean `ab66f12` on
+`local/monorepo`; coordinator owns integration and local commits.
 The last inspected implementation baseline is `0ab641c`; the initial nine plans
 were committed in `322d631` and linked in `d99733e`. Re-read actual HEAD/status
 at startup. This file is the execution source of truth and is coordinator-owned.
@@ -30,12 +31,12 @@ not satisfy those gates. Readiness does not authorize execution by itself.
 
 ## Milestones
 
-All owners are **unassigned**, all implementation/hardware evidence is **none**,
-and no write leases are held. Update these columns when the new session starts.
+Initial dispatch: 01 protocol, 06A research, and 09A inventory. Hardware evidence
+remains none. Exact active ownership is recorded below.
 
 | ID | Plan / handover | Status | Entry gate | Next concrete move | Owner / accepted revision |
 | --- | --- | --- | --- | --- | --- |
-| 01 | [Protocol](01-protocol-and-recovery.md) / [handover](handovers/01-protocol.md) | Ready | Inspect current baseline | Specify wire/API contract, literal fixtures, identity, snapshot ordering | Unassigned / none |
+| 01 | [Protocol](01-protocol-and-recovery.md) / [handover](handovers/01-protocol.md) | Active | Clean baseline inspected | Wire/API checkpoint, then codec and recovery | protocol / none |
 | 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Planned | G01 | Queue/state and fake endpoint tests, then LK7 integration | Unassigned / none |
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Planned | G01 | Fake HID adapter/session integration, geometry and compact UI | Unassigned / none |
 | 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Planned | G-live-offline; user starts session | Identify firmware/GUI/rollback and run the manual worksheet | Unassigned / none |
@@ -49,13 +50,13 @@ and no write leases are held. Update these columns when the new session starts.
 
 | Task | Initial status | Writable scope | Acceptance / release |
 | --- | --- | --- | --- |
-| 06A | Ready | Architecture research document; 06 handover | Sources, constraints, open questions; does not choose the final editor |
+| 06A | Active | Architecture research document; 06 handover | Sources, constraints, open questions; does not choose the final editor |
 | 06B | Planned | Architecture decision; revised 07/08 plan proposals | G05, source-backed decision, coordinator acceptance within agreed scope |
 | 07A | Planned | New schema/export Zig source and dedicated tests | G05/G06, lossless format/API and G07-export accepted |
 | 07B | Planned | Editor UI and dedicated UI tests | G07-export, supported save/edit/export workflow; completes 07 criteria |
 | 08A | Planned | Build/flasher backend and dedicated fake tests | G05/G06/G07-export; no GUI/hardware; partial backend only |
 | 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
-| 09A | Ready | Platform/board capability documents | Honest source-backed matrices; refresh after G04/G05, no support claims |
+| 09A | Active | Platform/board capability documents | Honest source-backed matrices; refresh after G04/G05, no support claims |
 | 09B | Deferred | A selected target's new plan, then assigned source | User selects target/environment; own implementation and hardware gates |
 
 05 diagram/source preparation and 04 worksheet preparation may be separately
@@ -105,7 +106,9 @@ material architecture scope change require the user's decision before that work.
 
 | Agent / task | Exact writable paths | Base / contract revision | Next checkpoint | State |
 | --- | --- | --- | --- | --- |
-| None | None | None | Coordinator startup | No workers active |
+| protocol / 01 | `device-protocol/src/root.zig`, `companion-model/src/root.zig`, `apps/headless/main.zig`, `tests/test_protocol_session.zig`, `docs/device-protocol.md`, `docs/plans/handovers/01-protocol.md` | `ab66f12` / baseline | Wire contract and literal fixtures before codec/model | Active |
+| architecture / 06A | `docs/plans/06-architecture-research.md`, `docs/plans/handovers/06-architecture.md` | `ab66f12` / baseline | Source-backed comparison; final decision pending G05 | Active |
+| inventory / 09A | `docs/plans/09-platform-capabilities.md`, `docs/plans/09-board-capabilities.md`, `docs/plans/09-setup-and-recovery.md`, `docs/plans/handovers/09-expansion.md` | `ab66f12` / baseline | Honest matrices and ordered gaps | Active |
 
 Coordinator records exact paths before dispatch; this table supersedes broad
 package suggestions in plans. Git/index, build/manifests, central docs, shared
@@ -123,6 +126,7 @@ reuse this result as evidence for later source changes.
 | Date | Event | Evidence / next action |
 | --- | --- | --- |
 | 2026-10-04 | Subagent execution structure prepared; no implementation started | Start from the fresh-session prompt in the workflow |
+| 2026-10-04 | User authorized offline subagent execution and local commits; clean `ab66f12` inspected | Zig `/Users/clorz/.zvm/0.16.0/zig`; dispatch 01/06A/09A; no hardware access |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.
