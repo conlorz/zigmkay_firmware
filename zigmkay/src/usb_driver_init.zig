@@ -27,6 +27,7 @@ pub fn Initializer(comptime usb: type, comptime config: usb.Config, comptime arg
     };
     return struct {
         descriptors: Descriptors = undefined,
+        observe: ?*const fn (u8, u8, u8, u16) void = null,
 
         pub fn configure(self: *@This(), base: anytype, device: *usb.DeviceInterface, number: u16) void {
             std.debug.assert(number <= 1);
@@ -37,24 +38,33 @@ pub fn Initializer(comptime usb: type, comptime config: usb.Config, comptime arg
             inline for (drivers, 0..) |field, i| {
                 const T = field.type.Descriptor;
                 self.descriptors[i] = wire.decode(T, &bytes[i]);
+                if (self.observe) |observe| observe(2, @intCast(i), 0, 0);
                 const desc = &self.descriptors[i];
                 inline for (@typeInfo(T).@"struct".fields) |part| {
                     if (comptime part.type == usb.descriptor.Endpoint) {
                         const endpoint = &@field(desc, part.name);
-                        if (endpoint.endpoint.dir == .Out) device.ep_open(endpoint);
+                        if (endpoint.endpoint.dir == .Out) {
+                            if (self.observe) |observe| observe(3, @intCast(i), @bitCast(endpoint.endpoint), endpoint.max_packet_size.into());
+                            device.ep_open(endpoint);
+                        }
                     }
                 }
                 const driver = &@field(base.driver_data.?, field.name);
+                if (self.observe) |observe| observe(4, @intCast(i), 0, 0);
                 if (@hasField(@TypeOf(base.driver_alloc), field.name)) {
                     driver.init(desc, device, &@field(base.driver_alloc, field.name));
                 } else driver.init(desc, device);
                 inline for (@typeInfo(T).@"struct".fields) |part| {
                     if (comptime part.type == usb.descriptor.Endpoint) {
                         const endpoint = &@field(desc, part.name);
-                        if (endpoint.endpoint.dir == .In) device.ep_open(endpoint);
+                        if (endpoint.endpoint.dir == .In) {
+                            if (self.observe) |observe| observe(5, @intCast(i), @bitCast(endpoint.endpoint), endpoint.max_packet_size.into());
+                            device.ep_open(endpoint);
+                        }
                     }
                 }
             }
+            if (self.observe) |observe| observe(6, 0, 0, number);
         }
     };
 }

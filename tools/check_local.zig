@@ -37,6 +37,7 @@ pub fn main(init: std.process.Init) !void {
             try root.access(io, path, .{});
             const bytes = try root.readFileAlloc(io, path, gpa, .limited(32 * 1024 * 1024));
             try @import("uf2-validator").validate(gpa, bytes);
+            try @import("usb_artifact.zig").validate(gpa, bytes);
         }
         const root_uf2 = try root.readFileAlloc(io, "zig-out/firmware/lk7/zigmkay.uf2", gpa, .limited(1024 * 1024));
         const leaf_uf2 = try root.readFileAlloc(io, "keyboards/zig-out/firmware/lk7/zigmkay.uf2", gpa, .limited(1024 * 1024));

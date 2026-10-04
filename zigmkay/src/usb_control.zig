@@ -2,8 +2,9 @@
 //! Generic USB/controller parameters keep the same boundary fake-testable.
 const protocol = @import("device-protocol");
 const transport = @import("telemetry_transport.zig");
+const ep0 = @import("usb_ep0.zig");
 
-pub const Setup = struct { request_type: u8, request: u8, value: u16, index: u16, length: u16 };
+pub const Setup = ep0.Setup;
 pub const Decision = enum { delegate, receive, reject };
 pub const Gate = struct {
     pending: bool = false,
@@ -28,6 +29,12 @@ pub const Hooks = struct {
     reject: *const fn () void,
     /// Disable/reset noncontrol endpoints before (re)initializing drivers.
     configure: ?*const fn (u16) void = null,
+    request: ?*const fn (Setup) ep0.Reply = null,
+    output: ?*const fn ([]const u8) bool = null,
+    status_complete: ?*const fn () void = null,
+    reset: ?*const fn () void = null,
+    interrupt_output: ?*const fn (u8, []const u8) u16 = null,
+    ready: ?*const fn () bool = null,
 };
 
 pub fn Controller(comptime usb: type, comptime Base: type) type {
@@ -41,6 +48,7 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
         configuration_descriptor: ?[]const u8 = null,
         hid_descriptors: []const [9]u8 = &.{},
         hooks: Hooks,
+        transfer: ep0.Transfer = .{},
         const Self = @This();
 
         pub fn on_setup_req(self: *Self, device: *usb.DeviceInterface, packet: *const usb.types.SetupPacket) void {
@@ -51,9 +59,20 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             // descriptor data and its status packet. The pinned controller does
             // not reset these buffers or discard its pending descriptor slice.
             self.hooks.prepare();
+            if (self.hooks.ready) |ready| {
+                if (!ready()) {
+                    self.transfer.reset();
+                    return;
+                }
+            }
             self.base.tx_slice = null;
             if (comptime @hasField(Base, "new_address")) self.base.new_address = 0;
             const request_type: u8 = @bitCast(packet.request_type);
+            if (self.hooks.request) |request| {
+                const setup = Setup{ .request_type = request_type, .request = packet.request, .value = packet.value.into(), .index = packet.index.into(), .length = packet.length.into() };
+                self.transfer.setup(device, setup, request(setup), self.hooks.reject);
+                return;
+            }
             if (request_type == 0x00 and packet.request == 9 and self.hooks.configure != null) {
                 if (packet.value.into() > 1 or packet.index.into() != 0 or packet.length.into() != 0) {
                     self.hooks.reject();
@@ -125,10 +144,29 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
         }
 
         pub fn on_buffer(self: *Self, device: *usb.DeviceInterface, comptime ep: usb.types.Endpoint) void {
+            if (comptime ep.num == .ep0) {
+                if (self.hooks.request != null) {
+                    if (comptime ep.dir == .In) {
+                        if (self.transfer.inComplete(device)) {
+                            if (self.hooks.status_complete) |complete| complete();
+                        }
+                    } else self.transfer.outComplete(device, self.hooks.output.?, self.hooks.reject);
+                    return;
+                }
+            }
             if (comptime ep.num == .ep0 and ep.dir == .In) {
                 if (self.control_owned) return;
             }
             if (comptime ep.dir == .Out) {
+                if (self.hooks.interrupt_output) |receive| {
+                    if (comptime ep.num != .ep0) {
+                        var bytes: [64]u8 = undefined;
+                        const len = device.ep_readv(ep.num, &.{&bytes});
+                        const next = receive(@intFromEnum(ep.num), bytes[0..len]);
+                        if (next != 0) device.ep_listen(ep.num, @intCast(next));
+                        return;
+                    }
+                }
                 if (self.telemetry) |t| {
                     if (comptime ep.num == .ep0) {
                         if (self.gate.pending) {
@@ -169,8 +207,9 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             self.gate.pending = false;
             self.control_owned = false;
             self.status_out_pending = false;
+            self.transfer.reset();
             if (self.telemetry) |t| t.disconnect();
-            if (self.hooks.configure) |configure| configure(0);
+            if (self.hooks.reset) |reset| reset() else if (self.hooks.configure) |configure| configure(0);
             self.base.on_bus_reset(device);
         }
     };
