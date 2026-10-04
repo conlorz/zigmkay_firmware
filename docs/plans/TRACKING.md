@@ -1,6 +1,6 @@
 # Central milestone tracker
 
-## Direct next task: bounded USB/HID recovery hardware session
+## Direct next task: final root mise flashing verification
 
 Recovery research/design accepted at `2972bc6`; runtime initializer `c9ea3a1`;
 offline R3 integrated at `2e30e9d`. Full offline checks pass, including ten board
@@ -17,7 +17,7 @@ User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconn
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
 | R-keyboard | Accepted | [Live configuration/input/modifier/release/reconnect evidence](../research/usb-hid-diagnostic-session.md); Mac only, no Caps Lock binding |
 | R-custom | Accepted | [Live custom run](../research/usb-hid-custom-contract.md): user confirms stable status, agreed controls and typing; SDL filter and refresh fixes integrated |
-| R-flash | Active | Bounded discovery/failure fixtures, identity/ambiguity and running verification; R-custom entry gate satisfied |
+| R-flash | Waiting-user | [Contract](../research/usb-hid-flash-contract.md); `0aa2ca7`, full checks and standalone live identity verification pass; updated root flash/restart verification run awaits BOOTSEL |
 
 Research workers have stopped and released all leases. The coordinator owns
 all integration. Source remains Zig 0.16.0 with the immutable MicroZig pin;

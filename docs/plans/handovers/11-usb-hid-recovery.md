@@ -53,6 +53,16 @@ full-capacity capture replay. User confirms stable live status, agreed controls
 and typing. R-custom accepted on macOS; R5 now active. Existing gaming layer 4
 is undefined and remains outside the validated controls. Next: finish bounded
 flash discovery, failure handling and safe running verification.
+
+R5 offline implementation `0aa2ca7` now includes bounded/ambiguous discovery,
+boot identity checks, strict UF2 capacity/address/flag validation, production
+transfer-stage fault fixtures and headless LK7 identity/snapshot verification.
+`mise run //:check-full` passed. Standalone live headless verification passed in
+0.48 seconds, digest `bbf087c054cfb061e04b9dd9e232e0a3`. Updated root flash now
+automatically verifies LK7; flash-file offers explicit `--verify-lk7`. See
+`usb-hid-flash-contract.md` for limits (no binary readback, kernel syscall blocking,
+other-board verification unsupported). Final unchanged-image root entry-point
+run awaits the user entering BOOTSEL. R-flash is not accepted yet.
 Do not repeat the diagnostic flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 

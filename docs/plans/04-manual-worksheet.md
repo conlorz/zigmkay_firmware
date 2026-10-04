@@ -2,7 +2,8 @@
 
 Current recovery candidate and bounded run:
 [plan 11's diagnostic session](../research/usb-hid-diagnostic-session.md),
-implementation `2e30e9d`. Use its SHA-256 and stop criteria after explicit hardware
+initial implementation `2e30e9d`. Current R5 candidate is recorded in
+[the flashing contract](../research/usb-hid-flash-contract.md). Use its SHA-256 and stop criteria after explicit hardware
 authorization. R-keyboard does not automatically accept the original G04
 identity/session/overlay rows below; companion tests wait for R-keyboard.
 
@@ -18,12 +19,12 @@ session. Coordinator fills artifact identities from the accepted 02/03 revision.
 
 | Item | Value |
 | --- | --- |
-| Integrated implementation / firmware build / protocol | `2e30e9d` / USB recovery / G01 `5b092ec`, unchanged v2 |
-| New firmware path / size | `.zig-cache/manual-session/recovery-11/lk7-2e30e9d.uf2` / 130,560 bytes |
-| New firmware SHA-256 | `6b5df9e387fae46b2b995d82670ddd9c78c7563d09456ea75aaf00f6a41dc391` |
-| Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / integrated `2e30e9d` tree / 42,245,536 bytes |
-| Companion SHA-256 | `4c612468ce0c9aee29d669123c99eb20b6de988615da642176612a6b9dc00db0` |
-| Expected board / profile / digest | `lk7` / `danish` / `1ba43aa9b78a280faf77cdf41d0a42eb` (34 keys, 4 layers) |
+| Integrated implementation / firmware build / protocol | `0aa2ca7` / USB recovery and agreed controls / G01 `5b092ec`, unchanged v2 |
+| New firmware path / size | `zig-out/firmware/lk7/zigmkay.uf2` / 130,560 bytes |
+| New firmware SHA-256 | `c402a55066505d338162e120eac4f038a621d0cee925ca0618f17efe48492263` |
+| Companion path / build revision / size | `zig-out/bin/zigmkay_companion` / integrated `0aa2ca7` tree / 42,283,760 bytes |
+| Companion SHA-256 | `22351c4ddadee6b10bd67aa0349c88e3f030e29deadd04bacac980a02a94118b` |
+| Expected board / profile / digest | `lk7` / `danish` / `bbf087c054cfb061e04b9dd9e232e0a3` (34 keys, 4 layers) |
 | Zig | 0.16.0 |
 | MicroZig revision | `00fde43fa3756790037b099baeafacc3e6bf9499` |
 | Baseline rollback source | `ab66f12`, Rollercole 34-key / four-layer profile |
