@@ -3,6 +3,10 @@
 Status: planned. Depends on the consolidated baseline. This milestone is fully
 offline and is the next implementation task.
 
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[01 handover](handovers/01-protocol.md). A protocol worker owns the assigned
+codec/model sources; the coordinator owns cross-package build glue and commits.
+
 ## Outcome
 
 A documented, portable protocol and session reducer that can establish identity,
@@ -82,3 +86,8 @@ These are focused local commits in the existing checkout.
 Handoff includes exact message layouts, transport actions, memory/queue budgets,
 and the snapshot cut-over algorithm required by 02/03. Hardware delivery,
 overlay polish, flashing, editor UI, and runtime remapping are outside this plan.
+
+Incoming: current baseline and preserved fixtures. Outgoing: accepted G01 handover
+freezes wire/API, identity, limits, and snapshot ordering for parallel 02/03.
+Publish actual commit/check evidence; downstream identity users in 05/07/08 reuse
+that contract. Amend it through the coordinator rather than competing edits.

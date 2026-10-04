@@ -1,7 +1,12 @@
 # 09: Document and stage other platforms and keyboards
 
-Status: planned, deferred behind LK7/macOS acceptance. Board compilation remains
-part of earlier checks; compilation alone does not establish live support.
+Status: planned. 09A documentation/inventory may start now; 09B target implementation
+is deferred behind LK7/macOS acceptance and selection of a concrete next target.
+Board compilation remains part of earlier checks; it does not establish live support.
+
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[09 handover](handovers/09-expansion.md). Early work is documentation-only and uses
+its own files. Refresh matrices from actual accepted handovers as work progresses.
 
 ## Outcome
 
@@ -71,3 +76,8 @@ observed. Never push this local fork or create worktrees/clones as part of addin
 targets. Wireless, new MCU families, runtime remapping, and replacement of native
 C bridges require separate scoped decisions rather than joining this backlog
 implicitly.
+
+Incoming: catalog/source evidence for 09A, then actual 01-08 handovers as available.
+Outgoing: honest matrices, gaps, and selected child plans with their own tracker
+rows/leases/hardware gates. 09A acceptance cannot accept 09B or claim untested
+support. Unselected platforms/boards remain deferred rather than auto-dispatched.

@@ -18,3 +18,8 @@ in Zig: production code, build logic, utilities, generators, and tests.
 - Run appropriate Zig checks for each change. Keep generated test outputs in
   build caches; update committed generated sources only by explicit regeneration.
 - Keep code, comments, diagnostics, test names, and commit messages in English.
+
+For milestone coordination, read [the central tracker](docs/plans/TRACKING.md)
+and [the subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). Respect exclusive
+file ownership, coordinator-owned Git/build integration, and accepted handovers.
+Planning files alone do not authorize implementation or device operations.

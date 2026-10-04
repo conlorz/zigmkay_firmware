@@ -1,7 +1,12 @@
 # 08: Companion build and deliberate firmware flashing
 
-Status: planned. Depends on 05/07 and 06's selected architecture. Manual flashing
-in 04/05 remains sufficient until this integration is implemented.
+Status: planned. 08A backend depends on accepted 05/06 and 07A export contract;
+08B GUI integration depends on full 07 and accepted 08A. Manual flashing in 04/05
+remains sufficient until this integration is implemented.
+
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[08 handover](handovers/08-build-flash.md). 08A may run beside 07B with fake process/
+volume boundaries and no GUI/hardware. Transfer GUI ownership before 08B starts.
 
 ## Outcome
 
@@ -77,3 +82,10 @@ from the separately authorized hardware session. All commits remain local.
 
 Automatic background updates, network artifact publishing, other MCU flash
 protocols, and unattended firmware flashing are outside this milestone.
+
+Incoming: accepted [05 selector/identity](handovers/05-keymap.md),
+[06 decision](handovers/06-architecture.md), and [07 export](handovers/07-editor.md).
+08A publishes backend/manifest API and actual fake-test results for 08B; it does
+not complete 08. Outgoing full workflow and separate observed hardware evidence
+release G08 and inform 09. Copy success, running identity, and typing acceptance
+remain distinct recorded results.

@@ -5,9 +5,11 @@ Use the compiler version pinned in `.zigversion`. Builds fetch third-party
 packages through immutable URLs and hashes in `build.zig.zon`; sibling clones
 are unnecessary. On macOS, use the installed Xcode SDK.
 
-See the [next-step roadmap](docs/plans/README.md) for LK7 live monitoring, the
-QWERTY/EurKEY Next Mac profile, editor research, and later build/flash integration.
-The next implementation milestone is [protocol and recovery](docs/plans/01-protocol-and-recovery.md).
+Start planning/execution from the [central tracker](docs/plans/TRACKING.md) and
+[subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). The
+[roadmap](docs/plans/README.md) covers LK7 live monitoring, the QWERTY/EurKEY Next
+Mac profile, editor research, and later build/flash integration. The next
+implementation milestone is [protocol and recovery](docs/plans/01-protocol-and-recovery.md).
 
 ```sh
 zig build                    # host tests, including GUI components

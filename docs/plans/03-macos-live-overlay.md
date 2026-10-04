@@ -3,6 +3,10 @@
 Status: planned. Depends on 01; end-to-end integration also requires 02.
 Hardware behavior is accepted in 04, not by offline tests alone.
 
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[03 handover](handovers/03-overlay.md). May run beside 02 after G01 using fake
+transport; real firmware integration consumes 02's accepted artifact/metadata.
+
 ## Outcome
 
 A small LK7 keyboard overlay that highlights physical keys and shows the current
@@ -85,3 +89,8 @@ label refresh; then record offline validation and outstanding macOS behaviors.
 Handoff provides concrete firmware/GUI commands, displayed states, selection
 rules, recording procedure, and the remaining manual checks for 04. Windows,
 Linux, editor UI, browser support, and automatic flashing remain later work.
+
+Incoming: accepted [01 contract](handovers/01-protocol.md); shared geometry;
+[02 metadata](handovers/02-firmware.md) for joint integration. Outgoing: actual
+GUI/replay commands, adapter/label/render evidence, and manual checks for 04;
+native UI constraints also inform 06/07. Release GUI leases before later changes.

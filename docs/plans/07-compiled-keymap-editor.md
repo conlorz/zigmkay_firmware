@@ -3,6 +3,10 @@
 Status: planned and conditional on 06's architecture decision. Depends on 05/06.
 The native companion is the preferred starting route, not yet a final decision.
 
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[07 handover](handovers/07-editor.md). Split 07A schema/export from 07B editor UI.
+After G07-export, 07B may run beside 08A backend on disjoint exact file leases.
+
 ## Outcome
 
 Edit an LK7 profile visually, save a lossless project, validate it, and export a
@@ -70,3 +74,9 @@ Handoff supplies the project format, supported action matrix, export command,
 artifact/profile identity, and concrete user workflow for 08. Arbitrary Zig
 source editing, other boards, runtime configuration, and on-device persistence
 remain deferred unless separately selected.
+
+Incoming: accepted [05](handovers/05-keymap.md)/[06](handovers/06-architecture.md)
+and existing identity. 07A publishes schema/actions, export path/API/digest,
+validation/error/result contract, literal fixtures, and actual build integration.
+Coordinator acceptance freezes G07-export for 07B/08A. Full 07 acceptance then
+releases G07 and transfers GUI ownership to 08B; 07A alone cannot complete 07.

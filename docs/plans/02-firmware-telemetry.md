@@ -3,6 +3,10 @@
 Status: planned. Depends on 01. Compile/test only until the joint hardware
 session in 04.
 
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[02 handover](handovers/02-firmware.md). May run beside 03 after G01; use exclusive
+firmware file leases and request shared build/identity edits from the coordinator.
+
 ## Outcome
 
 LK7 attaches the observer to a bounded production transport and responds to the
@@ -79,3 +83,8 @@ size/scheduling checks. Each commit is local and reviewable.
 Provide the artifact path/hash and companion-compatible metadata for 03/04.
 Do not run the flasher, request BOOTSEL, enumerate a live keyboard, change the
 board's pins, or design keymap editing as part of this implementation task.
+
+Incoming: accepted [01 contract](handovers/01-protocol.md). Outgoing: firmware
+transport/budget/USB evidence and identified artifacts for 03/04. Acceptance is
+offline; G-live-offline additionally needs accepted 03 and stable joint checks.
+Actual device acceptance stays pending until the user-led 04 session.

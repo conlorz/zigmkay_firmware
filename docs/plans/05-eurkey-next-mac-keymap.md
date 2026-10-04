@@ -3,6 +3,10 @@
 Status: planned. Depends on 04. The user has selected EurKEY Next, QWERTY
 letters, and Mac shortcuts. This profile must be usable before the editor exists.
 
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[05 handover](handovers/05-keymap.md). Diagram/source preparation may be assigned
+early; profile implementation waits for G04 and review of concrete assignments.
+
 ## Outcome and references
 
 A named, selectable LK7 profile that produces QWERTY letters and intended
@@ -87,3 +91,9 @@ then record manual acceptance and fixes in focused local commits.
 Handoff supplies a usable profile, its build selector, reference diagrams,
 symbol expectations, and a hardware report. Editor implementation, runtime
 remapping, and automatic flashing are outside this milestone.
+
+Incoming: accepted [04 baseline](handovers/04-hardware.md) and
+[01 identity](handovers/01-protocol.md). Coordinator integrates shared selection
+and build glue; the keymap worker owns new profile data/tests. Outgoing: reviewed
+profile/selector/identity plus actual manual evidence releases G05 for final 06,
+07, and 08. Compiled-but-untested profiles do not release G05.

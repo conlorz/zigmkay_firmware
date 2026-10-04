@@ -1,7 +1,12 @@
 # 06: Research the visual editor architecture
 
-Status: planned. Depends on a stable live baseline; use 05's concrete profile
-requirements. The current preference is extending the native companion.
+Status: planned. 06A research may start from the current baseline; final 06B
+decision needs the accepted live baseline and 05's concrete profile requirements.
+The current preference is extending the native companion.
+
+Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
+[06 handover](handovers/06-architecture.md). Research uses dedicated documents
+beside 01 or 02/03; no unassigned UI/framework implementation belongs to 06A.
 
 ## Outcome
 
@@ -72,3 +77,9 @@ Commit research notes and source references; commit any necessary Zig spike with
 appropriate offline checks; commit the architecture decision and adjusted plans.
 Do not add a permanent browser service, vendor an entire UI framework, or start
 the full editor while the architecture decision remains unresolved.
+
+Incoming: current constraints for 06A; accepted [03](handovers/03-overlay.md),
+[04](handovers/04-hardware.md), and [05](handovers/05-keymap.md) for 06B. Outgoing:
+source-backed decision and revised 07/08 specifications release G06. The worker
+proposes plan changes; the coordinator integrates them. Material scope/new-language
+decisions require the user; an early comparison alone does not release G06.

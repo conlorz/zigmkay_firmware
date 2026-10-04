@@ -3,6 +3,12 @@
 Status: planned. User priorities agreed on 2026-10-04. This roadmap describes
 future work; creating these plans does not implement or hardware-validate it.
 
+Execution starts from the [central tracker](TRACKING.md), which owns status,
+assignments, dependencies, and accepted evidence. Read the
+[subagent workflow](SUBAGENT-WORKFLOW.md) for parallel waves, shared-checkout
+ownership, and the fresh-session starting prompt. Each plan has a durable
+[handover](handovers/README.md); all initial records are pending, not accepted.
+
 ## Starting point and decisions
 
 Canonical checkout: `zigmkay_firmware`, branch `local/monorepo`. The inspected
@@ -57,16 +63,20 @@ currently fixed imports. These are concrete work items below.
 | 03 | [macOS live overlay](03-macos-live-overlay.md) | 01; integrate with 02 | Small overlay with correct geometry and resilient connection handling |
 | 04 | [LK7 hardware acceptance](04-lk7-hardware-acceptance.md) | 02, 03 | User-verified typing and live monitoring on real hardware |
 | 05 | [EurKEY Next Mac keymap](05-eurkey-next-mac-keymap.md) | 04 | Selectable compiled QWERTY profile with Mac shortcuts |
-| 06 | [Editor architecture research](06-editor-architecture-research.md) | Stable live baseline; inform with 05 | Evidence-backed native/browser decision |
+| 06 | [Editor architecture research](06-editor-architecture-research.md) | Research may start now; final decision after 05 | Evidence-backed native/browser decision |
 | 07 | [Compiled keymap editor](07-compiled-keymap-editor.md) | 05, 06 | Validated edit/save/export workflow; architecture conditional on 06 |
-| 08 | [Build and flash workflow](08-build-and-flash-workflow.md) | 05, 07 | Selected keymap builds and deliberate, identifiable firmware flashing |
-| 09 | [Platforms and boards](09-platform-and-board-expansion.md) | LK7/macOS acceptance; stable interfaces | Staged Windows/Linux and additional-board support |
+| 08 | [Build and flash workflow](08-build-and-flash-workflow.md) | Backend after accepted 07A; GUI after full 07 | Selected keymap builds and deliberate, identifiable firmware flashing |
+| 09 | [Platforms and boards](09-platform-and-board-expansion.md) | Inventory may start now; target work separately gated | Staged Windows/Linux and additional-board support |
 
-Implementation starts with 01. Portable protocol and session work can be tested
-without hardware. Native/browser research can start independently once current
-constraints are understood, but must not delay the live-monitoring milestone.
-Do not execute every plan automatically from this index: complete and report the
-requested milestone, its checks, remaining limits, and next dependency.
+Implementation starts with 01, while independent 06A research and 09A inventory
+can run in parallel. After its contract is accepted, 02 firmware and 03 overlay
+can run concurrently. Later, accepted 07A export allows 07B UI and 08A backend
+work in parallel. See the tracker for exact partial-task gates and owner leases.
+
+Reading this roadmap does not start execution. When the user starts the subagent
+flow, the coordinator dispatches ready tasks within that session's authorized
+scope, integrates their results, and records handovers before releasing dependent
+work. Report actual checks, limits, user gates, and next ready tasks.
 
 ## Shared acceptance rules
 
