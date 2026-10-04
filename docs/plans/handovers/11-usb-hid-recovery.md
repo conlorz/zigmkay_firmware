@@ -48,9 +48,11 @@ The custom candidate flashed/configured successfully in 4.10 seconds. First live
 GUI failed before handshake: SDL defaults HID enumeration to game controllers.
 `bceadb0` disables that filter in live mode and logs discovery/open. Host-only
 retry discovers and opens the exact vendor collection; full checks pass again.
-Remaining: user-observed live status and custom/input outcomes, then inspect saved
-capture. R-custom is not yet accepted; R5 remains gated. Existing gaming layer 4
-is undefined and remains outside the validated controls.
+`40e0afc` preserves valid state during healthy periodic refresh; `78d7443` fixes
+full-capacity capture replay. User confirms stable live status, agreed controls
+and typing. R-custom accepted on macOS; R5 now active. Existing gaming layer 4
+is undefined and remains outside the validated controls. Next: finish bounded
+flash discovery, failure handling and safe running verification.
 Do not repeat the diagnostic flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 

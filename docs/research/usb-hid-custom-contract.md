@@ -142,3 +142,13 @@ recorder maximum returned StreamTooLong before probing EOF. Replay loading now
 permits one extra byte for the EOF probe; replay still rejects oversized input.
 A full-capacity file round-trip regression passes, and the actual recorded
 session successfully replays through the GUI's three-frame offline smoke mode.
+
+## R-custom acceptance
+
+User confirmed the physical-position test works after the refresh fix: stable
+live status, overlay/log toggle, companion close, and ordinary typing afterward.
+Both-thumb callbacks select the control layer correctly. R-custom is accepted
+on macOS for these agreed controls with production signal/backpressure/recovery
+regressions. Stable-run capture is `custom-session-stable.bin` in the ignored
+session cache. Windows/Linux and the undefined gaming action remain unverified;
+gaming is not included in this acceptance. R5 is now eligible for implementation.
