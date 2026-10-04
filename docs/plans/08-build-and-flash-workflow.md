@@ -51,9 +51,21 @@ Do not infer safe selection from a generic volume name alone.
    candidates through explicit selection. Validate UF2 structure/family and
    board compatibility to the extent available. Explain any board identity that
    cannot be proved in BOOTSEL rather than inventing a unique serial guarantee.
-5. Start with manual physical BOOTSEL/recovery instructions. A future automatic
-   reboot request must be a separate deliberate device action with a documented
-   protocol and explicit user task; it is not implied by building or monitoring.
+5. Add an explicit editor **Enter bootloader** action over the existing vendor
+   HID channel, requested by the user during architecture planning. Extend the
+   versioned protocol with capability detection, a session-bound correlated
+   request and acceptance/error response. Enable only for the selected compatible,
+   identity-verified connection; older firmware uses the physical combo fallback.
+   Firmware validates through its bounded control mailbox and transitions from a
+   main-loop boundary, reusing the ROM boot path used by `ActivateBootMode`.
+   Define bounded acknowledgment/drain timing before disconnect; do not wait
+   indefinitely or reboot from an arbitrary USB receive callback. Reject stale,
+   malformed and duplicate requests, and never resend automatically after a
+   timeout/reconnect. Session tokens are isolation, not authentication.
+   Treat HID removal as expected but not proof of BOOTSEL: discover and validate
+   the recovery volume through the existing flasher before offering transfer.
+   Building, monitoring and editor startup never enter bootloader implicitly.
+   Keep the physical combo/recovery instructions available when HID is unavailable.
 6. Preserve the known-good rollback artifact and manifest. Handle device removal,
    insufficient space, permission/copy failure, and cancellation before flashing.
    During a copy, follow the actual transport's completion semantics; do not
@@ -76,6 +88,11 @@ Do not infer safe selection from a generic volume name alone.
   multiple/missing volumes, copy failure, removal, and reconnect timeout.
 - Paths/profile names with spaces and metacharacters remain literal arguments;
   arbitrary paths cannot redirect a flash to an unrelated drive.
+- Fake transport/ROM tests cover bootloader capability negotiation, explicit-only
+  dispatch, old firmware fallback, wrong/stale session, duplicate/malformed
+  requests, acknowledgment backpressure, expected disconnect and missing/ambiguous
+  recovery volumes. A separately authorized device session verifies HID-requested
+  BOOTSEL and successful recovery; planning does not authorize that operation.
 - Offline tests prove that build/export/startup never calls the real flasher or
   requests BOOTSEL. Tests create artifacts/fake volumes in build caches only.
 - `zig build check-full` passes. Manual CLI flashing remains available and

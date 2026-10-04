@@ -120,6 +120,14 @@ All jobs use argument vectors and immutable snapshots; compilation and flashing
 remain distinct explicit actions. Reuse plan 11 flasher and running-identity
 verification. Preserve rollback artifacts and reject stale builds.
 
+User amendment: add an explicit Enter bootloader action over vendor HID in 08.
+Current firmware already routes `ActivateBootMode` to
+`Platform.rom.reset_to_usb_boot()` and accepts a separate reset-interface USB
+request after status completion. Vendor HID currently accepts only hello/snapshot
+controls, so add a negotiated versioned command instead of reusing a telemetry
+signal. Detailed session/acknowledgment/fallback tests are assigned in 08. No
+automatic startup/build reboot or hardware operation is authorized by this plan.
+
 ## Evidence and remaining implementation checks
 
 This is a source/documentation-backed architecture decision, not an implemented

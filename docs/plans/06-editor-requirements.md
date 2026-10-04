@@ -23,6 +23,8 @@ Confirmed by the user on 2026-10-04:
   display EurKEY text and tap/hold/combo events without flashing.
 - Attached modules live inside the project and are edited in the user's usual
   external code editor. Preserve source on save/export and show compiler errors.
+- Explicit editor Enter bootloader action over vendor HID is selected for 08;
+  keep the physical board combo as recovery fallback.
 
 Open a separate editor while retaining the small monitoring overlay. Choose LK7,
 clone an existing profile or create a project, select a layer and physical key,
