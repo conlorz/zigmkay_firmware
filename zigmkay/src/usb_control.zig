@@ -26,6 +26,8 @@ pub const Hooks = struct {
     /// Abort old EP0 buffers, clear stall, reset OUT PID before a new DATA1.
     prepare: *const fn () void,
     reject: *const fn () void,
+    /// Disable/reset noncontrol endpoints before (re)initializing drivers.
+    configure: ?*const fn (u16) void = null,
 };
 
 pub fn Controller(comptime usb: type, comptime Base: type) type {
@@ -50,7 +52,18 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             // not reset these buffers or discard its pending descriptor slice.
             self.hooks.prepare();
             self.base.tx_slice = null;
+            if (comptime @hasField(Base, "new_address")) self.base.new_address = 0;
             const request_type: u8 = @bitCast(packet.request_type);
+            if (request_type == 0x00 and packet.request == 9 and self.hooks.configure != null) {
+                if (packet.value.into() > 1 or packet.index.into() != 0 or packet.length.into() != 0) {
+                    self.hooks.reject();
+                    return;
+                }
+                self.hooks.configure.?(packet.value.into());
+                if (self.telemetry) |t| t.disconnect();
+                device.ep_ack(.ep0);
+                return;
+            }
             if (packet.request == 6) {
                 const value = packet.value.into();
                 const response: ?[]const u8 = if (request_type == 0x80 and value == 0x0200)
@@ -157,6 +170,7 @@ pub fn Controller(comptime usb: type, comptime Base: type) type {
             self.control_owned = false;
             self.status_out_pending = false;
             if (self.telemetry) |t| t.disconnect();
+            if (self.hooks.configure) |configure| configure(0);
             self.base.on_bus_reset(device);
         }
     };

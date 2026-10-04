@@ -13,7 +13,7 @@ jobs = 2
 
 [tasks.test]
 description = "Run every package's own tests and root integration tests; no hardware"
-depends = ["//zigmkay:test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
+depends = ["//zigmkay:test", "//keyboards:usb-test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
 
 [tasks.integration-test]
 description = "Run cross-package traces, identity, session and build-boundary checks"

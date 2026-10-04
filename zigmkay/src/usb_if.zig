@@ -20,6 +20,7 @@ pub const HID_KeymodifierCodes = enum(u8) {
 
 pub const KeyboardInReport = extern struct {
     modifiers: u8,
+    reserved: u8 = 0,
     keys: [6]u8,
 
     pub const empty: @This() = .{ .modifiers = 0, .keys = @splat(0) };
@@ -49,6 +50,7 @@ const Keyboard = usb.drivers.hid.InterruptDriver(.{
             .dir = .In,
             .type = .dynamic,
         } },
+        .{ .data_static = .{ .In, u8 } },
         // Input: up to 6 pressed key codes
         .{ .data = .{
             .usage = .{ .global_page = .keyboard },
@@ -137,17 +139,11 @@ const Mouse = usb.drivers.hid.InterruptDriver(.{
         },
         .{ .data_static = .{ .In, u3 } }, // Padding
         .{ .global_usage_page = .generic_desktop },
-        .{
-            .data = .{
-                .usage = .{ .global_page = .generic_desktop },
-                .usage_range = .{ 0x30, 0x31 }, // X, Y
-                .logical_range = .{ -127, 127 },
-                .count = 2,
-                .Child = i8,
-                .dir = .In,
-                .type = .dynamic,
-            },
-        },
+        .{ .local_usage_range = .{ 0x30, 0x31 } }, // X, Y
+        .{ .global_logical_range = .{ -127, 127 } },
+        .{ .global_report_count = 2 },
+        .{ .global_report_size = 8 },
+        .{ .main_input = .{ .variable = true, .relative = true } },
         // Wheel — must be Relative so the OS maps it to REL_WHEEL, not ABS_WHEEL
         .{ .local_usage = 0x38 },
         .{ .global_logical_range = .{ -127, 127 } },
@@ -271,14 +267,32 @@ const wire_descriptors = blk: {
 };
 
 pub var usb_controller: ControllerType = .init;
+var driver_initializer = @import("usb_driver_init.zig").Initializer(usb, usb_config, usb_args){};
 const configuration_bytes = wire_descriptors.configuration;
 const hid_bytes = wire_descriptors.hid;
 var vendor_controller = control.Controller(usb, ControllerType){
     .base = &usb_controller,
     .configuration_descriptor = &configuration_bytes,
     .hid_descriptors = &hid_bytes,
-    .hooks = .{ .prepare = prepare_vendor_control, .reject = reject_vendor_control },
+    .hooks = .{ .prepare = prepare_vendor_control, .reject = reject_vendor_control, .configure = configure_drivers },
 };
+
+fn configure_drivers(number: u16) void {
+    const peripherals = microzig.chip.peripherals;
+    // The pinned HAL has no endpoint-close API. Reset its noncontrol endpoint
+    // registers and allocation arena at configuration boundaries, including a
+    // repeated selection of configuration one. EP0 retains its fixed buffers.
+    const controls: *volatile [30]u32 = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_CONTROL);
+    const buffers: *volatile [30]u32 = @ptrCast(&peripherals.USB_DPRAM.EP1_IN_BUFFER_CONTROL);
+    for (0..30) |i| {
+        controls[i] = 0;
+        buffers[i] = 0;
+    }
+    peripherals.USB.BUFF_STATUS.raw = 0xfffffffc;
+    const arena: [*]align(64) u8 = @ptrFromInt(@intFromPtr(peripherals.USB_DPRAM) + 0x180);
+    usb_device.data_buffer = arena[0..3712];
+    driver_initializer.configure(&usb_controller, &usb_device.interface, number);
+}
 
 // Polled resets only the IN PID on SETUP. A vendor Output SetReport starts
 // a fresh OUT DATA1 stage, including after cancellation/stall. Keep the hardware

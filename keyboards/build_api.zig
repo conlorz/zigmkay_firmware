@@ -47,6 +47,23 @@ pub fn selectionError(b: *std.Build, selection: ?[]const u8) ?[]const u8 {
 }
 
 pub fn commands(b: *std.Build, root: std.Build.LazyPath, microzig_dep: *std.Build.Dependency, shared: Shared, selected: ?[]const u8, optimize: std.builtin.OptimizeMode) void {
+    const usb_module = b.createModule(.{ .root_source_file = microzig_dep.path("core/src/core/usb.zig") });
+    const processor_module = @import("zigmkay").processor(b, shared.processor_root, shared.model, shared.protocol);
+    const usb_tests = b.createModule(.{
+        .root_source_file = root.path(b, "tests/usb_runtime_probe.zig"),
+        .target = b.graph.host,
+        .imports = &.{ .{ .name = "usb", .module = usb_module }, .{ .name = "zigmkay", .module = processor_module } },
+    });
+    const usb_check = b.step("usb-test", "Test real pinned USB driver initialization without hardware");
+    usb_check.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = usb_tests })).step);
+    const target_probe = b.addObject(.{ .name = "usb-runtime-probe", .root_module = b.createModule(.{
+        .root_source_file = root.path(b, "tests/usb_runtime_probe.zig"),
+        .target = b.resolveTargetQuery(.{ .cpu_arch = .thumb, .os_tag = .freestanding, .abi = .eabi, .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_m0plus } }),
+        .optimize = .ReleaseSmall,
+        .imports = &.{ .{ .name = "usb", .module = usb_module }, .{ .name = "zigmkay", .module = processor_module } },
+    }) });
+    _ = target_probe.getEmittedAsm();
+    usb_check.dependOn(&target_probe.step);
     const chosen = b.step("firmware", "Compile and install the explicitly selected board");
     const all = b.step("firmware-all", "Compile and install every catalog entry");
     const list = b.addRunArtifact(b.addExecutable(.{ .name = "list-keyboards", .root_module = b.createModule(.{ .root_source_file = root.path(b, "list.zig"), .target = b.graph.host }) }));

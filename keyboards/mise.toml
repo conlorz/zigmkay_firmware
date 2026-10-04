@@ -17,3 +17,6 @@ run = 'zig build firmware -j4 -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Dopti
 [tasks.firmware-all]
 description = "Compile every catalog board into root zig-out"
 run = "zig build firmware-all -j4 -p ../zig-out"
+[tasks.usb-test]
+description = "Real pinned USB driver tests and Cortex-M0+ probe; no hardware"
+run = "zig build usb-test -j4"

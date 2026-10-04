@@ -46,3 +46,14 @@ test "nested USB descriptors serialize without ABI padding and preserve unaligne
     }
     try std.testing.expectEqual(bytes.len, offset);
 }
+
+test "wire bytes decode into persistent runtime fields without aggregate copying" {
+    var bytes = wire.encode(Configuration{});
+    // Runtime mutation prevents this from becoming another constant-layout test.
+    bytes[4] = 3;
+    const result = wire.decode(Configuration, &bytes);
+    try std.testing.expectEqual(@as(u16, 27), result.header.total.value);
+    try std.testing.expectEqual(@as(u8, 3), result.header.interfaces);
+    try std.testing.expectEqual(@as(u16, 0x0111), result.hid.version.value);
+    try std.testing.expectEqual(@as(u16, 65), result.hid.report_length.value);
+}

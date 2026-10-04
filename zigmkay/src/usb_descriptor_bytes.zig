@@ -8,7 +8,7 @@ pub fn size(comptime T: type) usize {
         .array => |info| info.len * size(info.child),
         .@"struct" => |info| if (info.layout == .@"packed") size(info.backing_integer.?) else blk: {
             var result: usize = 0;
-            for (info.fields) |field| result += size(field.type);
+            inline for (info.fields) |field| result += size(field.type);
             break :blk result;
         },
         else => @compileError("Unsupported USB descriptor field " ++ @typeName(T)),
@@ -39,4 +39,39 @@ pub fn append(output: []u8, offset: *usize, comptime value: anytype) void {
         },
         else => @compileError("Unsupported USB descriptor field " ++ @typeName(T)),
     }
+}
+
+/// Materialize descriptor fields in runtime storage, never copy a nested
+/// compiler-emitted aggregate constant into the driver's descriptor memory.
+pub fn decode(comptime T: type, bytes: []const u8) T {
+    std.debug.assert(bytes.len == comptime size(T));
+    var offset: usize = 0;
+    const result = read(T, bytes, &offset);
+    std.debug.assert(offset == bytes.len);
+    return result;
+}
+
+fn read(comptime T: type, bytes: []const u8, offset: *usize) T {
+    return switch (@typeInfo(T)) {
+        .int => blk: {
+            const U = std.meta.Int(.unsigned, @bitSizeOf(T));
+            var value: U = 0;
+            inline for (0..comptime size(T)) |i| value |= @as(U, @truncate(bytes[offset.* + i])) << (8 * i);
+            offset.* += comptime size(T);
+            break :blk @bitCast(value);
+        },
+        .@"enum" => |info| @enumFromInt(read(info.tag_type, bytes, offset)),
+        .array => |info| blk: {
+            var value: T = undefined;
+            for (&value) |*element| element.* = read(info.child, bytes, offset);
+            break :blk value;
+        },
+        .@"struct" => |info| blk: {
+            if (info.layout == .@"packed") break :blk @bitCast(read(info.backing_integer.?, bytes, offset));
+            var value: T = undefined;
+            inline for (info.fields) |field| @field(value, field.name) = read(field.type, bytes, offset);
+            break :blk value;
+        },
+        else => @compileError("Unsupported USB descriptor field " ++ @typeName(T)),
+    };
 }
