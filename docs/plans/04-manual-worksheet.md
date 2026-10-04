@@ -98,8 +98,8 @@ layer combinations. Do not type into sensitive applications during this session.
 | --- | --- | --- |
 | Ordinary typing before monitoring | Baseline tap/hold/combo behavior remains usable | Passed in plan 11: controlled taps/modifiers/releases and user typing |
 | Boot / identity | Keyboard works and expected board/profile/digest is negotiated | Passed in plan 11: root flash/headless identity and coherent snapshot |
-| Single keys 0–33, separately | Correct physical index highlights on press and clears on release | Pending |
-| Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Pending |
+| Single keys 0–33, separately | Correct physical index highlights on press and clears on release | Passed: user checked all 34 positions, correct highlight/release |
+| Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Layers passed: left Enter 2, right Space 1, both 3, release 0; modifier display pending |
 | Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Pending |
 | Attach while key 3 is held | Initial snapshot highlights key 3 without a fresh press | Pending |
 | Companion restart | Typing continues; restarted companion synchronizes current state | Fresh companion sessions/typing passed in plan 11; held-state attach still pending |
