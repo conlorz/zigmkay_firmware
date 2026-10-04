@@ -85,7 +85,31 @@ fn receive(state: *companion.State, log: *LogComponent, io: std.Io, bytes: []con
 }
 pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(init.arena.allocator());
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--native-text-check")) {
+        var session = input.Session.init();
+        defer session.deinit();
+        std.log.info("Native source={s}; layout={s}; EurKEY={}", .{ session.source.id(), session.source.layoutId(), session.eurkey() });
+        var output: [128]u8 = undefined;
+        for ([_]u8{ 4, 8, 22, 52 }) |code| {
+            session.reset();
+            const translated = try session.translate(.{ .tap_keycode = code, .tap_modifiers = .{ .left_alt = true } }, &output);
+            std.log.info("Option + HID {d}: {s}; dead-state={d}", .{ code, translated, session.dead_state });
+            if (session.dead_state != 0) {
+                const composed = try session.translate(.{ .tap_keycode = 8 }, &output);
+                std.log.info("Then E: {s}", .{composed});
+            }
+        }
+        session.reset();
+        _ = try session.translate(.{ .tap_keycode = 52, .tap_modifiers = .{ .left_alt = true } }, &output);
+        try std.testing.expectEqualStrings("´q", try session.translate(.{ .tap_keycode = 20 }, &output));
+        _ = try session.translate(.{ .tap_keycode = 52, .tap_modifiers = .{ .left_alt = true } }, &output);
+        session.reset();
+        try std.testing.expectEqualStrings("e", try session.translate(.{ .tap_keycode = 8 }, &output));
+        std.log.info("Native EurKEY composition, multi-scalar fallback and reset passed", .{});
+        return;
+    }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--editor-spike")) return @import("editor/spike.zig").run(init);
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--editor")) return @import("editor/main.zig").run(init, args);
     var smoke = false;
     var live = false;
     var verify_running = false;
@@ -260,6 +284,8 @@ pub fn main(init: std.process.Init) !void {
 }
 test {
     _ = @import("editor/model.zig");
+    _ = @import("editor/main.zig");
+    _ = @import("editor/testing.zig");
     std.mem.doNotOptimizeAway(&main);
     _ = adapter;
     _ = capture;
