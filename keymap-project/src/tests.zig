@@ -186,3 +186,47 @@ test "atomic document replacement commits new metadata and reuses unchanged sour
     try std.testing.expectEqualStrings("Saved again", loaded.snapshot.document.name);
     try std.testing.expectEqualStrings("// opaque callback\n", loaded.snapshot.sources[0].bytes);
 }
+
+test "Zig export is deterministic preserves compound fields and keeps metadata out of code" {
+    const gpa = std.testing.allocator;
+    const snapshot = p.snapshot.Snapshot{ .document = fixture, .sources = &.{} };
+    const first = try p.exporter.generate(gpa, snapshot, board);
+    defer gpa.free(first);
+    const second = try p.exporter.generate(gpa, snapshot, board);
+    defer gpa.free(second);
+    try std.testing.expectEqualStrings(first, second);
+    for ([_][]const u8{
+        "pub const key_count = 2;",   ".tap_keycode=4",       ".left_gui=true",           ".right_alt=true",
+        ".dead=true",                 ".retro_tapping=true",  ".tapping_term=.{.ms=180}", ".hold_layer=1",
+        ".custom=253",                ".media_key=.VolumeUp", ".mouse_action=.WheelDown", ".initial_delay=.{.ms=200}",
+        ".repeat_interval=.{.ms=50}", ".timeout=.{.ms=40}",
+    }) |literal| try std.testing.expect(std.mem.indexOf(u8, first, literal) != null);
+    try std.testing.expect(std.mem.indexOf(u8, first, "Navigation") == null);
+    const source = try gpa.dupeZ(u8, first);
+    defer gpa.free(source);
+    var ast = try std.zig.Ast.parse(gpa, source, .zig);
+    defer ast.deinit(gpa);
+    try std.testing.expectEqual(@as(usize, 0), ast.errors.len);
+}
+
+test "typed adapters round trip every action and all simultaneous fields" {
+    for (fixture.layers) |layer| for (layer.actions) |action| {
+        if (action) |original| {
+            const model_action = try p.lowerAction(fixture, original);
+            const lifted = try p.adapter.liftAction(fixture.layers, model_action);
+            try std.testing.expect(std.meta.eql(model_action, try p.lowerAction(fixture, lifted)));
+        }
+    };
+    const hold: @import("layout-model").KeyDef = .{ .hold_only = .{ .hold_modifiers = .fromByte(255), .hold_layer = 1 } };
+    try std.testing.expect(std.meta.eql(hold, try p.lowerAction(fixture, try p.adapter.liftAction(fixture.layers, hold))));
+    try std.testing.expectError(error.InvalidLayer, p.adapter.liftHold(fixture.layers, .{ .hold_layer = 14 }));
+}
+
+test "caller diagnostics retain their source after parse returns" {
+    const gpa = std.testing.allocator;
+    var diagnostics: p.Diagnostics = .{};
+    defer diagnostics.deinit(gpa);
+    try std.testing.expectError(error.ParseZon, p.parse(gpa, ".{ .unknown = true }", &diagnostics));
+    try std.testing.expectEqualStrings(".{ .unknown = true }", diagnostics.source.?);
+    try std.testing.expectEqualStrings(diagnostics.source.?, diagnostics.parser.ast.source);
+}

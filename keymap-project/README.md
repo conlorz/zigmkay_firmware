@@ -5,8 +5,8 @@ compile Zig, evaluate imports, execute callbacks, or access devices.
 
 Run `mise //keymap-project:test` from the monorepo. Root aggregate tests include
 this package. This is the first schema checkpoint; **G07-export is not frozen**.
-Curated adapters, import/registry resolution, deterministic export, shared
-selection and native runner/jobs remain required
+Curated profile adapters, import/registry resolution, firmware export integration,
+shared selection and native runner/jobs remain required
 before 07B starts. Schema/API changes remain possible until that gate.
 
 `src/root.zig` defines schema 1 and `parse`, `serialize`, `validate`,
@@ -84,3 +84,26 @@ Tests cover save/reopen, repeated atomic replacement, rejected digest changes,
 filesystem failure with the previous project still readable, corrupted immutable
 bundles, source bounds and identity/freshness invalidation. This API remains
 provisional until the complete 07A contract passes G07-export.
+
+## Typed adapters and deterministic Zig generation
+
+`adapter.liftAction/liftTap/liftHold` preserve typed firmware actions and convert
+indices back to stable layer IDs. They are building blocks for curated profile
+adapters, not arbitrary source import. Compile-time model field-count guards
+require a deliberate schema review if the portable action types gain fields.
+
+`exporter.generate` returns owned deterministic Zig bytes for a verified
+snapshot. It emits keymap, sides, dimensions, combos, encoder actions,
+`custom_functions` and an `identity(protocol)` accessor. Metadata names never
+enter executable source. Callback modules are named `callback_N` in document
+order and must expose ABI-1 `custom_functions`; their handlers dispatch in that
+same order. Consumers must bind those modules to the exact verified source
+inventory. Registry/import resolution and the board build integration are still
+pending, so this is a pure generator, not an end-user export/build command.
+
+The package test build generates a tiny profile only into the Zig build cache,
+compiles it, specializes the existing firmware processor and verifies literal
+A and layer-held Left Arrow press/release traces. It also checks canonical
+firmware identity equivalence. Separate compound-field export assertions and
+Zig syntax checks cover timing, media/mouse, modifiers, autofire, combos and
+transparency; compiled emitted traces for every action/callback remain pending.

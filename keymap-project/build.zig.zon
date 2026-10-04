@@ -4,6 +4,7 @@
     .fingerprint = 0xd37e8675cee40857,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .zigmkay = .{ .path = "../zigmkay" },
         .layout_model = .{ .path = "../layout-model" },
         .device_protocol = .{ .path = "../device-protocol" },
     },

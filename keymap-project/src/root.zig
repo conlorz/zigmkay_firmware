@@ -2,6 +2,8 @@ const std = @import("std");
 const model = @import("layout-model");
 const protocol = @import("device-protocol");
 pub const snapshot = @import("snapshot.zig");
+pub const exporter = @import("export.zig");
+pub const adapter = @import("adapter.zig");
 
 pub const schema_version = 1;
 pub const Limits = struct {
@@ -88,13 +90,28 @@ pub const ValidationError = error{
     CallbackIndexLocked,
 };
 
-pub fn parse(gpa: std.mem.Allocator, bytes: []const u8, diagnostics: ?*std.zon.parse.Diagnostics) !Document {
+/// Owns the terminated source as long as parser diagnostics borrow it.
+pub const Diagnostics = struct {
+    parser: std.zon.parse.Diagnostics = .{},
+    source: ?[:0]u8 = null,
+    pub fn deinit(self: *Diagnostics, gpa: std.mem.Allocator) void {
+        self.parser.deinit(gpa);
+        if (self.source) |source| gpa.free(source);
+        self.* = .{};
+    }
+};
+pub fn parse(gpa: std.mem.Allocator, bytes: []const u8, diagnostics: ?*Diagnostics) !Document {
     if (bytes.len > Limits.document_bytes) return error.DocumentTooLarge;
+    if (diagnostics) |diag| std.debug.assert(diag.source == null);
     const terminated = try gpa.dupeZ(u8, bytes);
-    defer gpa.free(terminated);
+    defer if (diagnostics == null) gpa.free(terminated);
     var local_diagnostics: std.zon.parse.Diagnostics = .{};
     defer local_diagnostics.deinit(gpa);
-    const doc = try std.zon.parse.fromSliceAlloc(Document, gpa, terminated, diagnostics orelse &local_diagnostics, .{});
+    const parser_diagnostics = if (diagnostics) |diag| blk: {
+        diag.source = terminated;
+        break :blk &diag.parser;
+    } else &local_diagnostics;
+    const doc = try std.zon.parse.fromSliceAlloc(Document, gpa, terminated, parser_diagnostics, .{});
     errdefer deinit(gpa, doc);
     if (doc.schema_version != schema_version) return error.UnsupportedVersion;
     return doc;
@@ -180,7 +197,14 @@ pub fn validate(doc: Document, board: Board) !void {
     var ids: [253]bool = @splat(false);
     if (doc.callbacks.len > 252) return error.InvalidCallback;
     for (doc.callbacks, 0..) |callback, ci| {
-        if (callback.abi_version != 1 or !nameValid(callback.binding) or callback.ids.len == 0 or callback.sources.len == 0) return error.InvalidCallback;
+        if (callback.abi_version != 1 or callback.ids.len == 0 or callback.sources.len == 0) return error.InvalidCallback;
+        switch (callback.kind) {
+            .attached => if (!pathValid(callback.binding)) return error.InvalidPath,
+            .registered => {
+                if (callback.binding.len == 0 or callback.binding.len > Limits.name_bytes) return error.InvalidCallback;
+                for (callback.binding) |byte| if (!(std.ascii.isAlphanumeric(byte) or byte == '_' or byte == '-')) return error.InvalidCallback;
+            },
+        }
         for (doc.callbacks[0..ci]) |earlier| if (std.mem.eql(u8, callback.binding, earlier.binding)) return error.InvalidCallback;
         for (callback.ids) |id| {
             if (id == 0 or id >= 253 or ids[id]) return error.InvalidCallback;
