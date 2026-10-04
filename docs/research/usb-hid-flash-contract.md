@@ -87,3 +87,21 @@ Record transfer stages, automatic restart/headless verification, then ask for
 ordinary typing and one overlay toggle. The previously accepted candidate remains
 available in the ignored recovery cache; physical BOOTSEL is the recovery route.
 R-flash is pending this updated entry-point run and user-observed persistence.
+
+## Final root run, 2026-10-04
+
+User entered BOOTSEL on the intended LK7. Exactly one RPI-RP2 volume and its
+RP2/v3.0 identity were verified; the artifact hash matched the prepared custom
+candidate `c402a55066505d338162e120eac4f038a621d0cee925ca0618f17efe48492263`.
+`mise run //:flash lk7` built the matching consumers, validated input, discovered
+and identified the volume, opened/wrote/synced successfully, and automatically
+ran the headless verifier. The vendor device appeared after restart, expected
+LK7/Danish digest and coherent snapshot verified. Entire root command exited 0
+in 6.46 seconds (flash/verify task 6.08 seconds). IORegistry reports configuration
+1 after restart. No second writer, alternate image or retry was needed.
+
+Companion reopened successfully against the new USB session. User persistence
+check (typing/Shift and physical overlay toggle) is pending. Actual disk-removal
+notification behavior was not independently observed; notification suppression
+remains unsupported. Firmware was unchanged from the previously accepted custom
+image; this run validates the updated transfer/verification pipeline.
