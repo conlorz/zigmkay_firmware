@@ -1,8 +1,8 @@
 # USB/HID recovery: research first, then keyboard, custom codes and flashing
 
 Status: **Research/design accepted and offline R3 integrated at `2e30e9d`;
-R-keyboard and R-custom accepted on macOS; R5 implemented at `0aa2ca7`, final
-updated root flashing run pending.** See the
+R-keyboard, R-custom and R-flash accepted on macOS; R5 implemented at `0aa2ca7`,
+updated root flashing/verification and post-flash persistence passed.** See the
 [decision](../research/usb-hid-decision.md) and
 [session preparation](../research/usb-hid-diagnostic-session.md).
 

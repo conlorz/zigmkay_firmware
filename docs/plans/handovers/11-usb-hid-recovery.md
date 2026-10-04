@@ -1,9 +1,8 @@
 # Recovery handoff for a fresh session
 
-State: **Research accepted; offline R3 integrated; bounded hardware session
-run with explicit authorization; configuration/HID and reconnect input succeeded;
-controlled modifier/release checks passed; R-keyboard accepted on macOS.** Current implementation
-`2e30e9d`, with full offline checks passing. See
+State: **Plan 11 complete for the available Mac/LK7: R-HID-design, R-keyboard,
+R-custom and R-flash accepted.** Current implementation `0aa2ca7`, with full
+offline checks and final root flash/verify/persistence passing. See
 [research decision](../../research/usb-hid-decision.md) and
 [identified diagnostic session](../../research/usb-hid-diagnostic-session.md).
 
@@ -28,11 +27,11 @@ controlled modifier/release checks passed; R-keyboard accepted on macOS.** Curre
   the candidate/rollback hashes, questions, capture route, limits and stop criteria.
   One authorized candidate flash completed in 3.88 seconds; macOS selected
   configuration 1 and attached all four HID drivers. Apple parsed the eight-byte
-  keyboard input. User reports typing after one reconnect; controlled modifier/
-  release and LED observations remain pending. See the session evidence.
-- R-HID-design accepted offline; R-keyboard pending. R-custom and R-flash are
-  gated on observed keyboard acceptance. Do not resume original 05–09.
-- Important limits: no known-working rollback binary; B0/B1 abort fails closed;
+  keyboard input. User subsequently confirmed controlled taps/modifiers/releases,
+  reconnect input and custom controls; LED state remains unverified.
+- All four recovery gates accepted on macOS. Do not resume original 04–09.
+- Important limits: original baseline is not a working rollback; accepted recovery
+  pair is now preserved in the ignored cache. B0/B1 abort fails closed;
   no USB diagnostic retrieval after a hard hang or boundary fault; Mac diagnostic
   string freshness unverified. Full tests do not prove live compatibility.
 
@@ -62,9 +61,10 @@ transfer-stage fault fixtures and headless LK7 identity/snapshot verification.
 automatically verifies LK7; flash-file offers explicit `--verify-lk7`. See
 `usb-hid-flash-contract.md` for limits (no binary readback, kernel syscall blocking,
 other-board verification unsupported). Final unchanged-image root entry-point
-run awaits the user entering BOOTSEL. R-flash is not accepted yet.
-Do not repeat the diagnostic flash.
-Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
+run passed in 6.46 seconds; user confirmed typing/Shift and overlay hide/show with
+stable live status afterward. R-flash accepted. Plan 11 is complete within the
+documented Mac/LK7 scope. No more hardware retries are needed. Original G04 and
+05–09 stay deferred until the user requests continuation.
 
 ## Historical state before recovery execution
 

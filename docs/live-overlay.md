@@ -3,8 +3,9 @@
 The companion defaults to a 760 × 370 resizable window showing the shared LK7
 physical geometry, compiled profile, active layer, firmware modifier byte, and
 macOS input-source/layout IDs. Default and replay modes never enumerate HID.
-Live device behavior remains pending milestone 04; offline smoke is not hardware
-acceptance.
+Plan 11's Mac/LK7 input, agreed controls and root flash/verify checks passed.
+Original milestone 04's broader worksheet remains unaccepted; offline smoke
+alone is not hardware acceptance.
 
 From the monorepo root, using mise's pinned Zig 0.16.0:
 
@@ -24,7 +25,7 @@ below and can intentionally end stale/disconnected. The headless executable's
 
 ## Explicit live session
 
-Only run these commands when the user starts the milestone 04 hardware session:
+Only run these commands during an explicitly requested hardware session:
 
 ```sh
 mise //:companion-run --live
@@ -37,6 +38,25 @@ candidates remain disconnected until an exact `--device-path` is supplied.
 Up to eight candidate paths shorter than 512 bytes are shown; the ambiguity count
 still considers all matching collections. A missing selected path displays
 `path_not_found`. No candidate is chosen arbitrarily.
+
+## LK7 companion keys
+
+Hold the left Enter and right Space thumbs nearest the center gap for one second,
+then tap the action key. Release the thumbs after each action.
+
+| Action | Physical position on the base layout |
+| --- | --- |
+| Hide/show overlay | Right half, middle row, far-right Y |
+| Show/hide event log | Left half, bottom row, innermost V |
+| Close companion | Right half, bottom row, far-right Z |
+
+On this both-thumbs layer, F12 is at the left bottom-row outermost key. Ordinary
+base keys are unchanged. Firmware and companion must be rebuilt together because
+these additions change the shared layout digest.
+
+`mise run //:flash lk7` now verifies running board/profile/layout identity and a
+coherent snapshot after transfer. `zig-out/bin/zigmkay_companion --verify-running`
+performs that check without opening a window. It is not executable-byte readback.
 
 The adapter sends Hello, compares the complete compiled board/profile/dimensions/
 digest identity, and obtains a held-key snapshot before showing a current live

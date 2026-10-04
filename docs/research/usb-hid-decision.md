@@ -118,11 +118,12 @@ interface count/endpoint allocation and unchanged shared v2 identity.
 `mise //:check-full` passes, including actual UF2 report/configuration parsing,
 ten boards and parity. Full fake tests exercise production request/transfer and
 executor code; real pinned HID initialization is tested separately. RP2040
-register timing, hard panic recovery, host diagnostic string freshness and all
-live platform behavior remain unverified. USB diagnostics are unavailable after
+register timing, hard panic recovery, host diagnostic string freshness and
+Windows/Linux live behavior remain unverified. USB diagnostics are unavailable after
 a hard hang or fail-closed boundary error with the user's Mac-only equipment.
 
-R-HID-design is accepted for this reviewed source-backed approach; it is not a
-device pass. R-keyboard, R-custom, R-flash and original G04 remain pending.
-The next concrete task is the [bounded session](usb-hid-diagnostic-session.md)
-after explicit hardware authorization. Do not implement R4/R5 ahead of their gates.
+R-HID-design is accepted. Subsequent authorized Mac/LK7 sessions accepted
+[R-keyboard](usb-hid-diagnostic-session.md), [R-custom](usb-hid-custom-contract.md)
+and [R-flash](usb-hid-flash-contract.md), including user-observed input and custom
+persistence after root flashing. Original G04 and 05–09 remain deferred; their
+separate worksheet requirements are not automatically accepted.

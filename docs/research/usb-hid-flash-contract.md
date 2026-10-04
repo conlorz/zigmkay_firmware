@@ -1,7 +1,7 @@
 # R5 flashing and running verification contract
 
 2026-10-04, Zig 0.16.0. R-custom accepted on macOS. R5 offline implementation
-integrated pending a final live run through the updated root mise entry point.
+integrated and accepted after the final updated root mise run on macOS/LK7.
 
 ## Transport decision and evidence
 
@@ -86,7 +86,7 @@ One identified unchanged custom candidate, one intended BOOTSEL volume, updated
 Record transfer stages, automatic restart/headless verification, then ask for
 ordinary typing and one overlay toggle. The previously accepted candidate remains
 available in the ignored recovery cache; physical BOOTSEL is the recovery route.
-R-flash is pending this updated entry-point run and user-observed persistence.
+The final result is recorded below.
 
 ## Final root run, 2026-10-04
 
@@ -100,8 +100,20 @@ LK7/Danish digest and coherent snapshot verified. Entire root command exited 0
 in 6.46 seconds (flash/verify task 6.08 seconds). IORegistry reports configuration
 1 after restart. No second writer, alternate image or retry was needed.
 
-Companion reopened successfully against the new USB session. User persistence
-check (typing/Shift and physical overlay toggle) is pending. Actual disk-removal
+Companion reopened successfully against the new USB session. User confirmed
+typing, Shift and physical overlay hide/show work with stable live status.
+R-flash is accepted for this Mac/LK7 within the stated verification contract.
+Actual disk-removal
 notification behavior was not independently observed; notification suppression
 remains unsupported. Firmware was unchanged from the previously accepted custom
 image; this run validates the updated transfer/verification pipeline.
+
+Accepted firmware snapshot:
+`.zig-cache/manual-session/recovery-11/lk7-accepted-c402a550.uf2` (same hash above).
+Matched companion snapshot:
+`.zig-cache/manual-session/recovery-11/companion-accepted-0aa2ca7`, SHA-256
+`22351c4ddadee6b10bd67aa0349c88e3f030e29deadd04bacac980a02a94118b`.
+These are now a known-working local pair on the observed LK7, unlike the original
+failed baseline. Caches can be removed; rebuild from accepted source if absent
+and verify hashes before a device write. The normal root commands remain the
+supported entry points.

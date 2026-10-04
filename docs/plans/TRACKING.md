@@ -1,6 +1,6 @@
 # Central milestone tracker
 
-## Direct next task: final root mise flashing verification
+## Recovery complete; original roadmap remains deferred
 
 Recovery research/design accepted at `2972bc6`; runtime initializer `c9ea3a1`;
 offline R3 integrated at `2e30e9d`. Full offline checks pass, including ten board
@@ -17,11 +17,15 @@ User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconn
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
 | R-keyboard | Accepted | [Live configuration/input/modifier/release/reconnect evidence](../research/usb-hid-diagnostic-session.md); Mac only, no Caps Lock binding |
 | R-custom | Accepted | [Live custom run](../research/usb-hid-custom-contract.md): user confirms stable status, agreed controls and typing; SDL filter and refresh fixes integrated |
-| R-flash | Waiting-user | [Contract](../research/usb-hid-flash-contract.md); `0aa2ca7`, full checks and standalone live identity verification pass; updated root flash/restart verification run awaits BOOTSEL |
+| R-flash | Accepted | [Final root run](../research/usb-hid-flash-contract.md); `0aa2ca7`, full checks; root flash/restart/identity verification passed in 6.46s; user confirms typing/Shift/custom persistence |
 
 Research workers have stopped and released all leases. The coordinator owns
 all integration. Source remains Zig 0.16.0 with the immutable MicroZig pin;
 all commits are local. Original G04 and 05–09 remain unaccepted/deferred as before.
+All plan 11 gates are accepted for the available Mac/LK7 and agreed controls.
+Windows/Linux live behavior, Caps Lock LED state, legacy gaming action and exact
+binary readback remain outside this acceptance. Do not resume 04–09 without user
+direction.
 
 ### Historical reset instruction
 
