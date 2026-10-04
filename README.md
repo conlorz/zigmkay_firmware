@@ -6,7 +6,7 @@ repository-wide work. Packages own their Zig builds; root Zig owns integration
 tests and the offline guard. No sibling clones or package directory changes are
 needed.
 
-**Current task:** [07A editor project/export implementation](docs/plans/07-compiled-keymap-editor.md), in progress; G07-export is not yet frozen.
+**Current task:** [07B native editor](docs/plans/07-compiled-keymap-editor.md), in progress; G07-export is frozen at `016cf7d`.
 Read the [architecture research](docs/plans/06-architecture-research.md)
 and the [tracker](docs/plans/TRACKING.md). USB/HID recovery and manual LK7
 acceptance are complete for the agreed macOS baseline. The remaining order is
@@ -104,7 +104,7 @@ updates are excluded from aggregate tests/checks. No default task accesses hardw
 | `//layout-model` | Portable key and physical types |
 | `//device-protocol` | Telemetry codec |
 | `//companion-model` | Portable session/state model |
-| `//keymap-project` | Versioned project, source snapshots, validation and Zig generation (07A in progress) |
+| `//keymap-project` | Versioned project, source snapshots, validation and Zig generation (07A accepted) |
 | `//zkeycodes` | Keycodes, HJSON conversion and generated checks |
 | `//zkeymap` | Native keyboard translation; existing C bridges |
 | `//zigmkay-companion` | DVUI/SDL3 GUI and component tests |

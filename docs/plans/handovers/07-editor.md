@@ -1,6 +1,6 @@
 # 07 handover: schema/export contract and visual editing
 
-State: **Draft, 07A partially implemented**. G07-export is not frozen; 07B has not started.
+State: **07A Accepted; 07B active**. G07-export frozen at `016cf7d` on 2026-10-04.
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
@@ -31,6 +31,38 @@ GUI ownership explicitly. 07A acceptance alone does not complete 07 or permit
 flashing. [09](../09-platform-and-board-expansion.md) consumes documented limits.
 
 ## Integrated result
+
+### Accepted 07A contract freeze
+
+Coordinator implementation/review: `ca76344`, `a5348e5`, `016cf7d` complete the
+checkpoints below. Consumed accepted 04/06 and original 01 canonical identity.
+Contract/schema/runner/build version 1 is frozen in
+[the package contract](../../../keymap-project/README.md). This supersedes the
+historical pending list below. APIs, bounds, ownership, errors, sources,
+curated registration, shared build selection, explicit CLI workflow and consumer
+job/reset/stale semantics are documented there.
+
+Verification on the complete `016cf7d` code tree: `mise //:check-full` passed,
+including all package/generated checks, ten-board artifacts, replay, offline
+guard and standalone/root LK7 UF2 parity. Curated Danish create/save/reopen/
+export built through the actual LK7 firmware path and native host runner with
+the same manifest selector, which captures verified files into build caches.
+Model package 22 tests, native runner 7 tests and process jobs 3 tests pass.
+Generated literals cover all current actions, callback bytes/relative imports,
+registered layer/Alt-Tab behavior, fresh-process reset and malformed frames;
+real process tests cover cancellation, crash, timeout, bounded output and stale
+results. Recorded warm-cache runner compilation: 1.536 s; startup 4.355 ms and
+input roundtrip 3.251 ms. No hardware operation occurred.
+
+Limits remain explicit: advisory reachability cannot prove opaque callback
+behavior; original latent Gaming callback is preserved without new acceptance;
+no cross-process writer locking or directory-sync power-loss claim; no arbitrary
+dynamic imports/non-Zig embedded assets. These are defined contract limits,
+not unfinished 07A consumers. Native OS text and visual/manual evidence belongs
+to 07B. G07-export released; full G07 remains pending. Coordinator retains
+schema maintenance ownership and owns the 07B UI spike/editor files exclusively.
+
+### Historical first checkpoints
 
 Base: clean `eef2c45`, inspected before changes on 2026-10-04. Local code commits:
 

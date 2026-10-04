@@ -10,5 +10,5 @@
         .zkeycodes = .{ .path = "../../zkeycodes" },
         .layout_model = .{ .path = "../../layout-model" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "main.zig", "protocol.zig", "fixture.zig", "test_runner.zig", "callback_fixture.zig" },
+    .paths = .{ "README.md", "build.zig", "build.zig.zon", "mise.toml", "main.zig", "protocol.zig", "fixture.zig", "test_runner.zig", "callback_fixture.zig" },
 }

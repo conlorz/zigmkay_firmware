@@ -1,109 +1,157 @@
-# Keymap project model (07A in progress)
+# Keymap project contract — schema 1 / G07-export
 
-Zig 0.16.0 typed ZON data only. Opening/parsing/validating a project does not
-compile Zig, evaluate imports, execute callbacks, or access devices.
+Frozen for editor/build consumers at `016cf7d`, 2026-10-04. Zig 0.16.0 typed ZON
+only; opening, validating, saving, capturing and generating source never execute
+attached code. Explicit build/test can execute Zig compile-time/runtime code.
 
-Run `mise //keymap-project:test` from the monorepo. Root aggregate tests include
-this package. This is the first schema checkpoint; **G07-export is not frozen**.
-Curated profile adapters, import/registry resolution, firmware export integration,
-shared selection and native runner/jobs remain required
-before 07B starts. Schema/API changes remain possible until that gate.
+## Commands
 
-`src/root.zig` defines schema 1 and `parse`, `serialize`, `validate`,
-`lowerAction`, `lowerTap`, `lowerHold`, `keyIndex`, `layerIndex` and
-`canDeleteLayer`. `parse` owns allocated strings/slices; call `deinit` once.
-Caller-supplied parser diagnostics start empty and must be deinitialized by the
-caller. Without diagnostics the parser manages its own. Parse errors never
-produce a partially usable document. Unknown fields and executable syntax fail;
-unsupported versions fail, with no implicit migration or overwrite.
+From the monorepo (all outputs below stay in caches):
 
-Ordered layers have nonzero stable `u32` document IDs and editable UTF-8 names.
-Actions and combos refer to these IDs, never guessed firmware layer indices.
-Lowering maps IDs to ordered firmware indices. Key IDs and sides come from a
-board-owned `Board`, which must match exactly; normal documents cannot edit
-wiring/geometry. The fixture board is deliberately tiny and does not claim LK7
-catalog integration. Encoders must match the board-owned action count.
+```sh
+mise //keymap-project:test
+mise //companion-jobs:test
+mise //apps/keymap-test:test
+mise exec -- zig build --build-file keymap-project/build.zig run -- create danish .zig-cache/my-project
+mise exec -- zig build --build-file keymap-project/build.zig run -- validate .zig-cache/my-project
+mise exec -- zig build --build-file keymap-project/build.zig run -- export .zig-cache/my-project .zig-cache/my-export
+```
 
-Actions preserve all model fields: null transparency versus explicit none,
-tap-only/hold-only/tap-hold/autofire, all simultaneous optional tap fields,
-one-shot, eight modifier bits, dead flag, custom IDs, media/mouse enums,
-retro tapping, tapping term, initial delay and repeat interval. Zero tapping
-terms/repeat intervals and zero combo timeouts are rejected; initial delay may
-be zero. Shared-key combos remain legal; duplicate unordered pairs within a
-layer fail. Combo order and pair order are retained.
+`create` accepts `danish`, `qwerty`, `eurkey`; refuses an existing project.
+User projects belong under gitignored `projects/`. These are curated typed
+adapters; arbitrary Zig keymap parsing and personal profile 05 are outside 07.
+An edited export is unflashed and distinct from the running profile.
 
-Bounds: 1 MiB input/output document, 127 keys, 15 layers, 1024 two-key combos,
-64 callback source entries, 128-byte UTF-8 names and 240-byte portable source
-paths. Callback declarations carry ABI 1, registered/attached binding, custom
-IDs 1–252, source path/SHA-256 metadata, required layers and optional explicit
-index constraints. IDs 253–255 are built-in tap signals and cannot be registered
-or used as opaque hold callbacks. Paths reject traversal, absolute paths,
-backslashes and ambiguous components. Metadata does not prove source behavior;
-source snapshot validation verifies bytes; import/registry resolution is pending.
+Build the export with an **absolute** export directory:
 
-Deletion fails for the base layer, references from remaining actions/combos/
-encoders, required callback layers or declared affected indices. Unconstrained
-opaque callbacks block deletion that renumbers retained layers. Renaming is
-metadata only; duplication does not duplicate callback behavior. The editor
-must validate before applying a deletion as a single undoable operation.
+```sh
+mise exec -- zig build --build-file apps/keymap-test/build.zig -Dprofile=/absolute/export -p /absolute/cache/runner
+mise exec -- zig build --build-file keyboards/build.zig firmware -Dkeyboard=lk7 -Dprofile=/absolute/export -p /absolute/cache/firmware
+mise exec -- zig build --build-file zigmkay-companion/build.zig -Dprofile=/absolute/export
+```
 
-Tests include literal lowering assertions, lossless serialization, rejection of
-executable/unknown/future data, malformed references, combo conflicts, unsafe
-callback deletion, invalid paths and timing. Tests use temporary/cache outputs
-only. No generated committed profile is changed.
+These build only. Shared `build_input.load` verifies the manifest/files and copies
+verified bytes into cache before compiling; edits to the external export cannot
+race the compiler. Default companion/firmware behavior retains the original
+accepted Danish profile. Editor exports currently support LK7 only.
 
-## Immutable snapshots and persistence
+## Model, ownership and errors
 
-`snapshot.zig` accepts a `Snapshot` with the document and caller-owned immutable
-`SourceBytes` for every declared source. Missing, mismatched, extra or duplicate
-entries fail. Total source bytes are bounded at 1 MiB. `identity` lowers actions
-and calls the existing `device-protocol.computeIdentity`; callback behavior
-declarations include ABI, binding and the ordered path/source digest. Both
-registered and attached source bytes therefore affect identity. `projectDigest`
-also hashes document metadata for job freshness. Neither is a build artifact
-hash: compiler/target/build inputs still need the runner/build contract.
+`src/root.zig`: `Document`, `Board`, `Action`, `Tap`, `Hold`, `Layer`, `Combo`,
+`Callback`, `Source`; `parse`, `serialize`, `validate`, `lowerAction/lowerTap/
+lowerHold`, `layerIndex/keyIndex`, `canDeleteLayer`. `parse` owns its returned
+strings/slices; call `deinit`. Optional `Diagnostics` owns its parser source;
+start empty and call `Diagnostics.deinit` with the same allocator even on error.
+`serialize`, `exporter.generate` and `Session.request` return owned byte slices.
 
-`save(allocator, io, project_dir, snapshot, board)` writes only `project.zon`
-and `.sources/<bundle SHA-256>/<relative source path>` inside the selected
-project directory. Relative file structure and raw bytes are preserved. It
-validates the complete snapshot before filesystem writes, atomically creates
-immutable source files, checks existing bundles byte-for-byte, synchronizes file
-contents, then atomically replaces the single document. The prior document is
-never deleted first. Failed saves may leave unreferenced bundles; they never
-replace referenced bundles. Directory metadata is not synchronized, so this
-does not yet claim power-loss durability. Concurrent writers must be serialized
-by the consumer; last successful document replacement wins.
+Ordered layers have nonzero stable u32 IDs and UTF-8 names. Actions/combos refer
+to stable IDs; lowering maps them to firmware indices. LK7 key IDs are stable
+catalog-derived `lk7_XXXX` IDs in board-owned index order. Physical geometry,
+sides, wiring and encoder counts are not editable document facts.
 
-`load` reads the bounded document and all referenced bundle files, validates
-digests and returns an owned `Loaded`; call its `deinit`. It never compiles or
-executes source. Bundle paths are immutable storage, not external editing paths;
-the editable attachment workspace/import-snapshot workflow is still pending.
-Registered bindings are declarations until curated resolution is implemented.
+Every current action field is retained: null transparency versus none;
+tap-only/hold-only/tap-hold/autofire; simultaneous optional tap fields;
+one-shot; eight modifier bits; dead flag; custom IDs; media/mouse;
+retro tapping; tapping term, initial delay, repeat interval; ordered two-key
+combos; encoders. Typed lift/lower adapters guard model field counts against
+silent future-field loss. Zero tapping terms/repeat intervals/combo timeouts
+fail; initial delay may be zero. Duplicate unordered combo pairs within a layer
+fail; overlapping combos stay ordered and legal.
 
-Tests cover save/reopen, repeated atomic replacement, rejected digest changes,
-filesystem failure with the previous project still readable, corrupted immutable
-bundles, source bounds and identity/freshness invalidation. This API remains
-provisional until the complete 07A contract passes G07-export.
+Bounds: 1 MiB document and total callback bytes, 64 callback source entries,
+127 keys, 15 layers, 1024 combos, 128-byte names, 240-byte source paths.
+Unknown/executable ZON fields, future versions, bad geometry/IDs/references,
+duplicates, undeclared custom IDs and invalid timing fail without a partial
+usable document or destructive save. No implicit migrations.
+`assessment.assess` reports declarative reachability/recovery and callback-review
+requirements; it does not prove arbitrary callback/timing behavior safe.
 
-## Typed adapters and deterministic Zig generation
+Callback ABI 1 exposes `core.CustomFunctions` as `custom_functions`.
+User IDs 1–252; built-in tap signal IDs 253–255 are not registrable hold callbacks.
+Required layers and declared index constraints block unsafe deletion. Unconstrained
+opaque callbacks block index-renumbering deletion. Base layer deletion fails;
+remaining action/combo/encoder references also block deletion. Renaming is
+metadata only; duplication never duplicates callback-specific behavior.
 
-`adapter.liftAction/liftTap/liftHold` preserve typed firmware actions and convert
-indices back to stable layer IDs. They are building blocks for curated profile
-adapters, not arbitrary source import. Compile-time model field-count guards
-require a deliberate schema review if the portable action types gain fields.
+`profiles.create` returns owned `snapshot.Loaded` (call `deinit`): Danish lifts
+all original actions/combos and preserves the complete registered module bytes;
+QWERTY/EurKEY are representative six-layer drafts, not the user's final profile.
+`profiles.callbackEntry` resolves only the curated registry binding with exact
+bytes and constraints. The original Danish legacy Gaming callback targets index
+4 outside its four-layer map; behavior is preserved, with review required, and
+legacy Gaming acceptance remains unclaimed.
 
-`exporter.generate` returns owned deterministic Zig bytes for a verified
-snapshot. It emits keymap, sides, dimensions, combos, encoder actions,
-`custom_functions` and an `identity(protocol)` accessor. Metadata names never
-enter executable source. Callback modules are named `callback_N` in document
-order and must expose ABI-1 `custom_functions`; their handlers dispatch in that
-same order. Consumers must bind those modules to the exact verified source
-inventory. Registry/import resolution and the board build integration are still
-pending, so this is a pure generator, not an end-user export/build command.
+## Source snapshots, persistence and export
 
-The package test build generates a tiny profile only into the Zig build cache,
-compiles it, specializes the existing firmware processor and verifies literal
-A and layer-held Left Arrow press/release traces. It also checks canonical
-firmware identity equivalence. Separate compound-field export assertions and
-Zig syntax checks cover timing, media/mouse, modifiers, autofire, combos and
-transparency; compiled emitted traces for every action/callback remain pending.
+`snapshot.Snapshot`: document plus caller-owned immutable `SourceBytes`, each
+entry indexed by callback and relative path. Validation checks exact inventory,
+source hashes and byte limits. `clone` produces owned copies. `identity` lowers
+through `device-protocol.computeIdentity`; ABI/binding/ordered transitive source
+hashes participate in callback behavior metadata. Registered changes invalidate
+identity too. `projectDigest` additionally includes document metadata for job
+freshness; layer renames leave telemetry identity unchanged.
+
+`save(allocator, io, project_dir, snapshot, board)` writes immutable
+`.sources/<bundle SHA-256>/<relative path>` then synchronizes and atomically
+replaces `project.zon`. The previous document is never deleted first; failures
+can leave unreferenced bundles, not partially committed source inventories.
+Existing differing bundles fail. `load` bounds/validates everything and returns
+owned `Loaded`. Consumers serialize writers; replacement is atomic but directory
+metadata sync/power-loss durability and cross-process writer locking are not
+claimed. Normal save never alters accepted profile source files.
+
+`sources.capture` copies a literal transitive source closure into an owned
+`Bundle` (deinit it). Paths/imports reject absolute/escaping/unknown/dynamic imports;
+permitted dependency modules are std, zigmkay, layout-model, zkeycodes. Relative
+imports remain byte-identical. Opaque source is not evaluated. Missing imports
+fail explicitly. Non-Zig embedded assets are outside this schema and fail.
+`sources.attach` creates a new immutable snapshot. Explicit `checkout` creates
+editable `callbacks/<index>/...` mirrors without overwriting existing edits;
+`refresh` explicitly captures edited bytes into a new snapshot. Save/reopen
+always reads the immutable source inventory, not mutable mirrors. Registered
+callbacks are read-only. Source changes invalidate prepared/built results.
+
+`exporter.generate` is pure deterministic Zig generation. `exporter.write`
+explicitly materializes keymap and callback modules into an owned directory;
+existing differing files cause `ExportOwnershipConflict`. `manifest.zon` is the
+final commit marker (build contract 1). Consumers verify all listed files;
+modules are `callback_N` in document order, preserving ABI dispatch order. No
+ordinary build regenerates committed sources. Failed export may leave an
+incomplete unaccepted directory; only a valid matching manifest is buildable.
+
+## Runner and jobs — contract 1
+
+`apps/keymap-test/protocol.zig` defines newline-framed typed ZON:
+input version 1, strictly increasing sequence, monotonic absolute `time_us`,
+key_down/key_up, encoder action index, advance, reset, stop. Input cap 4096 bytes.
+Response cap 1 MiB; at most 256 processor events, commands and signals per input.
+Outputs include immutable snapshot ID, matching sequence, state, full processor
+trace, USB command data, companion signal data, layer mask/highest layer,
+modifiers and optional diagnostic. No platform/device dispatch exists.
+
+Runner emits initial ready/sequence 0. Malformed version/sequence/time/key or
+encoder input fails explicitly and terminates. Output/event overflow fails;
+crashes/EOF invalidate the session. Reset responds restart_required and exits;
+consumer kills/reaps and starts the same immutable executable to clear callback
+globals. Stop/focus loss releases UI mappings and stops the process. BOOTSEL,
+media/mouse and companion effects are data/log entries, never OS/device actions.
+`advance` performs one real processor tick at the supplied absolute time; it
+retains existing firmware timing/retro semantics, not a duplicate simulator.
+
+`companion-jobs` owns direct argv process execution with copied immutable args,
+1 MiB stdout/stderr bounds, deadline/watchdog, cancellation and reaping.
+`Job`/`Session` require stable addresses and serialized use; asynchronous `poll`
+returns owned results. `Result.fresh` rejects a changed snapshot; `artifactKey`
+also hashes compiler version, target, optimization and dependency/build inputs.
+UI must reject old job results. `Session.request` bounds/read-times out framed
+responses and terminates hung sessions. Subprocess isolation is not a sandbox.
+
+Verification: full offline check/matrix/parity passed. Generated action traces
+cover taps, holds, retro rules, autofire, transparency, none, layers, one-shot,
+combos, dead chords, media/mouse, encoders, custom callbacks/signals and boot data.
+Registered Danish layer/Alt-Tab traces and attached-global fresh-process reset
+pass. Capacity/reference/round-trip/save-failure/source-edit/export-ownership and
+real crash/timeout/cancel/stale tests pass. Measured registered runner build with
+warm dependency caches: 1.536 s; startup 4.355 ms, input roundtrip 3.251 ms in the
+recorded native fixture run. These are environment observations, not latency
+budgets. Native text/input-source and GUI acceptance belong to 07B.

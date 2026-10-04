@@ -1,1 +1,1 @@
-.{ .name = .companion_jobs, .version = "0.1.0", .fingerprint = 0x59efd54620bb6af0, .minimum_zig_version = "0.16.0", .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "src" } }
+.{ .name = .companion_jobs, .version = "0.1.0", .fingerprint = 0x59efd54620bb6af0, .minimum_zig_version = "0.16.0", .paths = .{ "README.md", "build.zig", "build.zig.zon", "mise.toml", "src" } }
