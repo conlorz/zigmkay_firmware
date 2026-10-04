@@ -91,7 +91,7 @@ remains none. Exact active ownership is recorded below.
 | 01 | [Protocol](01-protocol-and-recovery.md) / [handover](handovers/01-protocol.md) | Accepted | Clean baseline inspected | Frozen v2 contract consumed by 02/03 | Coordinator / `5b092ec` |
 | 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
-| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Waiting-user | G-live-offline; user starts session | Run the identified manual worksheet after explicit hardware task | Coordinator with user / none |
+| 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Active | User starts remaining acceptance now; plan 11 baseline reused | All-key/layer highlights, held attach/reconnect, burst and overlay/input-source checks | Coordinator with user / none |
 | 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Planned | G04; 06A already accepted | Finalize architecture using existing profiles and editor requirements | Unassigned / none |
 | 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G04 and G06 | Schema/export/shared selector first, editor UI second | Unassigned / none |
 | 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |

@@ -7,7 +7,10 @@ initial implementation `2e30e9d`. Current R5 candidate is recorded in
 authorization. R-keyboard does not automatically accept the original G04
 identity/session/overlay rows below; companion tests wait for R-keyboard.
 
-State: hardware troubleshooting in progress; G04 acceptance is pending.
+State: focused 04 acceptance session active; plan 11 recovery accepted.
+Current input source: EurKEY Next, macOS KeyboardLayout ID -31468, read from
+AppleSelectedInputSources. Remaining rows are being checked with physical-position
+instructions; do not repeat accepted recovery flashing.
 One authorized recovery flash, automatic reboot, configuration 1 and all four HID
 attachments succeeded. User reports typing after reconnect and all controlled
 modifier/release checks passed. Host LED state remains unverified (no Caps Lock
@@ -93,15 +96,15 @@ layer combinations. Do not type into sensitive applications during this session.
 
 | Test | Expected result | Actual result |
 | --- | --- | --- |
-| Ordinary typing before monitoring | Baseline tap/hold/combo behavior remains usable | Pending |
-| Boot / identity | Keyboard works and expected board/profile/digest is negotiated | Pending |
+| Ordinary typing before monitoring | Baseline tap/hold/combo behavior remains usable | Passed in plan 11: controlled taps/modifiers/releases and user typing |
+| Boot / identity | Keyboard works and expected board/profile/digest is negotiated | Passed in plan 11: root flash/headless identity and coherent snapshot |
 | Single keys 0–33, separately | Correct physical index highlights on press and clears on release | Pending |
 | Layers / persistent modifiers | Stable layer mask and held modifiers match actions | Pending |
 | Safe existing actions | Combo/tap/hold/autofire behavior preserved; physical state remains accurate | Pending |
 | Attach while key 3 is held | Initial snapshot highlights key 3 without a fresh press | Pending |
-| Companion restart | Typing continues; restarted companion synchronizes current state | Pending |
-| USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Pending |
-| Firmware restart | Old-session traffic discarded; new state synchronized | Pending |
+| Companion restart | Typing continues; restarted companion synchronizes current state | Fresh companion sessions/typing passed in plan 11; held-state attach still pending |
+| USB unplug/replug | State becomes visibly stale and reconnect restores accurate state | Normal reconnect typing passed in plan 11; overlay/held-key case pending |
+| Firmware restart | Old-session traffic discarded; new state synchronized | Passed in plan 11: fresh running session/snapshot and post-flash controls/input |
 | Safe burst / explicit diagnostic loss | Typing remains responsive; recovery clears any obsolete press | Pending |
 | Overlay resize / movement / input-source switch | Geometry and labels refresh; limitations recorded | Pending |
 
