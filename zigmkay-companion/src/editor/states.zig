@@ -1,0 +1,1 @@
+pub const State = enum { normal, multiselect, layer_add_rename, deletion_constraint, combo, advanced, dirty, no_device, wrong_identity, validation, callback_missing, callback_changed, test_preparing, test_running, test_stale, test_failed };

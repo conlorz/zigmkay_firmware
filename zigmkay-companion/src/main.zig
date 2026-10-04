@@ -108,9 +108,10 @@ pub fn main(init: std.process.Init) !void {
         std.log.info("Native EurKEY composition, multi-scalar fallback and reset passed", .{});
         return;
     }
-    if (args.len > 1 and std.mem.eql(u8, args[1], "--editor-spike")) return @import("editor/spike.zig").run(init);
+    if (args.len > 1 and std.mem.eql(u8, args[1], "--editor-spike")) return @import("editor/spike.zig").run(init, args.len > 2 and std.mem.eql(u8, args[2], "--native-dialog"));
     if (args.len > 1 and std.mem.eql(u8, args[1], "--editor")) return @import("editor/main.zig").run(init, args);
     var smoke = false;
+    var editor_smoke = false;
     var live = false;
     var verify_running = false;
     var replay: ?[]const u8 = null;
@@ -127,6 +128,11 @@ pub fn main(init: std.process.Init) !void {
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
+        if (std.mem.eql(u8, arg, "--editor-overlay-smoke")) {
+            smoke = true;
+            editor_smoke = true;
+            continue;
+        }
         if (std.mem.eql(u8, arg, "--verify-running")) {
             verify_running = true;
             live = true;
@@ -213,9 +219,12 @@ pub fn main(init: std.process.Init) !void {
     var frames: usize = 0;
     var show_log = false;
     var visible = true;
-    while (open) {
+    var editor_open = editor_smoke;
+    var editor: ?@import("editor/main.zig").Editor = if (editor_smoke) try @import("editor/main.zig").Editor.init(init, true) else null;
+    defer if (editor) |*draft| draft.deinit();
+    while (open or editor_open) {
         try win.begin(win.beginWait(interrupted));
-        try backend.addAllEvents(&win);
+        if (editor) |*draft| try @import("editor/events.zig").pump(&backend, &win, draft) else try backend.addAllEvents(&win);
         const now = driver.transport.now();
         if (recording) |*recorder| {
             if (now >= capture_end or recorder.full) driver.recording = null;
@@ -266,13 +275,40 @@ pub fn main(init: std.process.Init) !void {
         if (capture_error) |err| dvui.label(@src(), "Capture save failed: {s}", .{@errorName(err)}, .{});
         _ = dvui.checkbox(@src(), &show_log, "Event log", .{});
         if (live and dvui.button(@src(), "Reconnect", .{}, .{})) driver.disconnect(now);
-        if (dvui.button(@src(), "Close", .{}, .{})) open = false;
+        {
+            const controls = dvui.box(@src(), .{ .dir = .horizontal }, .{});
+            defer controls.deinit();
+            if (dvui.button(@src(), "Close", .{}, .{})) open = false;
+            if (!open and editor_open) _ = sdl.SDL_HideWindow(backend.window);
+            if (dvui.button(@src(), "Open editor", .{}, .{})) {
+                if (editor == null) editor = try @import("editor/main.zig").Editor.init(init, false);
+                editor_open = true;
+            }
+        }
         const bounds = win.data().rect;
         const extra_rows: usize = (if (live and driver.status != .connected) @as(usize, 1) + driver.transport.path_count else 0) + @intFromBool(live and driver.session.phase == .incompatible) + @intFromBool(live and driver.session.last_error != null) + @intFromBool(live and driver.transport_error != null) + @intFromBool(window_warning) + @intFromBool(recording != null) + @intFromBool(capture_error != null);
         const header_height: f32 = 140 + @as(f32, @floatFromInt(extra_rows)) * 24;
         if (visible and (!live or (driver.session.phase != .incompatible and driver.session.phase != .negotiating))) try layout.draw(&labels, state.highest_layer, &state.pressed, state.modifiers, stale, .{ .x = 8, .y = header_height, .w = @max(0, bounds.w - 16), .h = @max(0, bounds.h - header_height - 8) });
         if (show_log) try log.draw(&labels, bounds.w / 2, 140, 0.8);
+        if (editor_open) {
+            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = 1536, .h = 1024 }, .min_size = .{ .w = 1280, .h = 900 } }, .{ .open_flag = &editor_open });
+            defer child.deinit();
+            switch (child.inner) {
+                .os => |os| {
+                    editor.?.backend_window = os.backend.window;
+                    editor.?.window_id = sdl.SDL_GetWindowID(os.backend.window);
+                    if (sdl.SDL_GetWindowOpacity(os.backend.window) != 1 or sdl.SDL_GetWindowFlags(os.backend.window) & sdl.SDL_WINDOW_ALWAYS_ON_TOP != 0) return error.EditorWindowFlagsInherited;
+                },
+                else => return error.NativeEditorWindowUnavailable,
+            }
+            editor.?.draw() catch |err| editor.?.report(err);
+            if (editor.?.should_close) editor_open = false;
+        }
         const end_micros = try win.end(.{});
+        if (!editor_open and editor != null) {
+            editor.?.deinit();
+            editor = null;
+        }
         frames += 1;
         if (smoke and frames == 3) break;
         interrupted = try backend.waitEventTimeout(if (live or smoke) 16_000 else @min(500_000, win.waitTime(end_micros)));

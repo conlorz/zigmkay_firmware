@@ -120,11 +120,20 @@ pub const Model = struct {
         var empty: [34]?p.Action = @splat(null);
         var name_buffer: [128]u8 = undefined;
         const name = if (duplicate) try std.fmt.bufPrint(&name_buffer, "{s} copy", .{doc.layers[self.layer].name}) else "New layer";
+        while (true) {
+            var used = false;
+            for (doc.layers) |existing| if (existing.id == self.next_layer_id) {
+                used = true;
+                break;
+            };
+            if (!used) break;
+            self.next_layer_id = std.math.add(p.LayerId, self.next_layer_id, 1) catch return error.LayerIdExhausted;
+        }
         layers[doc.layers.len] = .{ .id = self.next_layer_id, .name = name, .actions = if (duplicate) doc.layers[self.layer].actions else &empty };
         var snapshot = self.current.snapshot;
         snapshot.document.layers = layers[0 .. doc.layers.len + 1];
         try self.commit(snapshot);
-        self.next_layer_id += 1;
+        self.next_layer_id +%= 1;
         self.layer = doc.layers.len;
     }
     pub fn deleteLayer(self: *Model, index: usize) !void {
@@ -184,4 +193,24 @@ test "bulk edits, metadata, constrained deletion and history survive save/reopen
     try model.open(std.testing.io, temporary.dir);
     try std.testing.expectEqual(saved, try model.id());
     try std.testing.expect(!model.dirty());
+    var exported = try temporary.dir.createDirPathOpen(std.testing.io, "export", .{});
+    defer exported.close(std.testing.io);
+    const manifest = try p.exporter.write(std.testing.allocator, std.testing.io, exported, model.current.snapshot, p.profiles.board);
+    defer std.zon.parse.free(std.testing.allocator, manifest);
+    try std.testing.expectEqual(saved, manifest.snapshot_id);
+    const repeated = try p.exporter.write(std.testing.allocator, std.testing.io, exported, model.current.snapshot, p.profiles.board);
+    defer std.zon.parse.free(std.testing.allocator, repeated);
+    try std.testing.expectEqualDeep(manifest, repeated);
+}
+
+test "imported stable layer IDs cannot collide with new layers" {
+    var model = try Model.init(std.testing.allocator, .eurkey);
+    defer model.deinit();
+    try model.addLayer(false);
+    model.next_layer_id = 100;
+    try model.addLayer(false);
+    try std.testing.expectEqual(@as(p.LayerId, 101), model.document().layers[7].id);
+    try model.undo();
+    try model.redo();
+    try p.validate(model.document(), p.profiles.board);
 }

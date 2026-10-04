@@ -39,27 +39,31 @@ fn number(comptime T: type, value: *T, title: []const u8) void {
     const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .horizontal, .id_extra = std.hash.Wyhash.hash(0, title) });
     defer row.deinit();
     dvui.labelNoFmt(@src(), title, .{}, .{ .min_size_content = .{ .w = 200 } });
-    _ = dvui.textEntryNumber(@src(), T, .{ .value = value }, .{ .min_size_content = .{ .w = 110 } });
+    _ = dvui.textEntryNumber(@src(), T, .{ .value = value }, .{ .min_size_content = .{ .w = 110, .h = 26 }, .padding = .all(6) });
 }
 fn modifiers(mods: *types.Modifiers, title: []const u8) void {
     const box = dvui.box(@src(), .{}, .{ .id_extra = std.hash.Wyhash.hash(0, title), .expand = .horizontal });
     defer box.deinit();
     dvui.labelNoFmt(@src(), title, .{}, .{});
-    const row = dvui.box(@src(), .{ .dir = .horizontal }, .{});
-    defer row.deinit();
-    inline for (.{ "left_ctrl", "left_shift", "left_alt", "left_gui", "right_ctrl", "right_shift", "right_alt", "right_gui" }, 0..) |field, i| {
-        var checked = @field(mods, field);
-        if (dvui.checkbox(@src(), &checked, switch (i) {
-            0 => "LC",
-            1 => "LS",
-            2 => "LA",
-            3 => "LG",
-            4 => "RC",
-            5 => "RS",
-            6 => "RA",
-            7 => "RG",
-            else => unreachable,
-        }, .{ .id_extra = i })) @field(mods, field) = checked;
+    inline for (0..2) |side| {
+        const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .id_extra = side });
+        defer row.deinit();
+        inline for (.{ "left_ctrl", "left_shift", "left_alt", "left_gui", "right_ctrl", "right_shift", "right_alt", "right_gui" }, 0..) |field, i| {
+            if (i / 4 == side) {
+                var checked = @field(mods, field);
+                if (dvui.checkbox(@src(), &checked, switch (i) {
+                    0 => "L Control",
+                    1 => "L Shift",
+                    2 => "L Option",
+                    3 => "L Command",
+                    4 => "R Control",
+                    5 => "R Shift",
+                    6 => "R Option",
+                    7 => "R Command",
+                    else => unreachable,
+                }, .{ .id_extra = i })) @field(mods, field) = checked;
+            }
+        }
     }
 }
 pub fn hold(value: *p.Hold, doc: p.Document, title: []const u8) void {

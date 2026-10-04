@@ -34,4 +34,15 @@ pub fn build(b: *std.Build) void {
     run.setCwd(b.path(".."));
     if (b.args) |args| run.addArgs(args);
     b.step("run", "Run the offline GUI; --live opts into HID").dependOn(&run.step);
+    const capture_tool = b.addExecutable(.{ .name = "editor-capture", .root_module = b.createModule(.{ .root_source_file = b.path("src/editor/capture_runner.zig"), .target = b.graph.host }) });
+    capture_tool.root_module.addImport("companion-jobs", b.dependency("companion_jobs", .{}).module("companion-jobs"));
+    const captures = b.addRunArtifact(capture_tool);
+    captures.addArtifactArg(gui.exe);
+    captures.setCwd(b.path(".."));
+    b.step("editor-check", "Capture both themes/scales and run semantic scenarios offline").dependOn(&captures.step);
+    const golden_check = b.addRunArtifact(capture_tool);
+    golden_check.addArtifactArg(gui.exe);
+    golden_check.addArg("docs/plans/goldens/07-editor");
+    golden_check.setCwd(b.path(".."));
+    b.step("editor-golden-check", "Check explicitly approved screenshots without refreshing them").dependOn(&golden_check.step);
 }

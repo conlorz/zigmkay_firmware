@@ -45,8 +45,26 @@ pub fn tap(value: p.Tap, buffer: []u8) []const u8 {
     if (value.media_key) |media| return @tagName(media);
     if (value.mouse_action) |mouse| return @tagName(mouse);
     if (value.custom) |custom| return std.fmt.bufPrint(buffer, "Custom {d}", .{custom}) catch "?";
-    if (value.one_shot) |hold| return if (hold.layer_id) |id| std.fmt.bufPrint(buffer, "One-shot L{d}", .{id}) catch "?" else "One-shot mods";
+    if (value.one_shot) |one| return if (one.layer_id) |id| std.fmt.bufPrint(buffer, "One-shot L{d}", .{id}) catch "?" else "One-shot mods";
     return "No tap";
+}
+pub fn hold(value: p.Hold, doc: p.Document, buffer: []u8) []const u8 {
+    if (value.layer_id) |id| for (doc.layers) |layer| if (layer.id == id) {
+        return std.fmt.bufPrint(buffer, "Layer: {s}", .{layer.name}) catch "Layer";
+    };
+    if (value.custom) |id| return std.fmt.bufPrint(buffer, "Custom hold {d}", .{id}) catch "Custom";
+    return switch (value.hold_modifiers.toByte()) {
+        0 => "No hold fields",
+        1 => "Control",
+        2 => "Shift",
+        4 => "Option",
+        8 => "Command",
+        16 => "Right Control",
+        32 => "Right Shift",
+        64 => "Right Option",
+        128 => "Right Command",
+        else => std.fmt.bufPrint(buffer, "Modifier chord 0x{X:0>2}", .{value.hold_modifiers.toByte()}) catch "Modifiers",
+    };
 }
 pub fn action(value: ?p.Action, buffer: []u8) []const u8 {
     const a = value orelse return "Inherited";

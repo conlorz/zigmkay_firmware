@@ -119,8 +119,13 @@ pub const Controller = struct {
     pub fn start(self: *Controller) !void {
         if (self.state != .prepared) return error.TestNotPrepared;
         const current_inputs = try @import("build_inputs.zig").digest(self.gpa, self.io, self.root);
-        if (!std.mem.eql(u8, &current_inputs, &self.build_inputs)) { self.state = .stale; return error.BuildInputsChanged; }
+        if (!std.mem.eql(u8, &current_inputs, &self.build_inputs)) {
+            self.state = .stale;
+            return error.BuildInputsChanged;
+        }
         try self.session.start(self.io, &.{self.executable.?});
+        if (self.last) |output| std.zon.parse.free(self.gpa, output);
+        self.last = null;
         self.sequence = 0;
         self.time_us = 0;
         self.state = .running;
@@ -203,10 +208,13 @@ pub const Controller = struct {
 test "editor preparation, literal runner output, restart, crash, cancellation and stale snapshots" {
     const gpa = std.testing.allocator;
     const io = std.testing.io;
-    const root = try std.Io.Dir.cwd().realPathFileAlloc(io, "..", gpa); defer gpa.free(root);
-    var model = try @import("model.zig").Model.init(gpa, .eurkey); defer model.deinit();
+    const root = try std.Io.Dir.cwd().realPathFileAlloc(io, "..", gpa);
+    defer gpa.free(root);
+    var model = try @import("model.zig").Model.init(gpa, .eurkey);
+    defer model.deinit();
     const frozen = try model.id();
-    var controller = try Controller.init(gpa, io, root); defer controller.deinit();
+    var controller = try Controller.init(gpa, io, root);
+    defer controller.deinit();
     try controller.prepare(model.current.snapshot);
     const deadline = std.Io.Clock.awake.now(io).toMilliseconds() + 60_000;
     while (controller.state == .preparing) {
@@ -228,9 +236,11 @@ test "editor preparation, literal runner output, restart, crash, cancellation an
         try std.Io.sleep(io, .fromMilliseconds(1), .awake);
     }
     try std.testing.expect(pressed);
-    controller.stop(); try std.testing.expectEqual(State.prepared, controller.state);
+    controller.stop();
+    try std.testing.expectEqual(State.prepared, controller.state);
     try std.testing.expect(!controller.pressed[10]);
     try controller.start();
+    try std.testing.expect(controller.last == null);
     // A crashed process must terminate the outstanding read and remain contained.
     controller.session.child.?.kill(io);
     controller.session.child = null;
@@ -240,10 +250,12 @@ test "editor preparation, literal runner output, restart, crash, cancellation an
         try std.Io.sleep(io, .fromMilliseconds(1), .awake);
     }
     try std.testing.expectEqual(State.failed, controller.state);
-    try controller.prepare(model.current.snapshot); controller.stop();
+    try controller.prepare(model.current.snapshot);
+    controller.stop();
     try std.testing.expectEqual(State.idle, controller.state);
     try controller.prepare(model.current.snapshot);
-    try model.apply(.none); controller.poll(try model.id());
+    try model.apply(.none);
+    controller.poll(try model.id());
     try std.testing.expectEqual(State.stale, controller.state);
     try std.testing.expect(controller.job == null and controller.session.child == null);
 }

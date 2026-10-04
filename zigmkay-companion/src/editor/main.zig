@@ -14,6 +14,8 @@ const Testing = @import("testing.zig").Controller;
 const Text = @import("text.zig").Text;
 const dialog = @import("dialog.zig");
 const jobs = @import("companion-jobs");
+const scenario = @import("scenario.zig");
+const fonts = @import("fonts.zig");
 
 fn color(hex: u24) dvui.Color {
     return .{ .r = @truncate(hex >> 16), .g = @truncate(hex >> 8), .b = @truncate(hex), .a = 255 };
@@ -33,21 +35,28 @@ fn rect(r: geometry.Rect) dvui.Rect {
     return .{ .x = r.x, .y = r.y, .w = r.w, .h = r.h };
 }
 fn options(t: Theme, r: dvui.Rect, size: f32) dvui.Options {
-    return .{ .rect = r, .font = dvui.Font.find(.{ .family = "Vera Sans", .size = size * 0.76 }), .color_text = .{ .color = t.text }, .color_fill = .{ .color = t.control }, .color_border = .{ .color = t.border }, .margin = .{}, .padding = .{ .x = 8, .y = 6, .w = 8, .h = 6 }, .corners = .all(6) };
+    return .{ .rect = r, .font = fonts.font("", size), .color_text = .{ .color = t.text }, .color_fill = .{ .color = t.control }, .color_border = .{ .color = t.border }, .margin = .{}, .padding = .{ .x = 8, .y = 6, .w = 8, .h = 6 }, .corners = .all(6) };
 }
 fn label(t: Theme, text: []const u8, r: dvui.Rect, size: f32) void {
     var opts = options(t, r, size);
+    opts.font = fonts.font(text, size);
+    if (size >= 18) opts.font = opts.font.?.withWeight(.bold);
     opts.id_extra = (@as(usize, @intFromFloat(r.x)) << 16) + @as(usize, @intFromFloat(r.y));
     opts.padding = .{};
     dvui.labelNoFmt(@src(), text, .{}, opts);
 }
 fn button(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect) bool {
     var opts = options(t, r, 13);
+    opts.font = fonts.font(text, 15);
     opts.tag = tag;
     opts.id_extra = std.hash.Wyhash.hash(0, tag);
     opts.background = true;
     if (r.w < 40) opts.padding = .all(2);
     if (std.mem.startsWith(u8, tag, "layer.duplicate") or std.mem.startsWith(u8, tag, "layer.delete")) opts.background = false;
+    if (std.mem.eql(u8, tag, "test.prepare")) {
+        opts.color_fill = .{ .color = color(0x126AFF) };
+        opts.color_text = .{ .color = color(0xFFFFFF) };
+    }
     return dvui.button(@src(), text, .{}, opts);
 }
 fn panel(t: Theme, which: geometry.Panel) *dvui.BoxWidget {
@@ -68,10 +77,13 @@ pub const Editor = struct {
     gpa: std.mem.Allocator,
     light: bool = false,
     fixture: bool = false,
+    connection_text: []const u8 = "Offline · No device",
     source: ?input.Source = null,
     shift: bool = false,
     option: bool = false,
     extend: bool = false,
+    canvas_focus: bool = true,
+    fonts_loaded: bool = false,
     advanced: bool = false,
     action_draft: forms.Draft = .{},
     testing: Testing,
@@ -94,6 +106,7 @@ pub const Editor = struct {
     diagnostic: [512]u8 = @splat(0),
     project_path: [1024]u8 = @splat(0),
     export_path: [1024]u8 = @splat(0),
+    exported_id: ?[32]u8 = null,
     paths_open: bool = false,
     callback_open: bool = false,
     callback_root: [1024]u8 = @splat(0),
@@ -115,6 +128,12 @@ pub const Editor = struct {
         defer process.gpa.free(root);
         var self = Editor{ .model = try Model.init(process.gpa, .eurkey), .io = process.io, .gpa = process.gpa, .fixture = fixture, .testing = try Testing.init(process.gpa, process.io, root), .text = Text.init(fixture) };
         if (!fixture) self.source = input.Source.init();
+        if (fixture) {
+            try @import("fixture.zig").setup(&self.model);
+            self.connection_text = "Fixture · profile match";
+            self.option = true;
+            try self.text.insert("Hello, Grüß dich!");
+        }
         self.syncRename();
         return self;
     }
@@ -128,12 +147,12 @@ pub const Editor = struct {
         self.model.deinit();
         if (self.source) |*source| source.deinit();
     }
-    fn syncRename(self: *Editor) void {
+    pub fn syncRename(self: *Editor) void {
         self.rename_buffer = @splat(0);
         const name = self.model.document().layers[self.model.layer].name;
         @memcpy(self.rename_buffer[0..name.len], name);
     }
-    fn report(self: *Editor, err: anyerror) void {
+    pub fn report(self: *Editor, err: anyerror) void {
         self.diagnostic = @splat(0);
         _ = std.fmt.bufPrint(&self.diagnostic, "{s}", .{@errorName(err)}) catch {};
     }
@@ -162,7 +181,7 @@ pub const Editor = struct {
                     return true;
                 };
             }
-        } else if (event.type == sdl.SDL_EVENT_KEY_DOWN and !event.key.repeat and !self.paths_open and !self.advanced) {
+        } else if (self.canvas_focus and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and !event.key.repeat and !self.paths_open and !self.advanced and !self.picker_open and !self.combo_open and !self.callback_open) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
                 self.model.select((self.model.primary + (if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) @as(usize, 1) else 33)) % 34, self.extend);
                 return true;
@@ -186,13 +205,18 @@ pub const Editor = struct {
         return false;
     }
     fn testTime(self: *Editor) u64 {
-        return @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds() - self.test_start));
+        return @max(self.testing.time_us, @as(u64, @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds() - self.test_start))));
     }
-    fn openAction(self: *Editor) void {
+    pub fn openAction(self: *Editor) void {
         self.action_draft = forms.Draft.from(self.model.action());
         self.advanced = true;
     }
     pub fn draw(self: *Editor) !void {
+        if (!self.fonts_loaded) {
+            try fonts.install(self.gpa, self.io);
+            self.fonts_loaded = true;
+        }
+        self.canvas_focus = dvui.focusedWidgetId() == null;
         if (dialog.poll()) |result| {
             if (result) |path| {
                 if (path[0] != 0) switch (self.dialog_target) {
@@ -280,10 +304,16 @@ pub const Editor = struct {
         const box = panel(t, .toolbar);
         defer box.deinit();
         label(t, "Zigmkay", .{ .x = 20, .y = 21, .w = 140, .h = 30 }, 23);
-        label(t, "LK7  /  Offline", .{ .x = 195, .y = 25, .w = 190, .h = 25 }, 15);
+        label(t, "Keyboard", .{ .x = 140, .y = 7, .w = 85, .h = 18 }, 11);
+        var board_choice: usize = 0;
+        _ = dvui.dropdown(@src(), &.{"LK7"}, .{ .choice = &board_choice }, .{}, options(t, .{ .x = 140, .y = 25, .w = 80, .h = 30 }, 13));
+        label(t, self.connection_text, .{ .x = 230, .y = 25, .w = 165, .h = 25 }, 12);
         if (dvui.dropdown(@src(), &p.profiles.names, .{ .choice = &self.profile_choice }, .{}, options(t, .{ .x = 405, .y = 16, .w = 270, .h = 36 }, 14))) {
-            var loaded = try p.profiles.create(self.gpa, @enumFromInt(self.profile_choice)); defer loaded.deinit();
-            try self.model.commit(loaded.snapshot); self.model.layer = 0; self.syncRename();
+            var loaded = try p.profiles.create(self.gpa, @enumFromInt(self.profile_choice));
+            defer loaded.deinit();
+            try self.model.commit(loaded.snapshot);
+            self.model.layer = 0;
+            self.syncRename();
         }
         if (self.model.dirty()) label(t, "Unsaved", .{ .x = 686, .y = 27, .w = 85, .h = 23 }, 12);
         if (button(t, "Open / Export", "file.paths", .{ .x = 775, .y = 16, .w = 130, .h = 36 })) self.paths_open = true;
@@ -298,7 +328,9 @@ pub const Editor = struct {
         if (button(t, "Save", "file.save", .{ .x = 1078, .y = 16, .w = 76, .h = 36 })) self.save() catch |err| self.report(err);
         inline for (.{ "Build · 08", "Flash · 08" }, 0..) |caption, index| {
             var opts = options(t, .{ .x = 1166 + @as(f32, @floatFromInt(index)) * 122, .y = 16, .w = 110, .h = 36 }, 13);
-            opts.id_extra = index; opts.background = true; opts.color_text = .{ .color = t.muted };
+            opts.id_extra = index;
+            opts.background = true;
+            opts.color_text = .{ .color = t.muted };
             dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = 0.5 }, opts);
         }
         if (button(t, if (self.light) "Dark" else "Light", "theme.toggle", .{ .x = 1410, .y = 16, .w = 100, .h = 36 })) self.light = !self.light;
@@ -326,8 +358,15 @@ pub const Editor = struct {
                 opts.color_fill = .{ .color = if (self.model.layer == i) c else .{ .r = @intCast((@as(u16, t.panel.r) * 4 + c.r) / 5), .g = @intCast((@as(u16, t.panel.g) * 4 + c.g) / 5), .b = @intCast((@as(u16, t.panel.b) * 4 + c.b) / 5), .a = 255 } };
                 opts.color_text = .{ .color = if (self.model.layer == i) color(0x10151C) else t.text };
                 opts.border = .all(if (self.model.layer == i) 2 else 0);
-                { var background = opts; background.id_extra = 1000 + i; background.tag = null; const card = dvui.box(@src(), .{}, background); card.deinit(); }
-                opts.background = false; opts.border = .{};
+                {
+                    var background = opts;
+                    background.id_extra = 1000 + i;
+                    background.tag = null;
+                    const card = dvui.box(@src(), .{}, background);
+                    card.deinit();
+                }
+                opts.background = false;
+                opts.border = .{};
                 opts.rect.?.w = 168;
                 if (dvui.button(@src(), "", .{}, opts)) {
                     self.model.layer = i;
@@ -363,7 +402,15 @@ pub const Editor = struct {
         const box = panel(t, .physical);
         defer box.deinit();
         label(t, "LK7 keymap", .{ .x = 20, .y = 20, .w = 180, .h = 25 }, 19);
-        label(t, self.model.document().layers[self.model.layer].name, .{ .x = 220, .y = 23, .w = 200, .h = 25 }, 15);
+        {
+            var badge = options(t, .{ .x = 195, .y = 18, .w = 31, .h = 28 }, 16);
+            badge.padding = .{};
+            badge.background = true;
+            badge.color_fill = .{ .color = palette[self.model.layer % palette.len] };
+            badge.color_text = .{ .color = color(0x10151C) };
+            dvui.labelNoFmt(@src(), try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d}", .{self.model.layer}), .{ .align_x = 0.5, .align_y = 0.5 }, badge);
+        }
+        label(t, self.model.document().layers[self.model.layer].name, .{ .x = 242, .y = 23, .w = 250, .h = 25 }, 16);
         if (dvui.dropdown(@src(), &.{ "Keys", "Combos", "Encoders" }, .{ .choice = &self.view }, .{}, options(t, .{ .x = 692, .y = 15, .w = 150, .h = 36 }, 13))) {
             if (self.view == 1) self.combo_open = true;
             if (self.view == 2) self.report(error.LK7HasNoEncoderActions);
@@ -376,6 +423,8 @@ pub const Editor = struct {
             const tag = try std.fmt.allocPrint(dvui.currentWindow().arena(), "key.select.{d}", .{key.key_index});
             var opts = options(t, .{ .x = x, .y = y, .w = 65, .h = 65 }, 20);
             opts.id_extra = key.key_index;
+            var data: dvui.WidgetData = undefined;
+            opts.data_out = &data;
             opts.tag = tag;
             opts.background = true;
             opts.border = .all(if (self.model.selected[key.key_index]) 2 else 1);
@@ -384,8 +433,17 @@ pub const Editor = struct {
                 opts.color_fill = .{ .color = if (self.light) color(0xE2F0FF) else color(0x233B55) };
             }
             var buffer: [64]u8 = undefined;
-            const caption = labels.action(self.model.document().layers[self.model.layer].actions[key.key_index], &buffer);
-            if (caption.len >= 5) opts.font = dvui.Font.find(.{ .family = "Vera Sans", .size = 10 });
+            const direct = self.model.document().layers[self.model.layer].actions[key.key_index];
+            var resolved = direct;
+            if (resolved == null) {
+                var layer_index = self.model.layer;
+                while (layer_index > 0 and resolved == null) {
+                    layer_index -= 1;
+                    resolved = self.model.document().layers[layer_index].actions[key.key_index];
+                }
+            }
+            const caption = labels.action(resolved, &buffer);
+            opts.font = fonts.font(caption, if (caption.len >= 4) 13 else 20);
             if (dvui.button(@src(), caption, .{}, opts)) {
                 self.model.select(key.key_index, self.extend);
                 if (self.testing.state == .running) {
@@ -394,6 +452,8 @@ pub const Editor = struct {
                     self.testing.input(.{ .key_up = key.key_index }, time + 1000) catch |err| self.report(err);
                 }
             }
+            if (dvui.focusedWidgetId() == data.id) self.canvas_focus = true;
+            if (direct == null) label(t, "inherited", .{ .x = x + 7, .y = y + 47, .w = 55, .h = 14 }, 8);
         }
     }
     fn inspector(self: *Editor, t: Theme) !void {
@@ -406,10 +466,14 @@ pub const Editor = struct {
         _ = button(t, labels.action(self.model.action(), &buffer), "inspector.preview", .{ .x = 20, .y = 75, .w = 74, .h = 74 });
         label(t, "Physical key", .{ .x = 113, .y = 81, .w = 215, .h = 23 }, 14);
         label(t, p.profiles.key_ids[self.model.primary], .{ .x = 113, .y = 112, .w = 210, .h = 23 }, 13);
+        const selected_key = physical.keys[self.model.primary];
+        label(t, try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · {s} · index {d}/34", .{ @tagName(selected_key.hand), @tagName(selected_key.group), self.model.primary + 1 }), .{ .x = 113, .y = 138, .w = 225, .h = 22 }, 11);
         label(t, "Tap", .{ .x = 20, .y = 177, .w = 90, .h = 25 }, 15);
         if (button(t, labels.action(self.model.action(), &buffer), "inspector.tap", .{ .x = 114, .y = 168, .w = 230, .h = 39 })) self.openAction();
         label(t, "Hold", .{ .x = 20, .y = 229, .w = 90, .h = 25 }, 15);
-        if (button(t, "Configure…", "inspector.hold", .{ .x = 114, .y = 220, .w = 230, .h = 39 })) self.openAction();
+        const draft = forms.Draft.from(self.model.action());
+        const hold_caption = if (draft.mode == 3 or draft.mode == 4) labels.hold(draft.hold, self.model.document(), &buffer) else "No hold";
+        if (button(t, hold_caption, "inspector.hold", .{ .x = 114, .y = 220, .w = 230, .h = 39 })) self.openAction();
         label(t, "Tapping term", .{ .x = 20, .y = 281, .w = 115, .h = 25 }, 12);
         var timing: u16 = if (self.model.action()) |a| switch (a) {
             .tap_hold => |th| th.tapping_term.ms,
@@ -435,27 +499,56 @@ pub const Editor = struct {
         label(t, "OS keyboard", .{ .x = 20, .y = 18, .w = 205, .h = 25 }, 19);
         label(t, if (self.source) |*source| source.id() else "EurKEY fixture · ANSI", .{ .x = 225, .y = 23, .w = 570, .h = 25 }, 13);
         label(t, "Show characters with modifiers", .{ .x = 811, .y = 23, .w = 265, .h = 25 }, 12);
-        if (button(t, if (self.shift) "✓ Shift" else "Shift", "os.shift", .{ .x = 1081, .y = 15, .w = 70, .h = 33 })) self.shift = !self.shift;
-        if (button(t, if (self.option) "✓ Option" else "Option", "os.option", .{ .x = 1158, .y = 15, .w = 73, .h = 33 })) self.option = !self.option;
+        var shift_theme = t;
+        var option_theme = t;
+        if (self.shift) {
+            shift_theme.control = color(0x126AFF);
+            shift_theme.text = color(0xFFFFFF);
+        }
+        if (self.option) {
+            option_theme.control = color(0x126AFF);
+            option_theme.text = color(0xFFFFFF);
+        }
+        if (button(shift_theme, "Shift", "os.shift", .{ .x = 1081, .y = 15, .w = 70, .h = 33 })) self.shift = !self.shift;
+        if (button(option_theme, "Option", "os.option", .{ .x = 1158, .y = 15, .w = 73, .h = 33 })) self.option = !self.option;
         for (labels.rows, 0..) |row, ri| {
             var x: f32 = 22;
             for (row, 0..) |key, ki| {
                 var buffer: [64]u8 = undefined;
+                var modified_buffer: [64]u8 = undefined;
                 var caption = if (key.name.len != 0) key.name else labels.usage(key.code, &buffer);
+                var modified: []const u8 = if (key.name.len == 0 and self.option) @import("fixture.zig").optionLabel(key.code, self.shift) else if (key.name.len == 0 and self.shift) @import("fixture.zig").shiftLabel(key.code) else "";
                 if (self.source) |*source| if (key.name.len == 0 and key.code >= 4 and key.code <= 56) {
-                    const result = source.keyToText(.{ .tap_keycode = key.code, .tap_modifiers = .{ .left_shift = self.shift, .left_alt = self.option } });
+                    const result = source.keyToText(.{ .tap_keycode = key.code });
                     if (result.len > 0) {
                         @memcpy(buffer[0..result.len], result.data[0..result.len]);
                         caption = buffer[0..result.len];
                     }
+                    modified = "";
+                    if (self.shift or self.option) {
+                        const preview = source.keyToText(.{ .tap_keycode = key.code, .tap_modifiers = .{ .left_shift = self.shift, .left_alt = self.option } });
+                        if (preview.len > 0) {
+                            @memcpy(modified_buffer[0..preview.len], preview.data[0..preview.len]);
+                            modified = modified_buffer[0..preview.len];
+                        }
+                    }
                 };
-                var opts = options(t, .{ .x = x, .y = 65 + @as(f32, @floatFromInt(ri)) * 50, .w = 76 * key.units - 5, .h = 45 }, if (caption.len > 3) 13 else 18);
+                var opts = options(t, .{ .x = x, .y = 58 + @as(f32, @floatFromInt(ri)) * 51, .w = 76 * key.units - 5, .h = 47 }, if (caption.len > 3) 13 else 18);
+                opts.font = fonts.font(caption, if (caption.len > 3) 13 else 18);
                 opts.id_extra = ri * 100 + ki;
                 opts.background = true;
                 opts.gravity_x = 0.5;
                 opts.gravity_y = 0.5;
                 opts.border = .all(1);
-                dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = 0.5 }, opts);
+                dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = if (modified.len == 0) 0.5 else 0.8 }, opts);
+                if (modified.len != 0 and !std.mem.eql(u8, modified, caption)) {
+                    var secondary = options(t, .{ .x = x + 2, .y = opts.rect.?.y + 2, .w = opts.rect.?.w - 4, .h = 17 }, 11);
+                    secondary.font = fonts.font(modified, 12);
+                    secondary.id_extra = ri * 100 + ki;
+                    secondary.padding = .{};
+                    secondary.color_text = .{ .color = color(if (self.light) 0x126ACC else 0x65B1FF) };
+                    dvui.labelNoFmt(@src(), modified, .{ .align_x = 0.5, .align_y = 0.5 }, secondary);
+                }
                 x += 76 * key.units;
             }
         }
@@ -464,8 +557,11 @@ pub const Editor = struct {
         {
             const box = panel(t, .testing);
             defer box.deinit();
-            label(t, "Try your draft", .{ .x = 18, .y = 12, .w = 200, .h = 24 }, 16);
-            label(t, if (self.text.len == 0) "Prepare an immutable draft to test offline" else self.text.value(), .{ .x = 18, .y = 48, .w = 470, .h = 25 }, 13);
+            label(t, try std.fmt.allocPrint(dvui.currentWindow().arena(), "Try your draft · {s}", .{@tagName(self.testing.state)}), .{ .x = 18, .y = 12, .w = 360, .h = 24 }, 16);
+            var text_options = options(t, .{ .x = 18, .y = 39, .w = 493, .h = 36 }, 17);
+            text_options.background = true;
+            text_options.border = .all(1);
+            dvui.labelNoFmt(@src(), if (self.text.len == 0) "Prepare an immutable draft to test offline" else self.text.value(), .{}, text_options);
             if (button(t, "Details", "test.details", .{ .x = 521, .y = 27, .w = 90, .h = 39 })) self.test_details = !self.test_details;
             if (button(t, switch (self.testing.state) {
                 .idle, .stale, .failed => "Prepare Test",
@@ -476,7 +572,10 @@ pub const Editor = struct {
                 switch (self.testing.state) {
                     .idle, .stale, .failed => self.testing.prepare(self.model.current.snapshot) catch |err| self.report(err),
                     .prepared => {
-                        if (self.text.native_session) |*session| if (!session.eurkey()) { self.report(error.SelectEurKeyInputSource); return; };
+                        if (self.text.native_session) |*session| if (!session.eurkey()) {
+                            self.report(error.SelectEurKeyInputSource);
+                            return;
+                        };
                         self.test_start = @intCast(std.Io.Clock.awake.now(self.io).toMicroseconds());
                         self.last_text_sequence = null;
                         self.text.reset();
@@ -493,14 +592,43 @@ pub const Editor = struct {
             const box = panel(t, .callbacks);
             defer box.deinit();
             label(t, "Callbacks", .{ .x = 18, .y = 12, .w = 200, .h = 24 }, 16);
-            label(t, if (self.model.document().callbacks.len == 0) "No attached source · external Zig files" else switch (self.callback_state) { .changed => "External source changed · refresh explicitly", .missing => "External source missing · snapshot preserved", .failed => "Callback diagnostic · open Manage", else => "Source snapshot preserved · external Zig" }, .{ .x = 18, .y = 49, .w = 390, .h = 24 }, 12);
-            if (button(t, "Manage…", "callback.attach", .{ .x = 321, .y = 9, .w = 110, .h = 31 })) self.callback_open = true;
+            if (button(t, if (self.model.document().callbacks.len > 0) self.model.document().callbacks[0].binding else "Attach source…", "callback.attach", .{ .x = 124, .y = 10, .w = 169, .h = 30 })) self.callback_open = true;
+            label(t, if (self.model.document().callbacks.len == 0) "No attached source · external Zig files" else switch (self.callback_state) {
+                .changed => "External source changed · refresh explicitly",
+                .missing => "External source missing · snapshot preserved",
+                .failed => "Callback diagnostic · open Manage",
+                else => "Source snapshot preserved · external Zig",
+            }, .{ .x = 18, .y = 49, .w = 390, .h = 24 }, 12);
+            if (button(t, "Open externally", "callback.external", .{ .x = 301, .y = 9, .w = 132, .h = 31 })) {
+                if (self.model.document().callbacks.len == 0) self.callback_open = true else self.openCallback(0) catch |err| self.report(err);
+            }
         }
-        if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 30, .y = 870, .w = 220, .h = 100 }, 12);
+        if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
+    }
+    fn openCallback(self: *Editor, index: usize) !void {
+        const callback = self.model.document().callbacks[index];
+        if (callback.kind != .attached) return error.RegisteredSourceReadOnly;
+        if (self.project_path[0] == 0) return error.SaveProjectDirectoryFirst;
+        if (self.external_job != null) return error.ExternalEditorBusy;
+        var dir = try std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
+        defer dir.close(self.io);
+        try p.sources.checkout(self.gpa, self.io, dir, self.model.current.snapshot, index);
+        const relative = try std.fmt.allocPrint(self.gpa, "callbacks/{d}/{s}", .{ index, callback.binding });
+        defer self.gpa.free(relative);
+        const path = try dir.realPathFileAlloc(self.io, relative, self.gpa);
+        defer self.gpa.free(path);
+        const job = try self.gpa.create(jobs.Job);
+        errdefer self.gpa.destroy(job);
+        job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ "/usr/bin/open", "-t", path }, .cwd = self.testing.root, .snapshot_id = try self.model.id(), .timeout_ms = 5000 });
+        errdefer job.deinit();
+        try job.start();
+        self.external_job = job;
     }
     fn paths(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 400, .y = 270, .w = 740, .h = 400 }, .padding = .all(20), .background = true, .color_fill = .{ .color = t.panel } });
+        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 400, .y = 120, .w = 740, .h = 720 }, .padding = .all(20), .background = true, .color_fill = .{ .color = t.panel } });
         defer window.deinit();
+        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+        defer area.deinit();
         dvui.label(@src(), "Project directory (atomic project.zon + immutable sources)", .{}, .{});
         {
             const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.project_path } }, .{ .expand = .horizontal });
@@ -527,6 +655,10 @@ pub const Editor = struct {
             dialog.start(self.backend_window.?) catch |err| self.report(err);
         }
         if (dvui.button(@src(), "Export Zig", .{}, .{})) {
+            if (self.export_path[0] == 0) {
+                self.report(error.ChooseExportDirectoryFirst);
+                return;
+            }
             var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, std.mem.sliceTo(&self.export_path, 0), .{});
             defer dir.close(self.io);
             const manifest = p.exporter.write(self.gpa, self.io, dir, self.model.current.snapshot, p.profiles.board) catch |err| {
@@ -534,7 +666,14 @@ pub const Editor = struct {
                 return;
             };
             std.zon.parse.free(self.gpa, manifest);
+            self.exported_id = manifest.snapshot_id;
         }
+        const current_id = try self.model.id();
+        dvui.label(@src(), "Draft snapshot: {s}", .{std.fmt.bytesToHex(current_id, .lower)}, .{});
+        if (self.exported_id) |id| dvui.label(@src(), "Export {s}: {s} · running firmware remains unverified", .{ if (std.mem.eql(u8, &id, &current_id)) "matches draft" else "is stale", std.fmt.bytesToHex(id, .lower) }, .{});
+        const advisory = try p.assessment.assess(self.model.document());
+        dvui.label(@src(), "Declarative recovery action reachable: {} · callbacks require review: {}", .{ advisory.recovery_found, advisory.callbacks_require_review }, .{});
+        for (self.model.document().layers, 0..) |layer, index| if (!advisory.reachable[index]) dvui.label(@src(), "Layer {s}: no declarative path from Base", .{layer.name}, .{ .id_extra = index });
         if (dvui.button(@src(), "Separate overlay", .{}, .{})) self.overlay_open = true;
         if (dvui.button(@src(), "Restore recovery draft", .{}, .{})) {
             const path = try std.fs.path.join(self.gpa, &.{ self.testing.root, ".zig-cache", "editor-recovery" });
@@ -587,7 +726,10 @@ pub const Editor = struct {
             const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_entry }, .placeholder = "Relative entry module, e.g. callbacks.zig" }, .{ .expand = .horizontal });
             entry.deinit();
         }
-        { const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_ids }, .placeholder = "Callback IDs, e.g. 1,2 (1–252)" }, .{ .expand = .horizontal }); entry.deinit(); }
+        {
+            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_ids }, .placeholder = "Callback IDs, e.g. 1,2 (1–252)" }, .{ .expand = .horizontal });
+            entry.deinit();
+        }
         if (dvui.button(@src(), "Attach callback ID and complete import closure", .{}, .{})) {
             var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.callback_root, 0), .{}) catch |err| {
                 self.report(err);
@@ -603,8 +745,15 @@ pub const Editor = struct {
             var count: usize = 0;
             var parts = std.mem.splitScalar(u8, std.mem.sliceTo(&self.callback_ids, 0), ',');
             while (parts.next()) |part| {
-                if (count == ids.len) { self.report(error.InvalidCallback); return; }
-                ids[count] = std.fmt.parseInt(u8, std.mem.trim(u8, part, " \t"), 10) catch |err| { self.report(err); return; }; count += 1;
+                if (count == ids.len) {
+                    self.report(error.InvalidCallback);
+                    return;
+                }
+                ids[count] = std.fmt.parseInt(u8, std.mem.trim(u8, part, " \t"), 10) catch |err| {
+                    self.report(err);
+                    return;
+                };
+                count += 1;
             }
             var loaded = p.sources.attach(self.gpa, self.model.current.snapshot, bundle, ids[0..count], &.{}) catch |err| {
                 self.report(err);
@@ -624,29 +773,24 @@ pub const Editor = struct {
             dvui.label(@src(), "{s}; {d} source files; {d} registered IDs; opaque layer index constraints retained", .{ @tagName(callback.kind), callback.sources.len, callback.ids.len }, .{});
             if (callback.kind == .attached) {
                 if (dvui.button(@src(), "Check external mirror against frozen snapshot", .{}, .{})) {
-                    var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{}) catch |err| { self.callback_state = .missing; self.report(err); return; }; defer dir.close(self.io);
-                    var loaded = p.sources.refresh(self.gpa, self.io, dir, self.model.current.snapshot, self.callback_index) catch |err| { self.callback_state = .missing; self.report(err); return; }; defer loaded.deinit();
-                    const current = try self.model.id(); const mirror = try p.snapshot.projectDigest(self.gpa, loaded.snapshot, p.profiles.board);
+                    var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{}) catch |err| {
+                        self.callback_state = .missing;
+                        self.report(err);
+                        return;
+                    };
+                    defer dir.close(self.io);
+                    var loaded = p.sources.refresh(self.gpa, self.io, dir, self.model.current.snapshot, self.callback_index) catch |err| {
+                        self.callback_state = .missing;
+                        self.report(err);
+                        return;
+                    };
+                    defer loaded.deinit();
+                    const current = try self.model.id();
+                    const mirror = try p.snapshot.projectDigest(self.gpa, loaded.snapshot, p.profiles.board);
                     self.callback_state = if (std.mem.eql(u8, &current, &mirror)) .snapshot else .changed;
                 }
                 if (dvui.button(@src(), "Checkout and open externally", .{}, .{})) {
-                    if (self.project_path[0] == 0) {
-                        self.report(error.SaveProjectDirectoryFirst);
-                        return;
-                    }
-                    var dir = try std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
-                    defer dir.close(self.io);
-                    try p.sources.checkout(self.gpa, self.io, dir, self.model.current.snapshot, self.callback_index);
-                    const relative = try std.fmt.allocPrint(self.gpa, "callbacks/{d}/{s}", .{ self.callback_index, callback.binding });
-                    defer self.gpa.free(relative);
-                    const path = try dir.realPathFileAlloc(self.io, relative, self.gpa);
-                    defer self.gpa.free(path);
-                    if (self.external_job != null) return error.ExternalEditorBusy;
-                    const job = try self.gpa.create(jobs.Job);
-                    errdefer self.gpa.destroy(job);
-                    job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ "open", "-t", path }, .cwd = self.testing.root, .snapshot_id = try self.model.id(), .timeout_ms = 5000 });
-                    try job.start();
-                    self.external_job = job;
+                    try self.openCallback(self.callback_index);
                 }
                 if (dvui.button(@src(), "Refresh edited source snapshot (undoable)", .{}, .{})) {
                     var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{}) catch |err| {
@@ -732,31 +876,48 @@ pub const Editor = struct {
         if (dvui.button(@src(), "Close combos", .{}, .{})) self.combo_open = false;
     }
     fn picker(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 1000, .y = 230, .w = 490, .h = 650 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } }); defer window.deinit();
+        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 1000, .y = 230, .w = 490, .h = 650 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
+        defer window.deinit();
         dvui.label(@src(), "Search actions · key choice preserves existing hold fields", .{}, .{});
-        { const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.search } }, .{ .expand = .horizontal }); entry.deinit(); }
+        {
+            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.search } }, .{ .expand = .horizontal });
+            entry.deinit();
+        }
         const query = std.mem.sliceTo(&self.search, 0);
-        { const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both }); defer area.deinit();
+        {
+            const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+            defer area.deinit();
             for (0..256) |index| {
-                var buffer: [64]u8 = undefined; const caption = labels.usage(@intCast(index), &buffer);
+                var buffer: [64]u8 = undefined;
+                const caption = labels.usage(@intCast(index), &buffer);
                 if (query.len > 0 and std.ascii.indexOfIgnoreCase(caption, query) == null) continue;
                 if (dvui.button(@src(), caption, .{}, .{ .id_extra = index, .expand = .horizontal })) {
                     var draft = forms.Draft.from(self.model.action());
                     if (draft.mode == 0 or draft.mode == 1 or draft.mode == 3) draft.mode = if (draft.mode == 3) 4 else 2;
                     const mods = if (draft.tap.key_press) |key| key.tap_modifiers else @import("layout-model").Modifiers{};
                     draft.tap.key_press = .{ .tap_keycode = @intCast(index), .tap_modifiers = mods };
-                    self.model.apply(draft.action()) catch |err| self.report(err); self.picker_open = false;
+                    self.model.apply(draft.action()) catch |err| self.report(err);
+                    self.picker_open = false;
                 }
             }
             inline for (@typeInfo(@import("layout-model").MediaCode).@"enum".fields, 0..) |field, i| {
-                if (query.len == 0 or std.ascii.indexOfIgnoreCase(field.name, query) != null) if (dvui.button(@src(), field.name, .{}, .{ .id_extra = 256 + i, .expand = .horizontal })) { try self.model.apply(.{ .tap_only = .{ .media_key = @enumFromInt(field.value) } }); self.picker_open = false; };
+                if (query.len == 0 or std.ascii.indexOfIgnoreCase(field.name, query) != null) if (dvui.button(@src(), field.name, .{}, .{ .id_extra = 256 + i, .expand = .horizontal })) {
+                    try self.model.apply(.{ .tap_only = .{ .media_key = @enumFromInt(field.value) } });
+                    self.picker_open = false;
+                };
             }
             for (self.model.document().layers, 0..) |layer, i| {
                 const caption = try std.fmt.allocPrint(dvui.currentWindow().arena(), "Hold layer: {s}", .{layer.name});
-                if (query.len == 0 or std.ascii.indexOfIgnoreCase(caption, query) != null) if (dvui.button(@src(), caption, .{}, .{ .id_extra = 512 + i, .expand = .horizontal })) { try self.model.apply(.{ .hold_only = .{ .layer_id = layer.id } }); self.picker_open = false; };
+                if (query.len == 0 or std.ascii.indexOfIgnoreCase(caption, query) != null) if (dvui.button(@src(), caption, .{}, .{ .id_extra = 512 + i, .expand = .horizontal })) {
+                    try self.model.apply(.{ .hold_only = .{ .layer_id = layer.id } });
+                    self.picker_open = false;
+                };
             }
         }
-        if (dvui.button(@src(), "Advanced fields…", .{}, .{})) { self.picker_open = false; self.openAction(); }
+        if (dvui.button(@src(), "Advanced fields…", .{}, .{})) {
+            self.picker_open = false;
+            self.openAction();
+        }
         if (dvui.button(@src(), "Cancel search", .{}, .{})) self.picker_open = false;
     }
     fn actionForm(self: *Editor, t: Theme) !void {
@@ -768,7 +929,7 @@ pub const Editor = struct {
             defer area.deinit();
             forms.draw(&self.action_draft, self.model.document());
         }
-        if (dvui.button(@src(), "Apply to selection", .{}, .{})) {
+        if (dvui.button(@src(), "Apply to selection", .{}, .{ .tag = "advanced.apply" })) {
             self.model.apply(self.action_draft.action()) catch |err| {
                 self.report(err);
                 return;
@@ -780,10 +941,17 @@ pub const Editor = struct {
     fn testDrawer(self: *Editor, t: Theme) !void {
         const window = dvui.floatingWindow(@src(), .{}, .{ .rect = .{ .x = 320, .y = 590, .w = 900, .h = 310 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
         defer window.deinit();
+        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+        defer area.deinit();
         dvui.label(@src(), "Test: {s} · preparation {d} ms", .{ @tagName(self.testing.state), @divTrunc(self.testing.elapsed_ns, 1_000_000) }, .{});
         dvui.label(@src(), "Mapped QWERTY scancodes target LK7 positions; focus loss stops and resets.", .{}, .{});
         if (self.text.native_session) |*session| dvui.label(@src(), "Actual source: {s} · EurKEY selected: {}", .{ session.source.id(), session.eurkey() }, .{});
-        if (self.testing.last) |output| dvui.label(@src(), "Sequence {d} · layers {x} · highest {d} · modifiers {x} · commands {d} · events {d} · signals {d}", .{ output.sequence, output.active_layers, output.highest_layer, output.modifiers, output.commands.len, output.events.len, output.signals.len }, .{});
+        if (self.testing.last) |output| {
+            dvui.label(@src(), "Sequence {d} · layers {x} · highest {d} · modifiers {x} · commands {d} · events {d} · signals {d}", .{ output.sequence, output.active_layers, output.highest_layer, output.modifiers, output.commands.len, output.events.len, output.signals.len }, .{});
+            for (output.commands) |command| dvui.label(@src(), "Command: {any}", .{command}, .{});
+            for (output.events) |event| dvui.label(@src(), "Event: {any}", .{event}, .{});
+            for (output.signals) |signal| dvui.label(@src(), "Signal: {any}", .{signal}, .{});
+        }
         if (self.testing.state == .running) {
             if (dvui.button(@src(), "Selected key down", .{}, .{})) try self.testing.input(.{ .key_down = @intCast(self.model.primary) }, self.testTime());
             if (dvui.button(@src(), "Selected key up", .{}, .{})) try self.testing.input(.{ .key_up = @intCast(self.model.primary) }, self.testTime());
@@ -797,15 +965,38 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var fixture = false;
     var light = false;
     var screenshot: ?[]const u8 = null;
+    var reference_path: ?[]const u8 = null;
+    var golden_path: ?[]const u8 = null;
+    var state: scenario.State = .normal;
+    var interactions = false;
+    var density: ?u8 = null;
     var i: usize = 2;
     while (i < args.len) : (i += 1) {
         if (std.mem.eql(u8, args[i], "--light")) light = true else if (std.mem.eql(u8, args[i], "--fixture")) fixture = true else if (std.mem.eql(u8, args[i], "--screenshot") and i + 1 < args.len) {
             i += 1;
             screenshot = args[i];
             fixture = true;
+        } else if (std.mem.eql(u8, args[i], "--scenario") and i + 1 < args.len) {
+            i += 1;
+            state = std.meta.stringToEnum(scenario.State, args[i]) orelse return error.InvalidScenario;
+        } else if (std.mem.eql(u8, args[i], "--density") and i + 1 < args.len) {
+            i += 1;
+            density = try std.fmt.parseInt(u8, args[i], 10);
+            if (density.? != 1 and density.? != 2) return error.InvalidDensity;
+        } else if (std.mem.eql(u8, args[i], "--compare-reference") and i + 1 < args.len) {
+            i += 1;
+            reference_path = args[i];
+        } else if (std.mem.eql(u8, args[i], "--compare-golden") and i + 1 < args.len) {
+            i += 1;
+            golden_path = args[i];
+        } else if (std.mem.eql(u8, args[i], "--interactions")) {
+            interactions = true;
+            fixture = true;
         } else return error.Usage;
     }
-    var backend = try Backend.initWindow(.{ .io = init.io, .environ_map = init.environ_map, .size = .{ .w = 1536, .h = 1024 }, .min_size = if (screenshot != null) .{ .w = 1536, .h = 1024 } else .{ .w = 1280, .h = 900 }, .title = "Zigmkay — LK7 Keymap Editor", .hidden = screenshot != null, .vsync = true, .persist_window_geometry = false });
+    if (density != null and screenshot == null) return error.DensityRequiresScreenshot;
+    if (state != .normal and screenshot == null) return error.ScenarioRequiresScreenshot;
+    var backend = try @import("window.zig").init(.{ .io = init.io, .environ_map = init.environ_map, .size = .{ .w = 1536, .h = 1024 }, .min_size = if (screenshot != null) .{ .w = 1536, .h = 1024 } else .{ .w = 1280, .h = 900 }, .title = "Zigmkay — LK7 Keymap Editor", .hidden = screenshot != null, .vsync = true, .persist_window_geometry = false }, density == 1);
     defer backend.deinit();
     var open = true;
     var window = try dvui.Window.init(@src(), init.gpa, backend.backend(), .{ .theme = if (light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark, .open_flag = &open });
@@ -815,14 +1006,45 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     editor.light = light;
     editor.window_id = sdl.SDL_GetWindowID(backend.window);
     editor.backend_window = backend.window;
+    scenario.setup(&editor, state) catch |err| editor.report(err);
     var frames: usize = 0;
     while (open) : (frames += 1) {
         try window.begin(window.beginWait(false));
         try @import("events.zig").pump(&backend, &window, &editor);
+        if (interactions) switch (frames) {
+            3 => try scenario.click(&window, "key.select.31", window.natural_scale, false),
+            4 => try scenario.click(&window, "key.select.31", window.natural_scale, true),
+            6 => try scenario.click(&window, "layer.duplicate.1", window.natural_scale, false),
+            7 => try scenario.click(&window, "layer.duplicate.1", window.natural_scale, true),
+            11 => try scenario.click(&window, "edit.undo", window.natural_scale, false),
+            12 => try scenario.click(&window, "edit.undo", window.natural_scale, true),
+            14 => try scenario.click(&window, "edit.redo", window.natural_scale, false),
+            15 => try scenario.click(&window, "edit.redo", window.natural_scale, true),
+            18 => try scenario.click(&window, "inspector.tap", window.natural_scale, false),
+            19 => try scenario.click(&window, "inspector.tap", window.natural_scale, true),
+            20 => editor.action_draft = forms.Draft.from(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 4 } } }),
+            22 => try scenario.click(&window, "advanced.apply", window.natural_scale, false),
+            23 => try scenario.click(&window, "advanced.apply", window.natural_scale, true),
+            else => {},
+        };
         if (editor.source) |*source| _ = source.refresh();
-        editor.draw() catch |err| { if (err == error.OutOfMemory) return err; editor.report(err); };
+        editor.draw() catch |err| {
+            if (err == error.OutOfMemory) return err;
+            editor.report(err);
+        };
         if (editor.should_close) open = false;
-        if (screenshot != null and frames == 5) {
+        if (frames == 2 and screenshot != null) try scenario.verifyPanels(window.natural_scale);
+        if (interactions and frames == 26) {
+            if (editor.model.primary != 31 or editor.model.document().layers.len != 7 or editor.model.layer != 5) return error.InteractionScenarioFailed;
+            if (editor.advanced or editor.model.action().? != .tap_only or editor.model.action().?.tap_only.key_press.?.tap_keycode != 4) return error.FormInteractionFailed;
+            std.log.info("Semantic input scenario passed: thumb selection, isolated duplication, undo/redo and advanced form apply", .{});
+            if (screenshot == null) {
+                _ = try window.end(.{});
+                break;
+            }
+        }
+        if (screenshot != null and frames == (if (interactions) @as(usize, 28) else 5)) {
+            if (density) |expected| if (window.natural_scale != @as(f32, @floatFromInt(expected))) return error.NativeDensityMismatch;
             window.endRendering(.{});
             const size = window.rect_pixels;
             const width: usize = @intFromFloat(size.w);
@@ -842,6 +1064,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             try writer.ensureTotalCapacity(4096);
             try dvui.PNGEncoder.writeWithResolution(&writer.writer, normalized, 1536, 1024, 0);
             try std.Io.Dir.cwd().writeFile(init.io, .{ .sub_path = screenshot.?, .data = writer.written() });
+            if (reference_path) |reference| try @import("comparison.zig").write(init.gpa, init.io, reference, normalized, screenshot.?, light, window.natural_scale);
+            if (golden_path) |path| try @import("comparison.zig").golden(init.gpa, init.io, path, normalized);
             _ = try window.end(.{});
             break;
         }

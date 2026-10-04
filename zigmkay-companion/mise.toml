@@ -29,3 +29,19 @@ run = 'zig build run -j4 -- {% if usage.live %}--live{% endif %} {% if usage.smo
 [tasks.smoke]
 description = "Render three offline frames without HID"
 run = "zig build run -j4 -- --smoke"
+
+[tasks.editor]
+description = "Open the separate offline LK7 draft editor"
+usage = '''
+flag "--light" help="Start in light mode"
+flag "--fixture" help="Use inert deterministic visual fixtures"
+'''
+run = 'zig build run -j4 -- --editor {% if usage.light %}--light{% endif %} {% if usage.fixture %}--fixture{% endif %}'
+
+[tasks.editor-check]
+description = "Capture all editor states/themes/scales and check semantic interactions offline"
+run = "zig build editor-check -j4"
+
+[tasks.editor-golden-check]
+description = "Compare approved editor goldens without updating them"
+run = "zig build editor-golden-check -j4"
