@@ -42,10 +42,15 @@ BOOTSEL 0+4 and successful `mise run //:flash lk7` with automatic keyboard
 reconnect. Current output hash matches the diagnostic candidate; this is not
 cryptographic running-device readback.
 
-R4 inventory/contract is in `usb-hid-custom-contract.md`; scoped firmware,
-protocol, companion-model and GUI tests pass. Companion binding placement is
-pending user preference. Existing gaming layer 4 is undefined and needs resolution.
-Next: integrate agreed controls and complete live custom checks.
+R4 inventory/contract is in `usb-hid-custom-contract.md`. `91cbdd5` adds agreed
+both-thumbs controls 19/24/29 and preserves F12 at 20. Full offline checks pass.
+The custom candidate flashed/configured successfully in 4.10 seconds. First live
+GUI failed before handshake: SDL defaults HID enumeration to game controllers.
+`bceadb0` disables that filter in live mode and logs discovery/open. Host-only
+retry discovers and opens the exact vendor collection; full checks pass again.
+Remaining: user-observed live status and custom/input outcomes, then inspect saved
+capture. R-custom is not yet accepted; R5 remains gated. Existing gaming layer 4
+is undefined and remains outside the validated controls.
 Do not repeat the diagnostic flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 

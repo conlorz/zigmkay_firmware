@@ -16,7 +16,7 @@ User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconn
 | --- | --- | --- |
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
 | R-keyboard | Accepted | [Live configuration/input/modifier/release/reconnect evidence](../research/usb-hid-diagnostic-session.md); Mac only, no Caps Lock binding |
-| R-custom | Active | [Live custom run](../research/usb-hid-custom-contract.md): flash/configuration pass, companion disconnected/STALE before handshake; collection-open diagnosis in progress |
+| R-custom | Waiting-user | [Live custom run](../research/usb-hid-custom-contract.md): flash/configuration pass; SDL enumeration filter fixed at `bceadb0`, vendor collection opens; actual live/control/input results pending |
 | R-flash | Planned | Only after R-custom; bounded discovery/failure fixtures, identity/ambiguity and running verification |
 
 Research workers have stopped and released all leases. The coordinator owns
