@@ -2,7 +2,7 @@
 
 State: **Research accepted; offline R3 integrated; bounded hardware session
 run with explicit authorization; configuration/HID and reconnect input succeeded;
-controlled modifier/release checks pending.** Current implementation
+controlled modifier/release checks passed; R-keyboard accepted on macOS.** Current implementation
 `2e30e9d`, with full offline checks passing. See
 [research decision](../../research/usb-hid-decision.md) and
 [identified diagnostic session](../../research/usb-hid-diagnostic-session.md).
@@ -36,8 +36,13 @@ controlled modifier/release checks pending.** Current implementation
   no USB diagnostic retrieval after a hard hang or boundary fault; Mac diagnostic
   string freshness unverified. Full tests do not prove live compatibility.
 
-Next: supply the unfamiliar layout's exact test positions and record the remaining
-controlled modifier/release and LED observations. Do not repeat the flash.
+User confirmed all position-based input/modifier/release checks passed. Caps Lock
+is not bound; LED state and Windows/Linux remain unverified. User also confirms
+BOOTSEL 0+4, successful reflash and automatic keyboard reconnect; that reflash's
+artifact and transfer entry point were not captured.
+
+Next: execute R4 inventory/contract and companion regression/live custom checks.
+Do not repeat the diagnostic flash.
 Continue R4 and then R5 only after their entry gates. Never infer a hardware pass.
 
 ## Historical state before recovery execution

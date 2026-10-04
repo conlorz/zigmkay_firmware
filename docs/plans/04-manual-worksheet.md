@@ -8,8 +8,9 @@ identity/session/overlay rows below; companion tests wait for R-keyboard.
 
 State: hardware troubleshooting in progress; G04 acceptance is pending.
 One authorized recovery flash, automatic reboot, configuration 1 and all four HID
-attachments succeeded. User reports typing after reconnect; controlled modifier/
-release checks and host LED state remain pending.
+attachments succeeded. User reports typing after reconnect and all controlled
+modifier/release checks passed. Host LED state remains unverified (no Caps Lock
+binding). User also confirms BOOTSEL 0+4, successful reflash and keyboard reconnect.
 Use this worksheet only after G-live-offline and an explicit user hardware
 session. Coordinator fills artifact identities from the accepted 02/03 revision.
 

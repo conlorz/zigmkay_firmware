@@ -1,7 +1,7 @@
 # USB/HID recovery: research first, then keyboard, custom codes and flashing
 
 Status: **Research/design accepted and offline R3 integrated at `2e30e9d`;
-R-keyboard waiting for the identified bounded hardware session.** See the
+R-keyboard accepted on macOS after the bounded hardware session; R4 ready.** See the
 [decision](../research/usb-hid-decision.md) and
 [session preparation](../research/usb-hid-diagnostic-session.md).
 

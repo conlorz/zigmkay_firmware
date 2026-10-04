@@ -8,13 +8,15 @@ artifacts, actual USB wire/report parsing and root/standalone parity. The target
 probe demonstrated device-side aggregate corruption that the old host-facing
 serialization did not fix. One authorized candidate flash succeeded: macOS
 configured the device and attached all four HID interfaces; reconnect typing
-works per user. Controlled modifier/release checks remain pending.
+works per user. Controlled taps, modifiers and release checks all passed per user.
+R-keyboard is accepted on macOS; LED state and other platforms are unverified.
+User also confirms BOOTSEL 0+4, successful reflash and automatic keyboard reconnect.
 
 | Recovery gate | State | Exact next work |
 | --- | --- | --- |
 | R-HID-design | Accepted offline | [Decision and limits](../research/usb-hid-decision.md) |
-| R-keyboard | Waiting-user | [Live configuration/reconnect evidence](../research/usb-hid-diagnostic-session.md); exact layout instructions for remaining modifier/release checks; Mac only |
-| R-custom | Planned | Only after live keyboard gate; inventory/migration and companion regressions/live signals |
+| R-keyboard | Accepted | [Live configuration/input/modifier/release/reconnect evidence](../research/usb-hid-diagnostic-session.md); Mac only, no Caps Lock binding |
+| R-custom | Ready | Inventory/contract and companion regressions/live signals; keyboard entry gate satisfied |
 | R-flash | Planned | Only after R-custom; bounded discovery/failure fixtures, identity/ambiguity and running verification |
 
 Research workers have stopped and released all leases. The coordinator owns

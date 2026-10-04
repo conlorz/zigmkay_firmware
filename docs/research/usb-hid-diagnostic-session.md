@@ -1,7 +1,7 @@
 # Bounded LK7 recovery session
 
 Prepared and run 2026-10-04 with explicit user authorization.
-**Configuration/HID attachment succeeded; modifier/release checks remain pending.**
+**R-keyboard accepted on macOS: configuration, input/modifiers/releases and reconnect passed.**
 User confirmed a Mac only, with no SWD probe or USB protocol analyzer.
 Implementation `2e30e9d`; research decision `2972bc6`; Zig 0.16.0.
 All offline checks below passed before preparing this session.
@@ -127,8 +127,15 @@ repeat/release test. They reported typing works after the single unplug/replug.
 Post-reconnect IORegistry again reports configuration 1. The unfamiliar layout
 prevented modifier testing; exact position-based instructions are being supplied.
 Caps Lock has no binding in this candidate; its host LED state is still unverified.
-R-keyboard remains waiting for controlled input/modifier observations. R-custom
-and R-flash remain gated. Windows/Linux live checks remain unavailable.
+The user subsequently confirmed all position-based tap, Shift, Command, Control,
+Option and released-key checks behaved as expected. R-keyboard is accepted on
+macOS; Caps Lock/LED state is unverified because no binding is present.
+Windows/Linux live checks remain unavailable.
+
+Separately, the user confirms BOOTSEL through 0+4 (Q+B), successful reflashing
+and automatic keyboard reconnect. The artifact and transfer entry point of that
+user-operated reflash were not captured. It does not by itself accept R-flash or
+identify the currently running binary. No second coordinator flash was performed.
 
 `mise //:check-full` passed for the complete `2e30e9d` source tree: package and
 integration tests, real pinned HID initialization, Cortex-M0+ probe, ten board
@@ -138,8 +145,8 @@ inspection confirms the initializer uses contiguous serialized endpoint bytes
 instead of the defective nested constant. It is not target runtime execution.
 
 R-HID-design is recorded/accepted offline. R3 offline work is integrated;
-R-keyboard awaits the remaining user-observed input/modifier checks. R-custom is gated on
-R-keyboard. R-flash is gated on R-custom and still needs bounded discovery,
+R-keyboard is accepted on macOS. R-custom is now eligible for execution.
+R-flash is gated on R-custom and still needs bounded discovery,
 device ambiguity/identity, cancellation/failure fixtures and running verification.
 Windows/Linux live checks are conditional on availability and remain unverified.
 The original 05–09 roadmap remains deferred.
