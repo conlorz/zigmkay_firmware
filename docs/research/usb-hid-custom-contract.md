@@ -107,3 +107,17 @@ Exact lower Connection/Transport text is requested. The pinned SDL backend uses
 nonexclusive macOS HID opens; no permission change or firmware reflash is justified
 by this capture alone. Added first-party native open-path/error logging for a
 host-only retry. R4 remains active; R5 implementation remains gated.
+
+Host-only tracing identified zero SDL candidates despite IORegistry's vendor
+collection. Pinned SDL 3.4.0 `src/hidapi/SDL_hidapi.c`, `OnlyControllersChanged`,
+defaults `SDL_HIDAPI_ENUMERATE_ONLY_CONTROLLERS` to true; its ignore predicate
+filters FF31/0074. The companion now explicitly sets that existing SDL hint to
+false in live mode before initialization. No upstream C or bridge changed.
+Selection still requires the exact vendor collection; keyboard/mouse remain
+unopened. A host-only retry enumerated FF31/0074 and successfully opened its path.
+Matched firmware was not reflashed. User-observed session/control results are
+pending; discovery/open alone is not R-custom acceptance.
+
+Fixed companion SHA-256:
+`0d2c51da513af2f3075ab9ee7fc8215af3fe3c0c7c2de3466fb03fe536373b34`.
+New bounded capture: `.zig-cache/manual-session/recovery-11/custom-session-fixed.bin`.

@@ -19,6 +19,7 @@ const Native = struct {
     paths: [8][512:0]u8 = undefined,
     path_lengths: [8]usize = @splat(0),
     path_count: usize = 0,
+    discovery_logged: bool = false,
     pub fn now(self: *Native) u64 {
         return @intCast(std.Io.Clock.awake.now(self.io).toMilliseconds());
     }
@@ -30,6 +31,7 @@ const Native = struct {
         var selected: ?[*:0]const u8 = null;
         var device = devices;
         while (device != null) : (device = device.*.next) {
+            if (!self.discovery_logged) std.log.info("HID candidate: page={x}, usage={x}, path={s}", .{ device.*.usage_page, device.*.usage, if (device.*.path) |p| std.mem.span(p) else "(none)" });
             if (device.*.usage_page != 0xFF31 or device.*.usage != 0x0074 or device.*.path == null) continue;
             count += 1;
             const path = std.mem.span(device.*.path);
@@ -43,6 +45,8 @@ const Native = struct {
                 if (std.mem.eql(u8, wanted, path)) selected = device.*.path;
             } else selected = device.*.path;
         }
+        if (!self.discovery_logged) std.log.info("Vendor HID discovery found {d} matching collections", .{count});
+        self.discovery_logged = true;
         if (requested != null and selected == null) return .path_not_found;
         if (requested == null and count > 1) return .multiple_devices;
         if (selected) |path| {
@@ -107,6 +111,9 @@ pub fn main(init: std.process.Init) !void {
     }
     if (live and (smoke or replay != null or timed_replay != null) or (replay != null and timed_replay != null) or (!live and (path != null or capture_path != null))) return error.IncompatibleModes;
     if (!std.math.isFinite(opacity) or opacity < 0.1 or opacity > 1 or capture_ms == 0 or capture_ms > 300_000) return error.InvalidConfiguration;
+    // SDL 3.4 defaults to game-controller collections and filters our vendor page.
+    // Selection below still opens only the exact FAFA/00F0/FF31/0074 collection.
+    if (live and !sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
     var state = try companion.State.init(.{ .key_count = keymap.key_count, .layer_count = keymap.keymap.len });
     var replay_stale = false;
     var log = LogComponent{};
