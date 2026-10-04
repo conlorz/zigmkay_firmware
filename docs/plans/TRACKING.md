@@ -1,6 +1,13 @@
 # Central milestone tracker
 
-## Recovery and G04 accepted; next is editor architecture/export
+## Recovery, G04 and G06 accepted; next is editor schema/export
+
+06B finalized in the editor planning session on 2026-10-04: separate native
+editor, full existing action set, named layers and bulk editing, offline draft
+runner with EurKEY text, attached externally edited Zig callbacks. See the
+[decision](06-editor-architecture-decision.md) and
+[requirements](06-editor-requirements.md). This accepts planning only; no 07/08
+implementation or new hardware session has started.
 
 User-revised order: **04 → 06 → 07 → 08 → 05 → 09**. Build shared profile
 selection in 07/08; use existing profiles and representative fixtures for editor
@@ -93,8 +100,8 @@ remains none. Exact active ownership is recorded below.
 | 02 | [Firmware](02-firmware-telemetry.md) / [handover](handovers/02-firmware.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 03 | [Overlay](03-macos-live-overlay.md) / [handover](handovers/03-overlay.md) | Accepted | G01 | Manual validation in 04 | Coordinator / `4fd4c66` |
 | 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Accepted | Plan 11 baseline plus focused user session | All required baseline/highlight/snapshot/recovery checks passed; limits in handover | Coordinator with user / `0aa2ca7` implementation |
-| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Ready | G04; 06A already accepted | Finalize architecture using existing profiles and editor requirements | Coordinator / none |
-| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Planned | G04 and G06 | Schema/export/shared selector first, editor UI second | Unassigned / none |
+| 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Accepted planning | G04; 06A already accepted | Consume final 06B; implementation checks assigned to 07 | Coordinator / final decision linked above |
+| 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Ready | G04 and G06 | Await implementation request; schema/export/shared selector and test contract first | Unassigned / none |
 | 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |
 | 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
 | 09 | [Expansion](09-platform-and-board-expansion.md) / [handover](handovers/09-expansion.md) | Planned | 09A may start now; target work needs selection and accepted baseline | Capability inventory and separately scoped target plans | Unassigned / none |
@@ -104,8 +111,8 @@ remains none. Exact active ownership is recorded below.
 | Task | Initial status | Writable scope | Acceptance / release |
 | --- | --- | --- | --- |
 | 06A | Accepted | Architecture research document; 06 handover | `2762d91`; sourced comparison; G04 now releases final editor decision |
-| 06B | Ready | Architecture decision; revised 07/08 plan proposals | G04, source-backed decision, coordinator acceptance within agreed scope |
-| 07A | Planned | New schema/export Zig source and dedicated tests | G04/G06, lossless format/API and G07-export accepted |
+| 06B | Accepted | Architecture decision; revised 07/08 plans | Source-backed native decision and explicit user feature answers; planning only |
+| 07A | Ready | New schema/export Zig source and dedicated tests | Await request; exact leases before implementation; G07-export remains pending |
 | 07B | Planned | Editor UI and dedicated UI tests | G07-export, supported save/edit/export workflow; completes 07 criteria |
 | 08A | Planned | Build/flasher backend and dedicated fake tests | G06/G07-export; no GUI/hardware; partial backend only |
 | 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
@@ -125,7 +132,7 @@ against a protocol/export interface that has not been frozen.
 | G-live-offline | Accepted 02/03 at one integrated revision, offline session tests, `check-full`, identified artifacts/rollback | Initial `4fd4c66`; superseded artifacts at `2089219` fix mandatory UF2 metadata; full checks and all ten UF2 validations pass; worksheet refreshed |
 | G04 | Actual passing typing/identity/snapshot/recovery worksheet from 04; optional overlay limits have explicit follow-ups | Accepted: [worksheet](04-manual-worksheet.md), implementation `0aa2ca7`, user-confirmed Mac/LK7 checks |
 | G05 | Reviewed key assignments, shared selector/identity, compiled profiles and actual EurKEY Next typing checks | Pending |
-| G06 | Final architecture decision grounded in G04, existing profiles and editor requirements; alternatives/sources and 07/08 specifications | Ready for final decision |
+| G06 | Final architecture decision grounded in G04, existing profiles and editor requirements; alternatives/sources and 07/08 specifications | Accepted planning, 2026-10-04; 06B decision and revised plans |
 | G07-export | Accepted 07A: schema/version, action preservation, export/API/path ownership, existing identity/digest, errors and consumer instructions | Pending |
 | G07 | All 07 offline/editor acceptance, including save/reopen/export and matching build behavior | Pending |
 | G08 | 08 offline integration plus explicit flash session, running identity and typing/overlay checks | Pending user session |

@@ -1,7 +1,9 @@
 # Editor feature discovery
 
-Status: draft for user discussion, 2026-10-04. Inspected clean revision
-`0eeb958`. This document does not accept G06 or authorize editor implementation.
+Status: agreed feature scope, 2026-10-04. Initial inspected clean revision
+`0eeb958`; source findings refreshed at `63f7998`. The accompanying
+[06B decision](06-editor-architecture-decision.md) defines architecture acceptance.
+This document does not authorize editor implementation.
 The accepted tracker supersedes historical G05 prerequisites in 06A: hardware
 04 is accepted; personal profile 05 follows the finished editor/build workflow.
 
@@ -17,6 +19,10 @@ Confirmed by the user on 2026-10-04:
 - Draft testing also includes sample text using EurKEY output in the editor.
 - Advanced workflow for attaching the user's own Zig callback module, alongside
   named registered callbacks for existing profiles.
+- Test inputs come from virtual keys or another keyboard mapped to draft positions;
+  display EurKEY text and tap/hold/combo events without flashing.
+- Attached modules live inside the project and are edited in the user's usual
+  external code editor. Preserve source on save/export and show compiler errors.
 
 Open a separate editor while retaining the small monitoring overlay. Choose LK7,
 clone an existing profile or create a project, select a layer and physical key,
@@ -34,8 +40,8 @@ Board geometry and wiring remain board-owned unless geometry editing is selected
 Preview should distinguish HID usage and modifier chord from host input-source
 labels. Show transparent inheritance separately from explicit no-action. Edited
 preview must remain distinct from the verified running device profile. Draft
-testing includes a text area for EurKEY output. The input method and whether this
-includes a full unflashed processor simulation are being clarified below.
+testing includes a text area for EurKEY output and actual processor simulation
+from virtual keys or explicitly mapped keyboard positions.
 
 ## Existing feature boundary
 
@@ -92,14 +98,12 @@ UI, browser, packaging, hardware or accessibility tests were performed.
   Native architecture remains plausible; application window/focus/dialog behavior
   still needs an offline spike if it is decisive to the selected workflow.
 
-## Decisions pending
+## Scope boundary
 
-The user selected the additional features above. Two concrete questions remain:
-whether draft testing uses virtual/mapped physical inputs, live LK7 telemetry, or
-ordinary macOS text input; and whether attached modules are edited externally or
-need an embedded source editor. Full existing-feature support does not select new
-macro/tap-dance implementations. Answers must be recorded before the final 06B
-decision and concrete 07/08 revisions; no answer is inferred from silence.
+All issued feature questions have been answered and recorded above. Live LK7
+telemetry is not the draft test input. No embedded Zig editor is selected.
+Full existing-feature support does not select new macro/tap-dance implementations.
+Additional sharing formats, geometry editing and layer reordering remain deferred.
 
 ## Additional source findings
 

@@ -1,5 +1,9 @@
 # 06A: editor architecture research
 
+Historical baseline audit. The accepted [06B decision](06-editor-architecture-decision.md)
+supersedes its provisional recommendation, old G05 dependencies and pre-recovery
+source limitations; retain the comparison and primary sources as research evidence.
+
 State: Accepted 06A research; provisional recommendation. Inspected 2026-10-04.
 Repository input: `ab66f12`; dispatch record: `ed14722`. This is a source audit,
 not a browser, OS integration, packaging, performance, or hardware test.

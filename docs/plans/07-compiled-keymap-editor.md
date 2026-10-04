@@ -5,7 +5,34 @@ Implement shared profile selection and identity plumbing here, using the accepte
 existing profile and representative QWERTY/EurKEY fixtures. The user's personal
 profile is created later in 05 through the finished editor; it is not an entry
 gate. Older 05 acceptance/prerequisite references below are superseded.
-The native companion is the preferred starting route, not yet a final decision.
+The native companion is selected by the accepted
+[06B decision](06-editor-architecture-decision.md). The agreed
+[feature scope](06-editor-requirements.md) includes all existing firmware actions,
+layer management, bulk editing, EurKEY draft testing and attached Zig callbacks.
+
+## Selected implementation additions
+
+07A owns `keymap-project` and the immutable export/test-runner contracts described
+in 06B. Freeze schema/bounds, registered and attached callback policies, canonical
+identity adapter, shared selector, save/source snapshot consistency and literal
+behavior fixtures before G07-export. Deliver the generated native host runner
+and reusable process-job support needed by 07B; do not duplicate the processor
+in a simulator. Registered and attached callbacks participate in source identity.
+
+07B starts with the bounded Zig offline window/dialog/input spike specified by
+06B, then implements named layer add/duplicate/delete, multi-key copy/paste,
+all action inspectors, external callback attachment/diagnostics, and explicit
+Prepare Test/Start/Stop draft testing. Tests use virtual or mapped host positions,
+display processor events/layers and EurKEY text, and reset on focus/input-source
+changes. No live LK7 input or system-wide synthetic events are needed.
+
+Acceptance additionally requires callback bytes/import preservation, constrained
+layer deletion, mapped-key focus/reset behavior, every existing action's literal
+emitted traces, EurKEY composition/multi-scalar text, cancellation/crash/stale
+runner handling and measured runner preparation/input latency. Native text
+translation acceptance records the actual macOS input-source ID/version; default
+tests use deterministic translation fixtures. No embedded source editor or new
+macro/tap-dance runtime is included.
 
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [07 handover](handovers/07-editor.md). Split 07A schema/export from 07B editor UI.
@@ -79,7 +106,7 @@ artifact/profile identity, and concrete user workflow for 08. Arbitrary Zig
 source editing, other boards, runtime configuration, and on-device persistence
 remain deferred unless separately selected.
 
-Incoming: accepted [05](handovers/05-keymap.md)/[06](handovers/06-architecture.md)
+Incoming: accepted [04](handovers/04-hardware.md)/[06](handovers/06-architecture.md)
 and existing identity. 07A publishes schema/actions, export path/API/digest,
 validation/error/result contract, literal fixtures, and actual build integration.
 Coordinator acceptance freezes G07-export for 07B/08A. Full 07 acceptance then

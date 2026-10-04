@@ -1,7 +1,10 @@
 # Next-step roadmap
 
 Status: plan 11 recovery and milestone 04 are accepted on macOS/LK7.
-Editor architecture is ready next. User reordered the remaining work:
+Editor architecture 06 is now accepted as a planning decision; see the
+[native decision](06-editor-architecture-decision.md) and
+[agreed features](06-editor-requirements.md). Schema/export 07A is ready for a
+separate implementation request. User reordered the remaining work:
 **04 → 06 → 07 → 08 → 05 → 09**. The personal QWERTY/EurKEY Next profile will be
 created through the finished editor, not hand-built before it. This supersedes
 the original G05 prerequisites for 06–08. Reordering does not start hardware work.

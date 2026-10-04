@@ -1,6 +1,9 @@
 # 06: Research the visual editor architecture
 
-Status: planned. 06A research may start from the current baseline; final 06B
+Status: accepted architecture planning on 2026-10-04. See the
+[06B decision](06-editor-architecture-decision.md) and agreed
+[features](06-editor-requirements.md). Implementation remains a separate task.
+Historical entry conditions: 06A research may start from the baseline; final 06B
 decision needs G04, existing profile/action inventory and agreed editor requirements.
 05 now follows 08: the user's personal profile is created in the finished editor
 and is not an architecture prerequisite. Older G05 references below are superseded.

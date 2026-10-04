@@ -7,6 +7,13 @@ this milestone: the user creates their profile through the finished editor.
 Reuse plan 11's accepted terminal flasher/verification boundary; this milestone
 adds project manifests, selected exported-profile builds and GUI integration.
 
+Architecture is selected by [06B](06-editor-architecture-decision.md). Reuse the
+07 process-job/test-snapshot boundary in `companion-jobs` rather than introducing
+another process controller. Build manifests include the complete owned callback
+source inventory/digest and frozen project snapshot. External callback edits
+invalidate earlier artifacts; compiler errors retain file/line context. A failed
+test or firmware build cannot promote an older artifact to current status.
+
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [08 handover](handovers/08-build-flash.md). 08A may run beside 07B with fake process/
 volume boundaries and no GUI/hardware. Transfer GUI ownership before 08B starts.
@@ -86,7 +93,7 @@ from the separately authorized hardware session. All commits remain local.
 Automatic background updates, network artifact publishing, other MCU flash
 protocols, and unattended firmware flashing are outside this milestone.
 
-Incoming: accepted [05 selector/identity](handovers/05-keymap.md),
+Incoming: accepted [04 baseline](handovers/04-hardware.md), shared selector/identity from 07,
 [06 decision](handovers/06-architecture.md), and [07 export](handovers/07-editor.md).
 08A publishes backend/manifest API and actual fake-test results for 08B; it does
 not complete 08. Outgoing full workflow and separate observed hardware evidence
