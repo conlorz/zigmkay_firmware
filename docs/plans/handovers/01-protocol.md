@@ -1,6 +1,6 @@
 # 01 handover: protocol, identity, and session recovery
 
-State: **Not produced**. No implementation commits or checks are recorded.
+State: **Accepted**, 2026-10-04, offline contract G01.
 Producer: protocol worker. Reviewer: coordinator.
 Plan: [01](../01-protocol-and-recovery.md). Rules: [handover format](README.md).
 
@@ -31,7 +31,38 @@ the frozen interface. Hardware delivery remains unverified and outside this gate
 
 ## Integrated result
 
-Pending. Complete the [result template](README.md) at submission/integration.
+Producer: protocol worker; reviewer: coordinator. Base `ab66f12`.
+Wire/literal checkpoint `c3db81a`; codec/shared identity `c15d182`;
+session/replay/integration `5b092ec`. Contract: v2 vendor reports and canonical
+profile identity v1, specified in [the protocol](../../device-protocol.md).
+
+Coordinator reviewed the complete diff and ran Zig 0.16.0 `zig build check` and
+`zig build check-full` on the stable tree committed as `5b092ec`: both passed.
+This includes all existing tests, 15 dedicated protocol/session tests, native
+and Wasm compilation, generated-source checks, cached session executable fixtures,
+all ten firmware boards, standalone packages, cross-host flasher compilation,
+and matching root/standalone LK7 UF2 bytes. Source inventory stayed unchanged and
+the hardware sentinel recorded no device operations. No live acceptance claimed.
+
+Consumers use `protocol.Packet`, `encodePacket/decodePacket` with explicit
+direction, `identityPackets`, `snapshotPackets`, and `companion.Session` with
+bounded `Actions`. `shared_keymap_3x5_2.identity(protocol)` is the shared LK7
+identity publication; callbacks have declared behavior versions. No duplicated
+digest or heuristic legacy decode is permitted. Malformed receive yields recovery
+actions and `last_error`; unsupported versions and mismatched identity become
+incompatible. Retain the last complete state with explicit stale indication.
+
+Static native budgets: Session 528, Actions 76, Packet 32 bytes. Identity assembly
+38 bytes, snapshot 20, pending deltas eight, returned actions two. Timeouts 500 ms,
+three attempts, refresh/cooldown 1000 ms. Host nonce allocation, exact snapshot
+cut-over, signal sequencing and macOS SetReport handling requirements are frozen
+in the protocol document. Read it before implementing adapters.
+
+G01 released for 02/03 at `5b092ec`. Protocol/model ownership returns to the
+coordinator; request amendments before editing. Headless `--session` is a
+deterministic device-report fixture replay; timed live recording belongs to 03.
+Hardware delivery, real macOS HID behavior and typing acceptance remain pending.
+The checkpoint records below are historical submissions superseded by this result.
 
 ## Contract checkpoint
 
