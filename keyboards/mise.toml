@@ -1,0 +1,19 @@
+[tasks.ls]
+description = "List firmware boards and capabilities"
+run = "zig build ls -j4"
+
+[tasks.firmware]
+description = "Compile a selected board's firmware"
+usage = '''
+arg "<keyboard>" help="Board ID" {
+  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
+}
+flag "--optimize <mode>" default="ReleaseSafe" {
+  choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
+}
+'''
+run = 'zig build firmware -j4 -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Doptimize=$usage_optimize"'
+
+[tasks.firmware-all]
+description = "Compile every catalog board into root zig-out"
+run = "zig build firmware-all -j4 -p ../zig-out"

@@ -24,6 +24,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(gui.exe);
     b.step("test", "Run companion component tests").dependOn(gui.tests);
     const run = b.addRunArtifact(gui.exe);
+    run.setCwd(b.path(".."));
     if (b.args) |args| run.addArgs(args);
     b.step("run", "Run the offline GUI; --live opts into HID").dependOn(&run.step);
 }

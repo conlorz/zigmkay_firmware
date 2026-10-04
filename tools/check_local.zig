@@ -27,16 +27,10 @@ pub fn main(init: std.process.Init) !void {
     }
     try init.environ_map.put("ZIGMKAY_SENTINEL", marker);
     try init.environ_map.put("PATH", try std.fmt.allocPrint(gpa, "{s}{c}{s}", .{ scratch, std.fs.path.delimiter, init.environ_map.get("PATH") orelse "" }));
-    try run(init, zig, root_path, &.{ "test", "check-generated" });
+    try runTasks(init, root_path, if (full) &.{"//:_validate-full"} else &.{ "//:test", "//:check-generated" });
     if (full) {
-        try run(init, zig, root_path, &.{ "firmware-all", "companion", "companion-headless", "flash-tool", "-Dkeyboard=lk7" });
-        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "zigmkay" }), &.{"test"});
-        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "zkeycodes" }), &.{ "test", "-Dtarget=thumb-freestanding-eabi" });
         try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "keyboards" }), &.{ "firmware", "-Dkeyboard=lk7" });
-        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "zkeymap" }), &.{ "test", "example" });
-        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "zig-flash" }), &.{ "test", "ci" });
-        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "zigmkay-companion" }), &.{"test"});
-        try run(init, zig, root_path, &.{ "companion-headless", "-Dkeyboard=lk7", "-Dtarget=thumb-freestanding-eabi" });
+        try run(init, zig, try std.fs.path.join(gpa, &.{ root_path, "apps/headless" }), &.{ "-p", "../../zig-out", "-Dtarget=thumb-freestanding-eabi" });
         const entries = @import("board-catalog");
         inline for (entries) |entry| {
             const path = try std.fmt.allocPrint(gpa, "zig-out/firmware/{s}/zigmkay.uf2", .{entry.name});
@@ -47,11 +41,20 @@ pub fn main(init: std.process.Init) !void {
         if (!std.mem.eql(u8, root_uf2, leaf_uf2)) return error.FirmwareParityMismatch;
         const replay = try std.process.run(gpa, io, .{ .argv = &.{ try std.fs.path.join(gpa, &.{ root_path, "zig-out/bin/zigmkay-companion-headless-lk7" }), try std.fs.path.join(gpa, &.{ root_path, "tests/fixtures/lk7_trace.bin" }) }, .environ_map = init.environ_map });
         if (!success(replay.term) or std.mem.indexOf(u8, replay.stdout, "reports=8\npressed=[]\nactive_layers=1") == null) return error.InstalledReplayFailed;
-        std.debug.print("All 10 board artifacts exist; root/standalone LK7 UF2 bytes match\n", .{});
+        std.debug.print("All 10 board artifacts exist; mise/standalone LK7 UF2 bytes match\n", .{});
     }
     try std.testing.expectError(error.FileNotFound, std.Io.Dir.cwd().access(io, marker, .{}));
     if (!std.mem.eql(u8, &before, &(try inventory.snapshot(gpa, io, root)))) return error.SourceChangedByChecks;
     std.debug.print("Source contents and inventory unchanged; no hardware tool executed\n", .{});
+}
+fn runTasks(init: std.process.Init, cwd: []const u8, tasks: []const []const u8) !void {
+    const argv = try std.mem.concat(init.arena.allocator(), []const u8, &.{ &.{ "mise", "run", "--jobs", "2" }, tasks });
+    const result = try std.process.run(init.arena.allocator(), init.io, .{ .argv = argv, .cwd = .{ .path = cwd }, .environ_map = init.environ_map, .stdout_limit = .limited(16 * 1024 * 1024), .stderr_limit = .limited(16 * 1024 * 1024) });
+    if (!success(result.term)) {
+        std.debug.print("{s}{s}", .{ result.stdout, result.stderr });
+        return error.CheckFailed;
+    }
+    std.debug.print("Mise aggregate tasks passed: {s}\n", .{try std.mem.join(init.arena.allocator(), " ", tasks)});
 }
 fn success(term: std.process.Child.Term) bool {
     return switch (term) {

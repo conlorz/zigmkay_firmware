@@ -1,0 +1,3 @@
+[tasks.test]
+description = "Run portable types and Wasm compilation tests"
+run = "zig build test -j4"

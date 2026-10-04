@@ -1,0 +1,7 @@
+[tasks.test]
+description = "Run native key mapping and label tests"
+run = "zig build test -j4"
+
+[tasks.example]
+description = "Compile the native layout example"
+run = "zig build example -j4"

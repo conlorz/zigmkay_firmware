@@ -1,0 +1,15 @@
+[tasks.test]
+description = "Test flasher paths and direct writes using temporary files only"
+run = "zig build test -j4"
+
+[tasks.build]
+description = "Compile zig_flash into root zig-out; no device access"
+run = "zig build -j4 -p ../zig-out"
+
+[tasks.ci]
+description = "Compile flasher for macOS, Linux and Windows; no device access"
+run = "zig build ci -j4"
+
+[tasks.flash]
+description = "HARDWARE: flash an explicit UF2/mount using the Zig utility"
+run = "zig build flash -j4 --"

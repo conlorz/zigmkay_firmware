@@ -1,0 +1,11 @@
+[tasks.test]
+description = "Test board catalog validation and registry generation"
+run = "zig build test -j4"
+
+[tasks.check-generated]
+description = "Check the committed registry without source updates"
+run = "zig build check-generated -j4"
+
+[tasks.regenerate]
+description = "Explicitly regenerate the committed registry"
+run = "zig build regenerate -j4"

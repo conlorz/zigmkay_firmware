@@ -1,0 +1,135 @@
+min_version = "2026.9.14"
+monorepo_root = true
+
+[monorepo]
+config_roots = ["zigmkay", "layout-model", "device-protocol", "companion-model", "zkeycodes", "zkeymap", "keyboards", "zigmkay-companion", "zig-flash", "apps/headless", "tools/registry"]
+
+[tools]
+zig = "0.16.0"
+
+[settings]
+experimental = true
+jobs = 2
+
+[tasks.test]
+description = "Run every package's own tests and root integration tests; no hardware"
+depends = ["//zigmkay:test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
+
+[tasks.integration-test]
+description = "Run cross-package traces, identity, session and build-boundary checks"
+run = "zig build test -j4"
+
+[tasks.check-generated]
+description = "Check keycodes and board registry without modifying committed sources"
+depends = ["//zkeycodes:check-generated", "//tools/registry:check-generated"]
+
+[tasks.check]
+description = "Guarded aggregate tests and generated checks; no source mutation or hardware"
+run = "zig build check -j4"
+
+[tasks.check-full]
+description = "Guarded full matrix, package tests, replay and UF2 parity; no hardware"
+run = "zig build check-full -j4"
+
+[tasks.ls]
+description = "List board IDs and capabilities"
+alias = "list-keyboards"
+depends = ["//keyboards:ls"]
+
+[tasks.firmware]
+description = "Build a selected board's UF2 into root zig-out"
+dir = "{{config_root}}/keyboards"
+usage = '''
+arg "<keyboard>" help="Board ID" {
+  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
+}
+flag "--optimize <mode>" default="ReleaseSafe" {
+  choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
+}
+'''
+run = 'zig build firmware -j4 -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Doptimize=$usage_optimize"'
+
+[tasks.firmware-all]
+description = "Build all ten boards into root zig-out; no flashing"
+depends = ["//keyboards:firmware-all"]
+
+[tasks.companion]
+description = "Build the LK7 desktop companion into root zig-out"
+depends = ["//zigmkay-companion:build"]
+
+[tasks.companion-run]
+description = "Run the companion; pass --live explicitly for HID or --smoke for offline"
+dir = "{{config_root}}/zigmkay-companion"
+usage = '''
+flag "--live" help="Explicitly enable vendor HID"
+flag "--smoke" help="Render three frames offline"
+flag "--replay <file>" help="Offline v1 trace"
+flag "--session-replay <file>" help="Offline timed capture"
+flag "--device-path <path>" help="Exact HID collection path"
+flag "--capture <file>" help="Explicit bounded live recording"
+flag "--capture-ms <ms>" default="30000"
+flag "--opacity <value>" default="0.94"
+flag "--no-top"
+flag "--unfocusable"
+flag "--borderless"
+flag "--click-through" help="Currently an explicit unsupported fallback"
+flag "--position-x <x>" help="Window x position; requires --position-y"
+flag "--position-y <y>" help="Window y position; requires --position-x"
+'''
+run = 'zig build run -j4 -- {% if usage.live %}--live{% endif %} {% if usage.smoke %}--smoke{% endif %} {% if usage.replay %}--replay "$usage_replay"{% endif %} {% if usage.session_replay %}--session-replay "$usage_session_replay"{% endif %} {% if usage.device_path %}--device-path "$usage_device_path"{% endif %} {% if usage.capture %}--capture "$usage_capture"{% endif %} --capture-ms "$usage_capture_ms" --opacity "$usage_opacity" {% if usage.no_top %}--no-top{% endif %} {% if usage.unfocusable %}--unfocusable{% endif %} {% if usage.borderless %}--borderless{% endif %} {% if usage.click_through %}--click-through{% endif %} {% if usage.position_x or usage.position_y %}--position "$usage_position_x" "$usage_position_y"{% endif %}'
+
+[tasks.companion-headless]
+description = "Build the offline LK7 replay executable into root zig-out"
+depends = ["//apps/headless:build"]
+
+[tasks.replay]
+description = "Replay a device trace offline; optional --session selects v2"
+dir = "{{config_root}}"
+run = "zig build --build-file apps/headless/build.zig run -j4 --"
+
+[tasks.flash-tool]
+description = "Build zig_flash into root zig-out without device access"
+depends = ["//zig-flash:build"]
+
+[tasks.flash]
+description = "HARDWARE: build selected firmware and flash through zig_flash"
+usage = '''
+arg "<keyboard>" help="Board ID" {
+  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
+}
+flag "--optimize <mode>" default="ReleaseSafe" {
+  choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
+}
+flag "--mount <path>" default="RPI-RP2" help="BOOTSEL volume label or absolute path"
+'''
+depends = [{task = "//:firmware", args = ["{{usage.keyboard}}", "--optimize", "{{usage.optimize}}"]}, "//zig-flash:build"]
+run = 'zig-out/bin/zig_flash "zig-out/firmware/$usage_keyboard/zigmkay.uf2" "$usage_mount"'
+
+[tasks.flash-file]
+description = "HARDWARE: flash an explicit UF2, including rollback images"
+usage = '''
+arg "<file>" help="UF2 input path"
+flag "--mount <path>" default="RPI-RP2"
+'''
+depends = ["//zig-flash:build"]
+run = 'zig-out/bin/zig_flash "$usage_file" "$usage_mount"'
+
+[tasks.convert]
+description = "Explicitly convert one HJSON input; paths are relative to repo root"
+run = "zig build --build-file zkeycodes/build.zig convert -j4 --"
+
+[tasks.convert-all]
+description = "Explicitly regenerate committed keycodes"
+depends = ["//zkeycodes:convert-all"]
+
+[tasks.registry-regenerate]
+description = "Explicitly regenerate the committed board registry"
+depends = ["//tools/registry:regenerate"]
+
+[tasks.build-all]
+description = "Compile the full offline artifact and target matrix"
+depends = ["//keyboards:firmware-all", "//zigmkay-companion:build", "//apps/headless:build", "//zig-flash:build", "//zig-flash:ci", "//zkeymap:example", "//zkeycodes:check-firmware-target"]
+
+[tasks._validate-full]
+hide = true
+depends = ["//:test", "//:check-generated", "//:build-all"]

@@ -1,0 +1,3 @@
+[tasks.test]
+description = "Run portable companion state tests"
+run = "zig build test -j4"

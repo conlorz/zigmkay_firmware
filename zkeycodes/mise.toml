@@ -1,0 +1,19 @@
+[tasks.test]
+description = "Run keycode generation and label tests"
+run = "zig build test -j4"
+
+[tasks.check-generated]
+description = "Check committed keycodes without updating them"
+run = "zig build check-generated -j4"
+
+[tasks.convert]
+description = "Explicit HJSON conversion; paths relative to zkeycodes"
+run = "zig build convert -j4 --"
+
+[tasks.convert-all]
+description = "Explicitly regenerate committed keycodes"
+run = "zig build convert-all -j4"
+
+[tasks.check-firmware-target]
+description = "Verify host generators with a firmware target selected"
+run = "zig build test -j4 -Dtarget=thumb-freestanding-eabi"

@@ -1,0 +1,7 @@
+[tasks.build]
+description = "Build LK7 offline replay into root zig-out"
+run = "zig build -j4 -p ../../zig-out"
+
+[tasks.run]
+description = "Replay reports offline; --session selects v2"
+run = "zig build run -j4 --"

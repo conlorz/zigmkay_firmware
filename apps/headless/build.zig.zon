@@ -1,0 +1,13 @@
+.{
+    .name = .zigmkay_headless,
+    .fingerprint = 0xbba8b0d348b1cb3d,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .zigmkay = .{ .path = "../../zigmkay" },
+        .zkeycodes = .{ .path = "../../zkeycodes" },
+        .device_protocol = .{ .path = "../../device-protocol" },
+        .companion_model = .{ .path = "../../companion-model" },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "main.zig", "mise.toml" },
+}

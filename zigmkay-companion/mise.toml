@@ -1,0 +1,31 @@
+[tasks.test]
+description = "Run companion GUI, geometry, labels, adapter and capture tests offline"
+run = "zig build test -j4"
+
+[tasks.build]
+description = "Build native LK7 GUI into root zig-out"
+run = "zig build -j4 -p ../zig-out"
+
+[tasks.run]
+description = "Run GUI; --live explicitly enables HID; --smoke stays offline"
+usage = '''
+flag "--live" help="Explicitly enable vendor HID"
+flag "--smoke" help="Render three frames offline"
+flag "--replay <file>" help="Offline v1 trace"
+flag "--session-replay <file>" help="Offline timed capture"
+flag "--device-path <path>" help="Exact HID collection path"
+flag "--capture <file>" help="Explicit bounded live recording"
+flag "--capture-ms <ms>" default="30000"
+flag "--opacity <value>" default="0.94"
+flag "--no-top"
+flag "--unfocusable"
+flag "--borderless"
+flag "--click-through" help="Currently an explicit unsupported fallback"
+flag "--position-x <x>" help="Window x position; requires --position-y"
+flag "--position-y <y>" help="Window y position; requires --position-x"
+'''
+run = 'zig build run -j4 -- {% if usage.live %}--live{% endif %} {% if usage.smoke %}--smoke{% endif %} {% if usage.replay %}--replay "$usage_replay"{% endif %} {% if usage.session_replay %}--session-replay "$usage_session_replay"{% endif %} {% if usage.device_path %}--device-path "$usage_device_path"{% endif %} {% if usage.capture %}--capture "$usage_capture"{% endif %} --capture-ms "$usage_capture_ms" --opacity "$usage_opacity" {% if usage.no_top %}--no-top{% endif %} {% if usage.unfocusable %}--unfocusable{% endif %} {% if usage.borderless %}--borderless{% endif %} {% if usage.click_through %}--click-through{% endif %} {% if usage.position_x or usage.position_y %}--position "$usage_position_x" "$usage_position_y"{% endif %}'
+
+[tasks.smoke]
+description = "Render three offline frames without HID"
+run = "zig build run -j4 -- --smoke"

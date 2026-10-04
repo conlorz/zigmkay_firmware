@@ -104,12 +104,9 @@ pub fn main(init: std.process.Init) !void {
     _ = try r.run(&.{args[3]}, false, "Usage:");
     _ = try r.run(&.{ args[6], args[7], args[5], args[7], scratch }, false, "Expected Zig 0.16.0, got 0.15.2");
     try std.testing.expectError(error.FileNotFound, dir.access(init.io, "hardware-tool-executed", .{}));
-    for ([_][]const u8{ "firmware", "companion", "companion-headless", "companion-run", "flash" }) |step| {
-        _ = try r.run(&.{ args[4], "build", "-j4", step }, false, "Missing -Dkeyboard");
-        _ = try r.run(&.{ args[4], "build", "-j4", step, "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");
-    }
-    _ = try r.run(&.{ args[4], "build", "-j4", "companion", "-Dkeyboard=yak" }, false, "Unsupported companion board 'yak'");
-    const listing = try r.run(&.{ args[4], "build", "-j4", "list-keyboards" }, true, "lk7: companion=lk7 offline");
+    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "firmware" }, false, "Missing -Dkeyboard");
+    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "firmware", "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");
+    const listing = try r.run(&.{ "mise", "run", "//:ls" }, true, "lk7: companion=lk7 offline");
     var lines = std.mem.splitScalar(u8, listing, '\n');
     var count: usize = 0;
     var last: []const u8 = "";
@@ -121,8 +118,18 @@ pub fn main(init: std.process.Init) !void {
         count += 1;
     }
     try std.testing.expectEqual(@as(usize, 10), count);
-    const alias_listing = try r.run(&.{ args[4], "build", "-j4", "ls" }, true, "lk7: companion=lk7 offline");
+    const alias_listing = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "ls" }, true, "lk7: companion=lk7 offline");
     try std.testing.expectEqualStrings(listing, alias_listing);
-    _ = try r.run(&.{ args[4], "build", "-j4", "flash", "--", "--help" }, true, "Usage: zig_flash");
+    _ = try r.run(&.{ "mise", "run", "//:flash", "--help" }, true, "--mount");
+    _ = try r.run(&.{ "mise", "run", "//:firmware", "does_not_exist" }, false, "does_not_exist");
+    const firmware_help = try r.run(&.{ "mise", "run", "//:firmware", "--help" }, true, "ReleaseSafe");
+    inline for (@import("board-catalog")) |entry| {
+        if (std.mem.indexOf(u8, firmware_help, entry.name) == null) return error.MissingBoardCompletion;
+    }
+    const completion = try r.run(&.{ "mise", "__complete_word__", "--shell", "fish", "--line", "mise //:firmware " }, true, "lk7");
+    inline for (@import("board-catalog")) |entry| {
+        if (std.mem.indexOf(u8, completion, entry.name) == null) return error.MissingBoardCompletion;
+    }
+    _ = try r.run(&.{ "mise", "__complete_word__", "--shell", "fish", "--line", "mise //:companion-run --" }, true, "--session-replay");
     std.debug.print("Offline executable and build-boundary checks passed\n", .{});
 }
