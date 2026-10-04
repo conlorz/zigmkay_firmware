@@ -42,4 +42,25 @@ Sources: [monorepo tasks](https://mise.jdx.dev/tasks/monorepo.html),
 
 ## Acceptance evidence
 
-Pending implementation and offline verification.
+Implemented root monorepo config plus eleven package configs. Root Zig no longer
+orchestrates package builds (implementation `447efb8`). It no longer
+publishes the GUI, flasher, firmware matrix or package test runners; it imports
+modules for integration and owns the guard. Packages retain native build/test
+steps; headless replay now has a standalone build and manifest.
+
+Passed: aggregate package/integration tests, guarded `mise //:check-full`, ten
+boards, host artifacts, five flasher targets, Wasm checks, headless replay and
+mise/standalone UF2 parity. Source inventory unchanged; no hardware tool ran.
+Actual GUI smoke through the new typed root task passed. Board/optimization and
+GUI flag help validated, as did actual Fish completion. Installed completion
+files for Fish/zsh without editing startup files. Flash dependency scheduling
+was inspected with dry-run only. Existing automatic-flash-restart investigation
+remains pending; this migration does not claim hardware acceptance.
+Root conversion and replay were exercised with repo-relative paths; conversion
+outputs stayed in cache. CLI checks verify actual board and GUI completion on
+every integration run, independently of Zig's incremental cache.
+
+Version caveat: on validated mise 2026.9.14, canonical `//:task` names complete
+arguments correctly; unqualified `mise run task` executes but falls back to file
+completion. README uses canonical names. Root `test` has explicit package test
+dependencies, not a wildcard that could recursively include itself.

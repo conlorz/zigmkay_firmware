@@ -139,6 +139,7 @@ reuse this result as evidence for later source changes.
 | 2026-10-04 | Dispatch 02 firmware and 03 overlay against frozen G01 | Exact disjoint leases above; coordinator owns build glue and stable joint checks |
 | 2026-10-04 | Accept integrated 02/03 and G-live-offline; release worker leases | `6c83623`, `4fd4c66`; 325 tests, check/check-full, ten boards, parity, offline GUI/replays passed; no hardware access |
 | 2026-10-04 | Prepare identified 04 artifacts and rollback; wait for user hardware session | Worksheet contains SHA-256, shared digest and recovery preparation; G04/G05 remain pending |
+| 2026-10-04 | User requested mise monorepo workflow; migrate terminal orchestration | [Tooling plan](10-mise-monorepo.md); package-owned tests, root integration-only Zig build, typed mise tasks/completion; offline full checks passed; hardware G04 remains pending |
 
 Append short entries for accepted gates, blockers, ownership transfers, and user
 decisions. Put detailed results in the relevant handover, not duplicate logs here.

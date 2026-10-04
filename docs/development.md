@@ -9,10 +9,17 @@ frequently and locally. Never push or publish a pull request. Historical
 integration and companion branches remain available in local Git history.
 Removed clones and research notes were archived outside this workspace.
 
-`zig build check` validates host tests, executable error paths, registry and
-keycode freshness. `zig build check-full` additionally compiles all ten boards,
-GUI and flasher, tests standalone packages, compiles the flasher for supported
-operating systems, and compares root and standalone LK7 UF2 bytes. Both checks
+Use `mise tasks --all` to explore the monorepo and `mise //:test` to run its
+tests. Every package owns a `mise.toml` task that invokes its own Zig test step;
+root test depends on those tasks and the root integration task. Root Zig does
+not republish package tests or forward production commands. Zig builds still
+own compiler dependencies and incremental caches. Mise pins Zig 0.16.0.
+
+`mise //:check` validates package tests, executable error paths, registry and
+keycode freshness. `mise //:check-full` additionally compiles all ten boards,
+GUI and flasher, compiles the flasher for supported operating systems, and
+compares mise's root-output and standalone LK7 UF2 bytes. The guard itself is
+Zig; it schedules the aggregate mise tasks inside the monitored interval. Both checks
 reject an incorrect compiler version and hash the complete source inventory
 before and after, including untracked and ignored source files. Explicit build
 caches, outputs, and historical evidence are excluded. Native Zig sentinels
@@ -31,9 +38,15 @@ assume a US keyboard layout, as in the imported package.
 
 The GUI defaults to offline mode, accepts `--replay <reports.bin>`, and offers
 `--smoke` for three rendered frames without HID access. `--live` opts into HID
-explicitly; device integration remains unverified. Root `flash` is disabled;
-`flash-tool` builds without running the tool. Never run device operations without
+explicitly; device integration remains unverified. `mise //:flash <board>`
+builds and runs the Zig utility; `mise //:flash-tool` only builds it.
+Never run device operations without
 an explicit hardware task from the user.
 
 Earlier milestone plans and evidence describe historical checkouts and tools;
-use the root README for current commands.
+use the root README for current commands. Raw package Zig builds remain usable,
+but root `zig build` means integration only. Aggregate checks require mise
+2026.9.14 or newer; task execution works without shell activation. Prefer
+canonical `//:task` and `//package:task` names for argument completion. Completion
+files can be installed through `mise completion fish --install` or the zsh
+equivalent; shell startup files are not edited by the repository.

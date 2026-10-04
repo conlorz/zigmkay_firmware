@@ -6,13 +6,13 @@ macOS input-source/layout IDs. Default and replay modes never enumerate HID.
 Live device behavior remains pending milestone 04; offline smoke is not hardware
 acceptance.
 
-From `zigmkay-companion/`, using Zig 0.16.0:
+From the monorepo root, using mise's pinned Zig 0.16.0:
 
 ```sh
-/Users/clorz/.zvm/0.16.0/zig build test
-/Users/clorz/.zvm/0.16.0/zig build run -- --smoke
-/Users/clorz/.zvm/0.16.0/zig build run -- --smoke --replay ../tests/fixtures/lk7_trace.bin
-/Users/clorz/.zvm/0.16.0/zig build run -- --smoke --session-replay .zig-cache/lk7-overlay-timed-fixture.bin
+mise //zigmkay-companion:test
+mise //:companion-run --smoke
+mise //:companion-run --smoke --replay tests/fixtures/lk7_trace.bin
+mise //:companion-run --smoke --session-replay zigmkay-companion/.zig-cache/lk7-overlay-timed-fixture.bin
 ```
 
 The test command creates the timed fixture in its build cache. Both replay smoke
@@ -27,8 +27,8 @@ below and can intentionally end stale/disconnected. The headless executable's
 Only run these commands when the user starts the milestone 04 hardware session:
 
 ```sh
-/Users/clorz/.zvm/0.16.0/zig build run -- --live
-/Users/clorz/.zvm/0.16.0/zig build run -- --live --device-path 'PATH_PRINTED_BY_THE_OVERLAY'
+mise //:companion-run --live
+mise //:companion-run --live --device-path 'PATH_PRINTED_BY_THE_OVERLAY'
 ```
 
 Selection requires VID/PID FAFA:00F0 and usage FF31:0074. Keyboard, mouse and other
@@ -66,7 +66,7 @@ skips zero, and refuses exhaustion instead of reusing queued-traffic tokens.
 
 ## Window and labels
 
-Supported CLI settings are `--position X Y`, `--opacity 0.1..1`, `--no-top`,
+Supported mise settings are `--position-x X --position-y Y`, `--opacity 0.1..1`, `--no-top`,
 `--unfocusable`, and `--borderless`. Defaults are opacity 0.94, always-on-top,
 focusable, and a title bar that supports moving/resizing/closing. Close and
 Reconnect controls remain in the overlay. Borderless placement can be configured
@@ -97,8 +97,8 @@ native symbols and actual source switching still need the user's macOS session.
 Recording is explicitly opt-in and limited to the requested live test interval:
 
 ```sh
-/Users/clorz/.zvm/0.16.0/zig build run -- --live --capture /tmp/lk7-test.capture --capture-ms 30000
-/Users/clorz/.zvm/0.16.0/zig build run -- --session-replay /tmp/lk7-test.capture
+mise //:companion-run --live --capture /tmp/lk7-test.capture --capture-ms 30000
+mise //:companion-run --session-replay /tmp/lk7-test.capture
 ```
 
 `--capture` requires `--live`. Duration defaults to 30 s, accepts 1..300000 ms,

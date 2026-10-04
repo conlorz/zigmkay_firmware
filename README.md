@@ -1,94 +1,129 @@
 # zigmkay_firmware
 
-A local Zig 0.16.0 monorepo for keyboard firmware and its companion tools.
-Use the compiler version pinned in `.zigversion`. Builds fetch third-party
-packages through immutable URLs and hashes in `build.zig.zon`; sibling clones
-are unnecessary. On macOS, use the installed Xcode SDK.
+A local Zig 0.16.0 keyboard firmware monorepo. **Mise is the terminal entry
+point**: it pins Zig, discovers package tasks, completes arguments and schedules
+repository-wide work. Packages own their Zig builds; root Zig owns integration
+tests and the offline guard. No sibling clones or package directory changes are
+needed.
 
-Start planning/execution from the [central tracker](docs/plans/TRACKING.md) and
-[subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). The
-[roadmap](docs/plans/README.md) covers LK7 live monitoring, the QWERTY/EurKEY Next
-Mac profile, editor research, and later build/flash integration. The next
-milestone is [manual LK7 acceptance](docs/plans/04-lk7-hardware-acceptance.md).
-Protocol, firmware and overlay offline criteria have passed; the
-[manual worksheet](docs/plans/04-manual-worksheet.md) identifies the artifacts.
+Start execution from the [tracker](docs/plans/TRACKING.md) and
+[subagent workflow](docs/plans/SUBAGENT-WORKFLOW.md). Offline milestones 01–03
+passed; [manual LK7 acceptance](docs/plans/04-manual-worksheet.md) remains pending.
 
-```sh
-zig build                    # host tests, including GUI components
-zig build check              # tests, generated checks, source inventory guard
-zig build check-full         # all boards, standalone packages, artifact parity
-zig build list-keyboards
-zig build ls                 # alias for the board catalog
-zig build --help             # discover steps and options
-zig build firmware -Dkeyboard=lk7
-zig build firmware-all
-zig build companion -Dkeyboard=lk7
-zig build companion-headless -Dkeyboard=lk7
-zig build flash-tool          # compile only
-zig build flash -- --help     # utility help; no hardware access
-```
+## Setup and discovery
 
-Firmware outputs are `zig-out/firmware/<id>/zigmkay.uf2`. Firmware defaults to
-ReleaseSafe. Selected firmware and companion builds require `-Dkeyboard`.
-The desktop and replay companions currently support LK7. Host tools remain
-native even when `-Dtarget=thumb-freestanding-eabi` is passed.
+Use mise 2026.9.14 or newer. From this directory:
 
 ```sh
-zig-out/bin/zigmkay-companion-headless-lk7 tests/fixtures/lk7_trace.bin
-zig-out/bin/zigmkay_companion --replay tests/fixtures/lk7_trace.bin
-zig-out/bin/zigmkay_companion --smoke
+mise trust
+mise install
+mise tasks --all                    # descriptions for root and package tasks
+mise tasks deps //:test              # inspect the aggregate test graph
+mise //:firmware --help              # board and optimization choices
+mise //:companion-run --help         # GUI options
+mise //:ls                          # ten-board catalog
 ```
 
-Build and run from this directory without entering individual packages:
+This is real mise monorepo mode: `//:task` selects a root task and
+`//package:task` selects a package task, from anywhere inside the repo.
+Use those names for reliable argument completion on the validated mise version.
+For example, `mise //:firmware <TAB>` lists board IDs and
+`mise //:companion-run --<TAB>` lists GUI options. Short commands such as
+`mise run test` also execute, but unqualified argument completion is limited in
+mise 2026.9.14.
+
+Install completion once for your shell:
 
 ```sh
-zig build companion-run -Dkeyboard=lk7 -- --smoke
-zig build companion-run -Dkeyboard=lk7 -- --replay tests/fixtures/lk7_trace.bin
-# Explicit hardware commands, only during an authorized device session:
-zig build flash -Dkeyboard=lk7                 # build selected UF2, then flash
-zig build flash -Dkeyboard=lk7 -Dmount=/Volumes/RPI-RP2
-zig build flash -- path/to/firmware.uf2 /Volumes/RPI-RP2
-zig build companion-run -Dkeyboard=lk7 -- --live
+mise completion fish --install
+# or:
+mise completion zsh --install
 ```
 
-Flash defaults to volume label `RPI-RP2`; it waits for BOOTSEL. It reports write
-and synchronization, which does not independently verify running firmware.
-Rollback/custom UF2 inputs use the explicit path form above. `flash` has no
-default board and is excluded from normal builds and checks.
+Fish loads the installed completion automatically. Zsh prints its required
+`fpath`/`compinit` setup; follow that output in your own shell configuration.
+Task execution does not require shell activation. The root `mise.toml` pins
+Zig to 0.16.0, matching `.zigversion`; it applies to package tasks too.
 
-The GUI starts offline. `--live` explicitly enables the vendor telemetry HID
-interface; live device operation has not been validated. Tests and check steps
-never enumerate devices or flash firmware.
-The separately built `zig_flash` requires an explicit firmware input and is
-invoked manually when hardware work is authorized.
+## Everyday tasks
 
-| Package | Purpose |
+```sh
+mise //:test                         # each package test plus integration
+mise //zigmkay:test                  # only processor tests
+mise //zigmkay-companion:test        # only companion tests; no HID
+mise //:check                        # tests/generated checks plus offline guard
+mise //:check-full                   # full build matrix, replay and parity
+mise //:firmware lk7                 # build only, no device access
+mise //:firmware lk7 --optimize Debug
+mise //:firmware-all
+mise //:companion
+mise //:companion-run --smoke
+mise //:companion-run --replay tests/fixtures/lk7_trace.bin
+mise //:companion-headless
+mise //:replay tests/fixtures/lk7_trace.bin
+mise //:flash-tool                   # build only
+```
+
+Artifacts stay in root `zig-out`: firmware in
+`zig-out/firmware/<board>/zigmkay.uf2`, GUI at
+`zig-out/bin/zigmkay_companion`, replay at
+`zig-out/bin/zigmkay-companion-headless-lk7`, flasher at
+`zig-out/bin/zig_flash`. Firmware defaults to ReleaseSafe; host tools remain
+native. GUI/replay currently use the fixed LK7 Danish profile. GUI replay/capture
+paths are relative to the monorepo root. Root `zig build` now runs integration
+checks only; use `mise //:test` for the entire repository.
+
+## Explicit hardware tasks
+
+Only use these during an authorized device session:
+
+```sh
+mise //:flash lk7                    # selected firmware build, then zig_flash
+mise //:flash lk7 --mount /Volumes/RPI-RP2
+mise //:flash-file .zig-cache/manual-session/rollback-ab66f12/zigmkay.uf2
+mise //:companion-run --live
+mise //:companion-run --live --capture /tmp/lk7.capture --capture-ms 30000
+mise //:companion-run --session-replay /tmp/lk7.capture   # offline
+```
+
+Flash requires an explicit board or UF2, waits for BOOTSEL, and uses the Zig
+utility. Write/sync success does not independently verify installed identity or
+automatic restart; that device issue remains under investigation in
+[04](docs/plans/handovers/04-hardware.md). Live HID, flashing and generated source
+updates are excluded from aggregate tests/checks. No default task accesses hardware.
+
+## Packages
+
+| Task namespace | Ownership |
 | --- | --- |
-| `zigmkay` | Keyboard processor and firmware behavior |
-| `keyboards` | Ten boards, catalog, shared LK7 keymap |
-| `layout-model` | Portable key definitions and physical layout types |
-| `device-protocol` | Versioned 32-byte telemetry codec |
-| `companion-model` | Portable companion state reducer |
-| `zkeycodes` | Keycode definitions, HJSON converter, generated layouts |
-| `zkeymap` | Native keyboard layout translation; existing C bridges |
-| `zigmkay-companion` | DVUI/SDL3 desktop companion |
-| `zig-flash` | Explicit UF2 volume-copy tool |
-| `apps/headless` | Offline replay executable |
-| `tools`, `tests` | Zig validation tooling and integration fixtures |
+| `//zigmkay` | Processor and firmware behavior |
+| `//keyboards` | Board catalog and firmware builds |
+| `//layout-model` | Portable key and physical types |
+| `//device-protocol` | Telemetry codec |
+| `//companion-model` | Portable session/state model |
+| `//zkeycodes` | Keycodes, HJSON conversion and generated checks |
+| `//zkeymap` | Native keyboard translation; existing C bridges |
+| `//zigmkay-companion` | DVUI/SDL3 GUI and component tests |
+| `//zig-flash` | Zig UF2 utility and offline platform checks |
+| `//apps/headless` | Offline trace replay |
+| `//tools/registry` | Registry validation/check/regeneration |
+| `//:integration-test` | Cross-package identity/session/trace checks |
 
-Owned packages are normal source directories, with local path dependencies.
-They are not separate Git repositories or Git submodules. Commit all changes
-locally in this repository; never push this fork.
+Codec/session behavioral fixtures remain cross-package integration tests;
+their package test steps also compile their own portable module roots.
+First-party implementation, generators and validation remain Zig. External
+dependencies use immutable revisions and hashes in package `build.zig.zon`
+files. All changes stay local: never push branches or create pull requests.
 
-The board catalog is `keyboards/boards.zon`. Regenerate its registry explicitly:
+Regeneration is explicit:
 
 ```sh
-zig run tools/registry/main.zig -- keyboards/boards.zon keyboards keyboards/generated/keyboard_registry.zig
+mise //:check-generated              # compare only
+mise //:registry-regenerate          # update committed registry
+mise //:convert-all                  # update committed keycodes
+mise //:convert input.hjson output.zig
 ```
 
-That command also works if the committed registry is missing. Append `--check`
-to compare without writing. To regenerate keycodes, run `zig build convert-all`
-in `zkeycodes`. Ordinary builds and checks never regenerate committed sources.
-See [development](docs/development.md), [the protocol](docs/device-protocol.md),
-[firmware telemetry](docs/firmware-telemetry.md), and the
-[overlay guide](docs/live-overlay.md) for live selection and timed capture/replay.
+See [development](docs/development.md), [mise migration](docs/plans/10-mise-monorepo.md),
+[protocol](docs/device-protocol.md), [firmware telemetry](docs/firmware-telemetry.md),
+and [overlay guide](docs/live-overlay.md).
