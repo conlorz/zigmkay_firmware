@@ -198,7 +198,8 @@ pub fn main(init: std.process.Init) !void {
             }
         }
         const stale = if (live) driver.session.stale else replay_stale;
-        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(&keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (live) @tagName(driver.session.phase) else "offline", if (stale) " / STALE" else "" }, .{});
+        const phase_label = if (driver.session.phase == .synchronizing and !stale) "live" else @tagName(driver.session.phase);
+        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(&keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (live) phase_label else "offline", if (stale) " / STALE" else "" }, .{});
         dvui.label(@src(), "Input source: {s} / layout: {s}", .{ source.id(), source.layoutId() }, .{});
         if (live and driver.status != .connected) {
             dvui.label(@src(), "Connection: {s}; select --device-path for multiple devices", .{@tagName(driver.status)}, .{});

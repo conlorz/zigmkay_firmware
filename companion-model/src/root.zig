@@ -137,8 +137,11 @@ pub const Session = struct {
     }
     fn startSnapshot(self: *Session, now: u64, recovering: bool, retry: bool) Actions {
         var actions = Actions{};
-        self.stale = true;
-        self.state.needs_resync = true;
+        // A routine refresh keeps the last coherent state valid until its
+        // deadline. Initial synchronization and fault recovery are stale.
+        const refreshing = self.phase == .live and !recovering and !retry;
+        self.stale = !refreshing;
+        self.state.needs_resync = !refreshing;
         self.clearAssembly();
         if (!self.allocateRequest(now)) return actions;
         self.phase = if (recovering) .recovering else .synchronizing;

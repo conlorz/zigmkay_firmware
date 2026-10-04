@@ -121,3 +121,18 @@ pending; discovery/open alone is not R-custom acceptance.
 Fixed companion SHA-256:
 `0d2c51da513af2f3075ab9ee7fc8215af3fe3c0c7c2de3466fb03fe536373b34`.
 New bounded capture: `.zig-cache/manual-session/recovery-11/custom-session-fixed.bin`.
+
+User observed functioning controls with status flicker. Inspection of the full
+4096-record capture found one connect, 85 host sends, 171 receives, 3839 ticks
+and zero disconnects: one continuous session with healthy snapshot refreshes
+roughly every second, completing in approximately 20–25 ms. The reducer marked
+even routine refreshes stale, causing misleading visual flicker. Routine refresh
+now preserves the last validated display until completion or its deadline; fault
+recovery and timeouts still mark it stale. Integration regression covers partial
+refresh, successful commit and deadline-triggered stale recovery. Full offline
+checks passed. This host-only change needs no firmware flash.
+
+Physical test instructions use the two thumbs nearest the center gap (left Enter
+and right Space), held for one second. Right home-row far-right Y toggles overlay;
+left bottom-row innermost V toggles log; right bottom-row far-right Z closes last.
+Release thumbs after each action. These replace index-only instructions.

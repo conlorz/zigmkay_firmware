@@ -345,3 +345,25 @@ test "session static memory budget" {
     try std.testing.expect(@sizeOf(companion.Session) <= 2048);
     try std.testing.expect(@sizeOf(companion.Actions) <= 128);
 }
+
+test "routine refresh preserves validated display until completion or timeout" {
+    var session = try liveSession();
+    const previous = session.state;
+    const now = session.refresh_at;
+    const request = session.tick(now, 0) catch unreachable;
+    try std.testing.expectEqual(@as(u2, 1), request.count);
+    try std.testing.expectEqual(companion.Phase.synchronizing, session.phase);
+    try std.testing.expect(!session.stale and !session.state.needs_resync);
+    try std.testing.expectEqualDeep(previous, session.state);
+    const snapshot = protocol.Snapshot{ .active_layers = 1, .highest_layer = 0 };
+    const parts = try protocol.snapshotPackets(snapshot, dimensions, session.token, session.request, session.expected_sequence);
+    _ = session.apply(parts[0], now + 10);
+    try std.testing.expect(!session.stale);
+    _ = session.apply(parts[1], now + 25);
+    try std.testing.expectEqual(companion.Phase.live, session.phase);
+    try std.testing.expect(!session.stale);
+    _ = try session.tick(session.refresh_at, 0);
+    _ = try session.tick(session.deadline, 0);
+    try std.testing.expect(session.stale and session.state.needs_resync);
+    try std.testing.expectEqual(companion.Phase.recovering, session.phase);
+}
