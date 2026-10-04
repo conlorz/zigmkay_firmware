@@ -4,6 +4,8 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const usb = microzig.core.usb;
 const USB_Device = rp2xxx.usb.Polled(.{});
+const transport = @import("telemetry_transport.zig");
+const control = @import("usb_control.zig");
 
 pub const HID_KeymodifierCodes = enum(u8) {
     left_control = 0xe0,
@@ -229,13 +231,55 @@ pub const ControllerType = usb.DeviceController(.{
 }});
 
 pub var usb_controller: ControllerType = .init;
+var vendor_controller = control.Controller(usb, ControllerType){
+    .base = &usb_controller,
+    .hooks = .{ .prepare = prepare_vendor_control, .reject = reject_vendor_control },
+};
+
+// Polled resets only the IN PID on SETUP. A vendor Output SetReport starts
+// a fresh OUT DATA1 stage, including after cancellation/stall. Keep the hardware
+// adjustment here rather than modifying the immutable dependency.
+fn prepare_vendor_control() void {
+    const peripherals = microzig.chip.peripherals;
+    // Polled processes SETUP before buffer completions. Cancel only EP0's
+    // stale completion flags so old OUT bytes cannot satisfy a new data stage.
+    peripherals.USB.BUFF_STATUS.raw = 0b11;
+    peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.modify(.{ .AVAILABLE_0 = 0, .FULL_0 = 0, .PID_0 = 0, .STALL = 0 });
+    peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.modify(.{ .AVAILABLE_0 = 0, .FULL_0 = 0, .STALL = 0 });
+    peripherals.USB.EP_STALL_ARM.modify(.{ .EP0_IN = 0, .EP0_OUT = 0 });
+}
+
+fn reject_vendor_control() void {
+    const peripherals = microzig.chip.peripherals;
+    peripherals.USB.EP_STALL_ARM.modify(.{ .EP0_IN = 1, .EP0_OUT = 1 });
+    peripherals.USB_DPRAM.EP0_OUT_BUFFER_CONTROL.modify(.{ .STALL = 1 });
+    peripherals.USB_DPRAM.EP0_IN_BUFFER_CONTROL.modify(.{ .STALL = 1 });
+}
+
+pub fn attach_telemetry(value: *transport.Transport) void {
+    vendor_controller.telemetry = value;
+}
 
 pub fn init() void {
+    usb_controller = .init;
+    vendor_controller.telemetry = null;
+    vendor_controller.gate = .{};
+    vendor_controller.control_owned = false;
     usb_device = .init();
 }
 
 pub fn poll() void {
-    usb_device.poll(&usb_controller);
+    if (vendor_controller.telemetry != null) usb_device.poll(&vendor_controller) else usb_device.poll(&usb_controller);
+}
+
+pub fn telemetry_endpoint() transport.Endpoint {
+    return .{ .context = &usb_controller, .send = send_telemetry };
+}
+
+fn send_telemetry(context: *anyopaque, report: *const @import("device-protocol").Report) bool {
+    const controller: *ControllerType = @ptrCast(@alignCast(context));
+    if (controller.drivers()) |drivers| return drivers.rawhid.send_report(report);
+    return false;
 }
 
 /// Dispatches a keyboard report over the first HID interface
@@ -261,6 +305,7 @@ pub fn send_mouse_report(report: *const MouseInReport) void {
 
 /// Pushes a custom 32-byte payload to the RAWHID interface for companion app signalling
 pub fn send_raw_report(report: *const RawHidReport) void {
+    if (vendor_controller.telemetry != null) return;
     if (usb_controller.drivers()) |drivers| {
         _ = drivers.rawhid.send_report(report);
     }

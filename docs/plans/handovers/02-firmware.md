@@ -1,6 +1,7 @@
 # 02 handover: LK7 firmware transport
 
-State: **Not produced**. No implementation commits or checks are recorded.
+State: **USB/LK7 checkpoint submitted for review**. Pure machinery committed as
+`b1af5aa`; final coordinator integration and offline acceptance are pending.
 Producer: firmware worker. Reviewer: coordinator.
 Plan: [02](../02-firmware-telemetry.md). Rules: [handover format](README.md).
 
@@ -64,3 +65,47 @@ USB exact-length reception, macOS ep0 SetReport wrapper, LK7 attachment, reserve
 legacy-signal transition, target size/all-board compilation/parity/check-full and
 identified artifacts remain pending. Worker made no Git/index/hardware operations.
 Next: coordinator review/commit pure checkpoint, then release USB integration.
+
+## USB and LK7 checkpoint
+
+State: **Submitted for review**; worker paused and releases source for stable
+coordinator checks. Input G01 `5b092ec`, pure transport `b1af5aa`.
+Owned changes since pure checkpoint: `zigmkay/src/usb_control.zig` (new),
+`usb_if.zig`, `core.zig`, `processing.zig`, `telemetry.zig`,
+`telemetry_transport.zig`, `loops.zig`, `root.zig`,
+`keyboards/my_keyboards/rollercole/leonardo_keycaprio_0_7.zig`,
+`tests/test_telemetry_transport.zig`, `docs/firmware-telemetry.md`, this handover.
+No `usb_command_executor.zig` change was needed: USB boundary suppresses its
+legacy RawHID path whenever telemetry is attached. No protocol/cache/C edits.
+
+First-party generic controller shim consumes validated vendor Output SetReport
+setup and its exact EP0 OUT data stage, plus direct exact-length interrupt OUT.
+RP2xxx hook resets vendor EP0 PID/buffers/stalls and stale EP0 completion flags;
+other endpoint completions remain intact. Identity is the existing shared helper;
+LK7 attaches it explicitly, all other board runners default telemetry off.
+Reserved custom tap/hold IDs and companion special keycodes send sequenced v2
+signals independently of keyboard queue capacity, after successful fallible
+combined-action work. Existing Rollercole callback behavior/pins are unchanged.
+
+Scoped command from the pure checkpoint was rerun after final changes:
+**15/15 passed**. Additional fake-boundary tests cover validated control ACK only
+after data, wrong direction/type/report ID/interface/length, cancelled setup,
+short/overlength data, other collections, interrupt OUT, bus reset/deconfiguration,
+full keyboard queue intents, custom+normal-key/modifier retry de-duplication.
+Owned Zig files formatted. Coordinator selected `zig build firmware -Dkeyboard=lk7`
+passed before final EP0 completion/intent refinements; this is WIP compile feedback,
+not final integrated evidence. Worker ran no shared install/check lane or hardware.
+
+Measured native aarch64 ABI: Transport 752 bytes, Observer 56, Gate one; fixed
+report storage 608 bytes, two physical/stable snapshots 40 bytes, no allocation.
+One request dispatch and one telemetry send attempt per runner iteration, plus
+bounded USB-report validation. Driver true send acceptance synchronously copies
+32 bytes to RP2xxx SRAM; false preserves exact bytes. Documentation records the
+pinned HAL's preexisting readiness spin and keyboard/mouse/consumer acceptance
+limitations. Real macOS SetReport/control PID behavior and typing remain 04 gates.
+
+Final target RAM/firmware size, all-ten-board compilation, root/standalone parity,
+check/check-full, shared integration tests and identified Danish LK7 UF2/hash are
+pending coordinator stable-tree integration. No hardware acceptance claimed.
+Next: review exact scoped diff, run joint stable checks, make focused local commits,
+record artifacts/budgets and accept the offline handover if all criteria pass.

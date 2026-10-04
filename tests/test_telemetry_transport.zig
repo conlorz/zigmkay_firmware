@@ -226,3 +226,263 @@ test "disabled observer tracks combo components disabled inputs and stable layer
     try std.testing.expectEqual(@as(u8, 1), processor.observer.state.modifiers.toByte());
     try std.testing.expectEqual(@as(core.LayerIndex, 1), processor.observer.state.highest_layer);
 }
+
+const FakeUsb = struct {
+    const Num = enum(u4) { ep0, ep1, ep2, ep3, ep4 };
+    const Dir = enum { In, Out };
+    pub const types = struct {
+        pub const Endpoint = struct { num: Num, dir: Dir };
+        const Word = struct {
+            value: u16,
+            pub fn into(self: @This()) u16 {
+                return self.value;
+            }
+        };
+        pub const SetupPacket = struct {
+            request_type: packed struct(u8) { raw: u8 },
+            request: u8,
+            value: Word,
+            index: Word,
+            length: Word,
+        };
+    };
+    pub const DeviceInterface = struct {
+        incoming: [64]u8 = @splat(0),
+        incoming_len: usize = 0,
+        listens: usize = 0,
+        acks: usize = 0,
+        reads: usize = 0,
+        pub fn ep_listen(self: *@This(), _: Num, _: usize) void {
+            self.listens += 1;
+        }
+        pub fn ep_ack(self: *@This(), _: Num) void {
+            self.acks += 1;
+        }
+        pub fn ep_readv(self: *@This(), _: Num, destinations: []const []u8) usize {
+            self.reads += 1;
+            @memcpy(destinations[0][0..self.incoming_len], self.incoming[0..self.incoming_len]);
+            return self.incoming_len;
+        }
+    };
+};
+const FakeBase = struct {
+    const Descriptor = struct {
+        interface: struct { interface_number: u8 = 3 } = .{},
+        ep_out: struct { endpoint: FakeUsb.types.Endpoint = .{ .num = .ep4, .dir = .Out } } = .{},
+    };
+    const desc = Descriptor{};
+    const Drivers = struct { rawhid: struct { descriptor: *const Descriptor = &desc } = .{} };
+    driver_data: Drivers = .{},
+    configured: bool = true,
+    setup_count: usize = 0,
+    buffers: usize = 0,
+    resets: usize = 0,
+    pub fn drivers(self: *@This()) ?*Drivers {
+        return if (self.configured) &self.driver_data else null;
+    }
+    pub fn on_setup_req(self: *@This(), _: *FakeUsb.DeviceInterface, _: *const FakeUsb.types.SetupPacket) void {
+        self.setup_count += 1;
+    }
+    pub fn on_buffer(self: *@This(), _: *FakeUsb.DeviceInterface, comptime _: FakeUsb.types.Endpoint) void {
+        self.buffers += 1;
+    }
+    pub fn on_bus_reset(self: *@This(), _: *FakeUsb.DeviceInterface) void {
+        self.resets += 1;
+    }
+};
+const HookCapture = struct {
+    var prepares: usize = 0;
+    var rejects: usize = 0;
+    fn prepare() void {
+        prepares += 1;
+    }
+    fn reject() void {
+        rejects += 1;
+    }
+};
+fn setupPacket(raw: u8, value: u16, index: u16, length: u16) FakeUsb.types.SetupPacket {
+    return .{ .request_type = .{ .raw = raw }, .request = 9, .value = .{ .value = value }, .index = .{ .value = index }, .length = .{ .value = length } };
+}
+
+test "SetReport wrapper validates setup data length cancellation and keeps other collections" {
+    HookCapture.prepares = 0;
+    HookCapture.rejects = 0;
+    var t = transport.Transport.init(identity);
+    var base = FakeBase{};
+    var device = FakeUsb.DeviceInterface{};
+    var controller = zigmkay.usb_control.Controller(FakeUsb, FakeBase){ .base = &base, .telemetry = &t, .hooks = .{ .prepare = HookCapture.prepare, .reject = HookCapture.reject } };
+    const good = setupPacket(0x21, 0x0200, 3, 32);
+    const hello_bytes = try protocol.encodePacket(.{ .session = 0, .nonce = 42, .request = 1, .payload = .hello }, identity.dimensions, .host_to_device);
+    @memcpy(device.incoming[0..32], &hello_bytes);
+    device.incoming_len = 32;
+    controller.on_setup_req(&device, &good);
+    try std.testing.expectEqual(@as(usize, 0), device.acks);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .Out });
+    try std.testing.expect(t.pending != null);
+    try std.testing.expectEqual(@as(usize, 1), device.acks);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 0), base.buffers);
+    t.boundary();
+    try std.testing.expectEqual(@as(u32, 42), t.session);
+    const invalid = [_]FakeUsb.types.SetupPacket{
+        setupPacket(0xA1, 0x0200, 3, 32),
+        setupPacket(0x21, 0x0201, 3, 32),
+        setupPacket(0x21, 0x0300, 3, 32),
+        setupPacket(0x21, 0x0200, 0x103, 32),
+        setupPacket(0x21, 0x0200, 3, 31),
+        setupPacket(0x21, 0x0200, 3, 33),
+    };
+    for (invalid) |packet| {
+        controller.on_setup_req(&device, &packet);
+        try std.testing.expect(!controller.gate.pending);
+    }
+    try std.testing.expectEqual(@as(usize, invalid.len), HookCapture.rejects);
+    const other = setupPacket(0x21, 0x0200, 0, 1);
+    controller.on_setup_req(&device, &good);
+    controller.on_setup_req(&device, &other);
+    try std.testing.expect(!controller.gate.pending);
+    try std.testing.expectEqual(@as(usize, 1), base.setup_count);
+    controller.on_buffer(&device, .{ .num = .ep0, .dir = .Out });
+    try std.testing.expectEqual(@as(usize, 1), base.buffers);
+    for ([_]usize{ 0, 12, 31, 33, 64 }) |length| {
+        controller.on_setup_req(&device, &good);
+        device.incoming_len = length;
+        controller.on_buffer(&device, .{ .num = .ep0, .dir = .Out });
+        try std.testing.expect(t.pending == null);
+    }
+    try std.testing.expectEqual(@as(usize, invalid.len + 5), HookCapture.rejects);
+    controller.on_buffer(&device, .{ .num = .ep1, .dir = .Out });
+    controller.on_buffer(&device, .{ .num = .ep2, .dir = .In });
+    controller.on_buffer(&device, .{ .num = .ep3, .dir = .In });
+    try std.testing.expectEqual(@as(usize, 4), base.buffers);
+    controller.on_bus_reset(&device);
+    try std.testing.expectEqual(@as(u32, 0), t.session);
+    try std.testing.expectEqual(@as(usize, 1), base.resets);
+    t.session = 42;
+    key(&t, true, 0);
+    base.configured = false;
+    controller.on_setup_req(&device, &other);
+    try std.testing.expectEqual(@as(u32, 0), t.session);
+    try std.testing.expectEqual(@as(u8, 1), t.state.pressed[0]);
+}
+
+test "interrupt OUT wrapper rejects short reports and accepts exact length without tail reads" {
+    var t = transport.Transport.init(identity);
+    var base = FakeBase{};
+    var device = FakeUsb.DeviceInterface{};
+    var controller = zigmkay.usb_control.Controller(FakeUsb, FakeBase){ .base = &base, .telemetry = &t, .hooks = .{ .prepare = HookCapture.prepare, .reject = HookCapture.reject } };
+    const bytes = try protocol.encodePacket(.{ .session = 0, .nonce = 12, .request = 1, .payload = .hello }, identity.dimensions, .host_to_device);
+    @memcpy(device.incoming[0..32], &bytes);
+    for ([_]usize{ 0, 12, 31, 33, 64 }) |len| {
+        device.incoming_len = len;
+        controller.on_buffer(&device, .{ .num = .ep4, .dir = .Out });
+        try std.testing.expect(t.pending == null);
+    }
+    device.incoming_len = 32;
+    controller.on_buffer(&device, .{ .num = .ep4, .dir = .Out });
+    try std.testing.expect(t.pending != null);
+    try std.testing.expectEqual(@as(usize, 6), device.listens);
+    try std.testing.expectEqual(@as(usize, 0), base.buffers);
+}
+
+test "reserved custom signals bypass full keyboard queue and preserve sequenced release" {
+    var t = transport.Transport.init(identity);
+    var fake = Fake{};
+    try synchronize(&t, &fake);
+    var output = core.OutputCommandQueue.Create();
+    output.companion_signals = t.signalSink();
+    while (true) output.queue.enqueue(.{ .KeyCodePress = 4 }) catch break;
+    const before = output.Count();
+    try output.send_raw_hid_signal(core.CUSTOM_ID_COMPANION_TOGGLE, &.{1});
+    try std.testing.expect(output.send_companion_custom(core.CUSTOM_ID_COMPANION_TOGGLE, false));
+    try std.testing.expectEqual(before, output.Count());
+    for (0..2) |_| t.pump(fake.endpoint());
+    const press = try fake.packet(5);
+    const release = try fake.packet(6);
+    try std.testing.expect(press.payload.signal.pressed);
+    try std.testing.expect(!release.payload.signal.pressed);
+    try std.testing.expectEqual(press.sequence +% 1, release.sequence);
+}
+
+test "fixed transport storage stays below one KiB" {
+    try std.testing.expect(@sizeOf(transport.Transport) <= 1024);
+}
+
+test "reserved tap and hold custom actions send sequenced press and release" {
+    const dimensions = core.KeymapDimensions{ .key_count = 2, .layer_count = 1 };
+    const keymap = [_][2]?core.KeyDef{.{
+        .{ .tap_only = .{ .custom = core.CUSTOM_ID_COMPANION_TOGGLE } },
+        .{ .hold_only = .{ .custom = core.CUSTOM_ID_COMPANION_LOG_TOGGLE } },
+    }};
+    const sides = [_]core.Side{ .L, .R };
+    const P = zigmkay.processing.CreateProcessorType(&dimensions, &keymap, &sides, &.{}, &.{}, &.{});
+    var t = transport.Transport.init(identity);
+    var fake = Fake{};
+    try synchronize(&t, &fake);
+    var input = core.MatrixStateChangeQueue.Create();
+    var encoders = core.EncoderEventQueue.Create();
+    var output = core.OutputCommandQueue.Create();
+    output.companion_signals = t.signalSink();
+    var processor = P{ .input_matrix_changes = &input, .encoder_event_changes = &encoders, .output_usb_commands = &output };
+    for (0..4) |i| {
+        const at = core.TimeSinceBoot.from_absolute_us(i * 1000);
+        try input.enqueue(.{ .pressed = i % 2 == 0, .key_index = @intCast(i / 2), .time = at });
+        try processor.Process(at);
+        t.pump(fake.endpoint());
+        const packet = try fake.packet(5 + i);
+        try std.testing.expectEqual(@as(u16, @intCast(i)), packet.sequence);
+        try std.testing.expectEqual(i % 2 == 0, packet.payload.signal.pressed);
+    }
+    try std.testing.expectEqual(@as(usize, 0), output.Count());
+}
+
+test "combined reserved custom and keyboard action emits only after successful retry" {
+    const dimensions = core.KeymapDimensions{ .key_count = 2, .layer_count = 1 };
+    const keymap = [_][2]?core.KeyDef{.{
+        .{ .tap_only = .{ .custom = core.CUSTOM_ID_COMPANION_TOGGLE, .key_press = .{ .tap_keycode = 4 } } },
+        .{ .hold_only = .{ .custom = core.CUSTOM_ID_COMPANION_LOG_TOGGLE, .hold_modifiers = .{ .left_ctrl = true } } },
+    }};
+    const sides = [_]core.Side{ .L, .R };
+    const P = zigmkay.processing.CreateProcessorType(&dimensions, &keymap, &sides, &.{}, &.{}, &.{});
+    var t = transport.Transport.init(identity);
+    var fake = Fake{};
+    try synchronize(&t, &fake);
+    var input = core.MatrixStateChangeQueue.Create();
+    var encoders = core.EncoderEventQueue.Create();
+    var output = core.OutputCommandQueue.Create();
+    output.companion_signals = t.signalSink();
+    var processor = P{ .input_matrix_changes = &input, .encoder_event_changes = &encoders, .output_usb_commands = &output };
+    for (0..2) |i| {
+        while (true) output.queue.enqueue(.{ .KeyCodePress = 5 }) catch break;
+        const at = core.TimeSinceBoot.from_absolute_us(i * 1000);
+        try input.enqueue(.{ .pressed = true, .key_index = @intCast(i), .time = at });
+        try std.testing.expectError(error.CapacityExceeded, processor.Process(at));
+        try std.testing.expectEqual(@as(usize, 0), t.delta_count);
+        while (output.dequeue() != null) {}
+        try processor.Process(at);
+        t.pump(fake.endpoint());
+        const packet = try fake.packet(5 + i);
+        try std.testing.expect(packet.payload.signal.pressed);
+        try std.testing.expectEqual(@as(u16, @intCast(i)), packet.sequence);
+        try processor.Process(at);
+        try std.testing.expectEqual(@as(usize, 0), t.delta_count);
+    }
+}
+
+test "direct companion special key taps bypass full keyboard queue using v2 intents" {
+    var t = transport.Transport.init(identity);
+    var fake = Fake{};
+    try synchronize(&t, &fake);
+    var output = core.OutputCommandQueue.Create();
+    output.companion_signals = t.signalSink();
+    while (true) output.queue.enqueue(.{ .KeyCodePress = 4 }) catch break;
+    const before = output.Count();
+    try output.tap_key(core.KC_COMPANION);
+    try output.tap_key(core.KC_SHUTDOWN_COMPANION);
+    try std.testing.expectEqual(before, output.Count());
+    for (0..4) |_| t.pump(fake.endpoint());
+    try std.testing.expectEqual(protocol.SignalKind.overlay_toggle, (try fake.packet(5)).payload.signal.kind);
+    try std.testing.expect(!(try fake.packet(6)).payload.signal.pressed);
+    try std.testing.expectEqual(protocol.SignalKind.shutdown, (try fake.packet(7)).payload.signal.kind);
+    try std.testing.expect(!(try fake.packet(8)).payload.signal.pressed);
+}

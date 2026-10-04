@@ -195,6 +195,7 @@ pub fn CreateProcessorType(
                                     }
                                 }
 
+                                if (hold_def.hold.custom) |id| _ = self.output_usb_commands.send_companion_custom(id, false);
                                 self.release_map[head_event.key_index] = ReleaseMapEntry.None;
                                 on_event(self, .{ .OnHoldExitAfter = .{ .hold = hold_def.hold } });
                             },
@@ -293,7 +294,7 @@ pub fn CreateProcessorType(
             on_event(self, .{ .OnTapEnterBefore = .{ .tap = tap } });
             if (tap.key_press) |keycode_fire| {
                 try handle_boot_and_print(self, keycode_fire);
-                try self.output_usb_commands.press_key(keycode_fire);
+                if (!self.output_usb_commands.is_companion_key(keycode_fire)) try self.output_usb_commands.press_key(keycode_fire);
             }
             if (tap.mouse_action) |mouse_action| {
                 try self.output_usb_commands.queue.enqueue(.{ .MouseCommandPressed = mouse_action });
@@ -301,14 +302,18 @@ pub fn CreateProcessorType(
             if (tap.media_key) |media_key| {
                 try self.output_usb_commands.queue.enqueue(.{ .ConsumerKeyPressed = media_key });
             }
+            if (tap.key_press) |keycode_fire| {
+                if (self.output_usb_commands.is_companion_key(keycode_fire)) try self.output_usb_commands.press_key(keycode_fire);
+            }
+            if (tap.custom) |id| _ = self.output_usb_commands.send_companion_custom(id, true);
             on_event(self, .{ .OnTapEnterAfter = .{ .tap = tap } });
         }
 
         fn execute_tap_release(self: *Self, tap: core.TapDef) !void {
             on_event(self, .{ .OnTapExitBefore = .{ .tap = tap } });
             if (tap.key_press) |keycode_fire| {
-                try self.output_usb_commands.release_key(keycode_fire);
-                if (keycode_fire.dead) {
+                if (!self.output_usb_commands.is_companion_key(keycode_fire)) try self.output_usb_commands.release_key(keycode_fire);
+                if (keycode_fire.dead and !self.output_usb_commands.is_companion_key(keycode_fire)) {
                     const space = core.KeyCodeFire{ .tap_keycode = 0x2C };
                     try self.output_usb_commands.tap_key(space);
                 }
@@ -320,6 +325,10 @@ pub fn CreateProcessorType(
             if (tap.media_key) |media_key| {
                 try self.output_usb_commands.queue.enqueue(.{ .ConsumerKeyReleased = media_key });
             }
+            if (tap.key_press) |keycode_fire| {
+                if (self.output_usb_commands.is_companion_key(keycode_fire)) try self.output_usb_commands.release_key(keycode_fire);
+            }
+            if (tap.custom) |id| _ = self.output_usb_commands.send_companion_custom(id, false);
             on_event(self, .{ .OnTapExitAfter = .{ .tap = tap } });
         }
 
@@ -349,6 +358,7 @@ pub fn CreateProcessorType(
         fn decide_hold_decided(self: *Self, hold: core.HoldDef, key_def: core.KeyDef, event: core.MatrixStateChange) !void {
             on_event(self, .{ .OnHoldEnterBefore = .{ .hold = hold } });
             try hold_apply_modifiers_and_layers(self, hold);
+            if (hold.custom) |id| _ = self.output_usb_commands.send_companion_custom(id, true);
 
             var retro_tap: ?core.TapDef = null;
             switch (key_def) {

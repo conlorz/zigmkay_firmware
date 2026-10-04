@@ -90,6 +90,7 @@ pub fn main() !void {
             .custom_functions = &rollercole_shared_keymap.custom_functions,
             .side_definition = &rollercole_shared_keymap.sides,
             .combos = rollercole_shared_keymap.combos[0..],
+            .telemetry_identity = rollercole_shared_keymap.identity(@import("device-protocol")),
             .scanner_settings = &.{
                 .matrix = .{
                     .debounce = .{ .ms = 50 },

@@ -7,6 +7,10 @@ pub const Sink = struct {
     /// Must be nonblocking; false indicates a dropped event.
     write: *const fn (*anyopaque, Message) bool,
 };
+pub const SignalSink = struct {
+    context: *anyopaque,
+    write: *const fn (*anyopaque, protocol.Signal) void,
+};
 
 pub const Observer = struct {
     sink: ?Sink = null,

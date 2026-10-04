@@ -56,6 +56,15 @@ pub const Transport = struct {
         _ = self.event(.{ .signal = value });
     }
 
+    pub fn signalSink(self: *Transport) telemetry.SignalSink {
+        return .{ .context = self, .write = writeSignal };
+    }
+
+    fn writeSignal(context: *anyopaque, value: protocol.Signal) void {
+        const self: *Transport = @ptrCast(@alignCast(context));
+        self.signal(value);
+    }
+
     fn event(self: *Transport, payload: protocol.Payload) bool {
         if (self.session == 0) return true;
         const sequence = self.next_sequence;

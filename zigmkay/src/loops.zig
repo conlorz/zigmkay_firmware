@@ -12,6 +12,8 @@ const microzig = @import("microzig");
 const rp2xxx = microzig.hal;
 const time = rp2xxx.time;
 const UartClient = @import("split_communication.zig").UartClient;
+const telemetry = @import("telemetry_transport.zig");
+const usb_if = @import("usb_if.zig");
 
 fn CreatePrimaryConfig(comptime dimensions: *const core.KeymapDimensions) type {
     return struct {
@@ -32,6 +34,7 @@ fn CreatePrimaryConfig(comptime dimensions: *const core.KeymapDimensions) type {
 
         encoder_pin_configs: []encoder_scanning.EncoderPinConfig = &.{},
         encoder_actions: []core.EncoderAction = &.{},
+        telemetry_identity: ?@import("device-protocol").Identity = null,
     };
 }
 
@@ -99,6 +102,12 @@ fn run_primary_internal(
 
     // USB events
     const usb_command_executor = usb.CreateAndInitUsbCommandExecutor();
+    var telemetry_transport: if (config.telemetry_identity != null) telemetry.Transport else void = if (config.telemetry_identity) |identity| telemetry.Transport.init(identity) else {};
+    if (comptime config.telemetry_identity != null) {
+        processor.observer.sink = telemetry_transport.sink();
+        usb_command_queue.companion_signals = telemetry_transport.signalSink();
+        usb_if.attach_telemetry(&telemetry_transport);
+    }
     while (true) {
         // Detect local changes
         const current_time = core.TimeSinceBoot{ .time_since_boot_us = time.get_time_since_boot().to_us() };
@@ -115,6 +124,10 @@ fn run_primary_internal(
 
         // Execute actions: send usb commands to the host
         try usb_command_executor.HouseKeepAndProcessCommands(&usb_command_queue, current_time);
+        if (comptime config.telemetry_identity != null) {
+            telemetry_transport.boundary();
+            telemetry_transport.pump(usb_if.telemetry_endpoint());
+        }
     }
 }
 
