@@ -294,7 +294,7 @@ test "cached flasher executable is absolute and exists outside build working dir
     file.close(std.testing.io);
 }
 
-test "selected frozen LK7 draft builds UF2 and rejects edits without flashing" {
+test "settled layout change builds frozen LK7 UF2 and rejects later edits without flashing" {
     const gpa = std.testing.allocator;
     const io = std.testing.io;
     const root = try std.Io.Dir.cwd().realPathFileAlloc(io, "..", gpa);
@@ -303,7 +303,13 @@ test "selected frozen LK7 draft builds UF2 and rejects edits without flashing" {
     defer model.deinit();
     var controller = try Controller.init(gpa, io, root);
     defer controller.deinit();
+    var scheduler = @import("auto_build.zig").Scheduler{};
+    scheduler.observe(try model.id(), 0);
+    try model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 20 } } });
     const current = try model.id();
+    scheduler.observe(current, 1);
+    try std.testing.expect(!scheduler.take(750, false));
+    try std.testing.expect(scheduler.take(751, false));
     try controller.build(model.current.snapshot);
     const deadline = std.Io.Clock.awake.now(io).toMilliseconds() + 120_000;
     while (controller.state == .building) {

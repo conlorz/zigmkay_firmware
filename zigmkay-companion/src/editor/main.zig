@@ -46,6 +46,7 @@ pub const Editor = struct {
     action_draft: forms.Draft = .{},
     testing: Testing,
     firmware: Firmware,
+    auto_build: @import("auto_build.zig").Scheduler = .{},
     bootloader_requested: bool = false,
     try_hid_bootloader: bool = true,
     bootloader: ?@import("../live_adapter.zig").BootloaderAttempt(@import("../main.zig").Native) = null,
@@ -117,6 +118,7 @@ pub const Editor = struct {
             try self.text.insert("Hello, Grüß dich!");
         }
         self.syncRename();
+        self.auto_build.manual(try self.model.id());
         return self;
     }
     pub fn deinit(self: *Editor) void {
@@ -319,9 +321,18 @@ pub const Editor = struct {
                 self.recovery_id = current_id;
             }
         }
-        self.testing.poll(try self.model.id());
-        self.firmware.poll(try self.model.id());
+        const current_id = try self.model.id();
+        self.testing.poll(current_id);
+        self.firmware.poll(current_id);
         if (self.callback_state == .changed or self.callback_state == .missing) self.firmware.invalidateExternalSources();
+        if (!self.fixture) {
+            self.auto_build.observe(current_id, @intCast(now));
+            const blocked = switch (self.firmware.state) {
+                .transferring, .transferred, .awaiting_reconnect, .building => true,
+                else => self.bootloaderBusy() or self.callback_state == .changed or self.callback_state == .missing or self.callback_state == .failed,
+            };
+            if (self.auto_build.take(@intCast(now), blocked)) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
+        }
         if (self.text.refresh()) {
             self.pausePractice();
             self.testing.stop();
@@ -420,7 +431,13 @@ pub const Editor = struct {
         }
         if (button(t, "Save", "file.save", .{ .x = 1078, .y = 16, .w = 76, .h = 36 })) self.save() catch |err| self.report(err);
         if (button(t, "Build", "firmware.build", .{ .x = 1166, .y = 16, .w = 110, .h = 36 })) {
-            if (!self.fixture) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
+            if (!self.fixture) {
+                self.firmware.build(self.model.current.snapshot) catch |err| {
+                    self.report(err);
+                    return;
+                };
+                self.auto_build.manual(try self.model.id());
+            }
         }
         if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) {
             if (!self.fixture) {
