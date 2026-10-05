@@ -2,13 +2,7 @@ const std = @import("std");
 const contract = @import("build_contract.zig");
 pub const Selected = struct { module: *std.Build.Module, snapshot_id: [32]u8, manifest: contract.Manifest };
 pub fn portablePath(path: []const u8) bool {
-    if (path.len == 0 or path.len > 512 or path[0] == '/') return false;
-    var parts = std.mem.splitScalar(u8, path, '/');
-    while (parts.next()) |part| {
-        if (part.len == 0 or std.mem.eql(u8, part, ".") or std.mem.eql(u8, part, "..")) return false;
-        for (part) |byte| if (!(std.ascii.isAlphanumeric(byte) or byte == '-' or byte == '_' or byte == '.')) return false;
-    }
-    return true;
+    return @import("portable_path.zig").valid(path, 512);
 }
 /// Shared selector used by host runner and firmware; hashes all files before adding modules.
 pub fn load(b: *std.Build, path: []const u8, firmware: *std.Build.Module, keycodes: *std.Build.Module, model: *std.Build.Module) !Selected {

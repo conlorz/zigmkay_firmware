@@ -135,13 +135,7 @@ fn nameValid(name: []const u8) bool {
     return true;
 }
 pub fn pathValid(path: []const u8) bool {
-    if (path.len == 0 or path.len > Limits.path_bytes or path[0] == '/' or !std.mem.endsWith(u8, path, ".zig")) return false;
-    var parts = std.mem.splitScalar(u8, path, '/');
-    while (parts.next()) |part| {
-        if (part.len == 0 or std.mem.eql(u8, part, ".") or std.mem.eql(u8, part, "..")) return false;
-        for (part) |byte| if (!(std.ascii.isAlphanumeric(byte) or byte == '_' or byte == '-' or byte == '.')) return false;
-    }
-    return true;
+    return @import("portable_path.zig").valid(path, Limits.path_bytes) and std.mem.endsWith(u8, path, ".zig");
 }
 pub fn layerIndex(doc: Document, id: LayerId) ValidationError!model.LayerIndex {
     if (doc.layers.len > Limits.layers) return error.InvalidDimensions;
