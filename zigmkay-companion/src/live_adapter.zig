@@ -58,6 +58,62 @@ pub const report_budget = 32;
 pub const drain_budget_ms = 2;
 pub const reconnect_ms = 1000;
 
+pub const BootloaderAttemptStatus = enum { idle, connecting, requested, accepted, manual_recovery };
+/// One bounded attempt per explicit Flash click. The independent session binds
+/// the running profile, never the unflashed draft or overlay labels.
+pub fn BootloaderAttempt(comptime Transport: type) type {
+    return struct {
+        const Self = @This();
+        driver: Driver(Transport),
+        status: BootloaderAttemptStatus = .idle,
+        deadline: u64 = 0,
+        request_sent: bool = false,
+        pub fn init(transport: Transport, board: protocol.Identity, nonce: u32, path: ?[]const u8) !Self {
+            var driver = try Driver(Transport).init(transport, board, nonce, path);
+            driver.session = try companion.Session.initBootloader(board);
+            return .{ .driver = driver };
+        }
+        pub fn active(self: *const Self) bool {
+            return self.status == .connecting or self.status == .requested;
+        }
+        pub fn start(self: *Self, now: u64) void {
+            if (self.status != .idle) return;
+            self.status = .connecting;
+            self.deadline = now +| 2500;
+        }
+        pub fn stop(self: *Self, status: BootloaderAttemptStatus, now: u64) void {
+            self.driver.disconnect(now);
+            self.status = status;
+        }
+        pub fn poll(self: *Self, now: u64) void {
+            if (!self.active()) return;
+            if (now >= self.deadline) return self.stop(.manual_recovery, now);
+            self.driver.poll(now);
+            if (!self.driver.connected or self.driver.session.phase == .incompatible) return self.stop(.manual_recovery, now);
+            const session = &self.driver.session;
+            if (session.bootloader_status == .accepted) return self.stop(.accepted, now);
+            if (self.request_sent) {
+                if (session.bootloader_status != .requested) self.stop(.manual_recovery, now);
+                return;
+            }
+            if (session.bootloaderAvailable()) {
+                self.request_sent = true;
+                self.driver.enterBootloader(now) catch return self.stop(.manual_recovery, now);
+                self.status = .requested;
+            } else if (session.capabilities_queried and session.capability_request == 0) self.stop(.manual_recovery, now);
+        }
+        pub fn message(self: *const Self) []const u8 {
+            return switch (self.status) {
+                .idle => "",
+                .connecting => "Checking HID bootloader support…",
+                .requested => "Bootloader requested via HID…",
+                .accepted => "Bootloader accepted · waiting for BOOTSEL drive…",
+                .manual_recovery => "HID unavailable · enter BOOTSEL manually to continue flashing.",
+            };
+        }
+    };
+}
+
 /// Transport methods: discover(?path)!Discovery, read(*[33]u8)!usize,
 /// write([]const u8)!void, close(), and now()u64. discover opens only a uniquely
 /// selected vendor collection. read is nonblocking; zero means no report.
@@ -221,6 +277,7 @@ pub fn Driver(comptime Transport: type) type {
 
 const Fake = struct {
     discovery: Discovery = .selected,
+    discovery_count: usize = 0,
     frames: [64]protocol.Report = undefined,
     count: usize = 0,
     cursor: usize = 0,
@@ -231,6 +288,7 @@ const Fake = struct {
     clock: u64 = 0,
     clock_step: u64 = 0,
     fn discover(self: *Fake, _: ?[]const u8) !Discovery {
+        self.discovery_count += 1;
         self.closed = false;
         return self.discovery;
     }
@@ -402,4 +460,90 @@ test "live bootloader requires capability and one explicit action without retry"
         try std.testing.expect(packet.payload != .enter_bootloader);
     }
     try std.testing.expectEqual(companion.BootloaderStatus.timed_out, driver.session.bootloader_status);
+}
+
+test "explicit bootloader binds running profile while ordinary overlay rejects mismatch" {
+    var running = fixture();
+    running.profile_id = "running\x00".*;
+    running.digest = @splat(9);
+    running.dimensions.layer_count = 3;
+    var attempt = try BootloaderAttempt(Fake).init(.{}, fixture(), 400, null);
+    try std.testing.expectEqual(@as(usize, 0), attempt.driver.transport.write_count);
+    attempt.start(0);
+    try attach(&attempt.driver, running, false);
+    try std.testing.expectEqual(companion.Phase.live, attempt.driver.session.phase);
+    try std.testing.expectEqual(running, attempt.driver.session.expected);
+    const query = attempt.driver.session.capability_request;
+    try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token, .request = query, .payload = .{ .capabilities = protocol.capability_bootloader } }, running.dimensions);
+    attempt.poll(3);
+    try std.testing.expectEqual(BootloaderAttemptStatus.requested, attempt.status);
+    const request = attempt.driver.session.bootloader_request;
+    try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token, .request = request, .payload = .{ .bootloader_result = .accepted } }, running.dimensions);
+    attempt.poll(4);
+    try std.testing.expectEqual(BootloaderAttemptStatus.accepted, attempt.status);
+    try std.testing.expect(attempt.driver.transport.closed);
+    const count = attempt.driver.transport.write_count;
+    attempt.poll(10000);
+    attempt.start(10000);
+    try std.testing.expectEqual(count, attempt.driver.transport.write_count);
+    var boot_requests: usize = 0;
+    for (attempt.driver.transport.writes[0..count]) |bytes| {
+        const packet = try protocol.decodePacket(bytes[1..], running.dimensions, .host_to_device);
+        if (packet.payload == .enter_bootloader) boot_requests += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 1), boot_requests);
+    var overlay = try Driver(Fake).init(.{}, fixture(), 500, null);
+    try attach(&overlay, running, false);
+    try std.testing.expectEqual(companion.Phase.incompatible, overlay.session.phase);
+}
+
+test "optional bootloader falls back for absent ambiguous unsupported and wrong-board devices" {
+    for ([_]Discovery{ .no_device, .multiple_devices, .path_not_found }) |discovery| {
+        var attempt = try BootloaderAttempt(Fake).init(.{ .discovery = discovery }, fixture(), 600, null);
+        attempt.poll(0); // Construction and idle polling cannot access hardware.
+        try std.testing.expectEqual(@as(usize, 0), attempt.driver.transport.discovery_count);
+        try std.testing.expectEqual(@as(usize, 0), attempt.driver.transport.write_count);
+        attempt.start(0);
+        attempt.poll(0);
+        try std.testing.expectEqual(BootloaderAttemptStatus.manual_recovery, attempt.status);
+        try std.testing.expect(!attempt.request_sent);
+    }
+    var wrong = fixture();
+    wrong.board_id = "other\x00\x00\x00".*;
+    var incompatible = try BootloaderAttempt(Fake).init(.{}, fixture(), 700, null);
+    incompatible.start(0);
+    try attach(&incompatible.driver, wrong, false);
+    incompatible.poll(3);
+    try std.testing.expectEqual(BootloaderAttemptStatus.manual_recovery, incompatible.status);
+    try std.testing.expect(!incompatible.request_sent);
+    for ([_]?u16{ null, 0 }) |capabilities| {
+        var old = try BootloaderAttempt(Fake).init(.{}, fixture(), 800, null);
+        old.start(0);
+        try attach(&old.driver, fixture(), false);
+        if (capabilities) |value| try old.driver.transport.queue(.{ .session = old.driver.session.token, .request = old.driver.session.capability_request, .payload = .{ .capabilities = value } }, fixture().dimensions);
+        old.poll(if (capabilities == null) 503 else 3);
+        try std.testing.expectEqual(BootloaderAttemptStatus.manual_recovery, old.status);
+        try std.testing.expect(!old.request_sent);
+    }
+}
+
+test "bootloader rejection stale acknowledgments and timeout never resend the command" {
+    for ([_]?protocol.BootloaderResult{ .unsupported, .busy, .duplicate, null }) |reply| {
+        var attempt = try BootloaderAttempt(Fake).init(.{}, fixture(), 900, null);
+        attempt.start(0);
+        try attach(&attempt.driver, fixture(), false);
+        try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token, .request = attempt.driver.session.capability_request, .payload = .{ .capabilities = protocol.capability_bootloader } }, fixture().dimensions);
+        attempt.poll(3);
+        const count = attempt.driver.transport.write_count;
+        const request = attempt.driver.session.bootloader_request;
+        try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token + 1, .request = request, .payload = .{ .bootloader_result = .accepted } }, fixture().dimensions);
+        try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token, .request = request + 1, .payload = .{ .bootloader_result = .accepted } }, fixture().dimensions);
+        attempt.poll(4);
+        try std.testing.expectEqual(BootloaderAttemptStatus.requested, attempt.status);
+        if (reply) |value| try attempt.driver.transport.queue(.{ .session = attempt.driver.session.token, .request = request, .payload = .{ .bootloader_result = value } }, fixture().dimensions);
+        attempt.poll(if (reply == null) 503 else 5);
+        try std.testing.expectEqual(BootloaderAttemptStatus.manual_recovery, attempt.status);
+        attempt.poll(10000);
+        try std.testing.expectEqual(count, attempt.driver.transport.write_count);
+    }
 }

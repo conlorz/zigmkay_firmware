@@ -240,7 +240,7 @@ pub fn main(init: std.process.Init) !void {
                 replacement = undefined;
             }
         }
-        if (live) {
+        if (live and !(if (editor) |*draft| draft.bootloaderBusy() else false)) {
             driver.poll(now);
             state = driver.session.state;
             for (driver.key_events[0..driver.key_event_count]) |event| log.record(event, @intCast(now));
@@ -323,14 +323,6 @@ pub fn main(init: std.process.Init) !void {
                     }
                     editor.?.firmware.observeRunning(if (driver.session.phase == .live and !driver.session.stale) driver.session.expected else null, driver.session.phase == .live and !driver.session.stale, now);
                 }
-                editor.?.bootloader_available = driver.connected and driver.session.bootloaderAvailable();
-                editor.?.bootloader_status = if (editor.?.bootloader_available) "Verified device supports explicit bootloader entry." else switch (driver.session.bootloader_status) {
-                    .requested => "Bootloader requested; waiting for acknowledgment.",
-                    .accepted => "Bootloader accepted; waiting for device removal and recovery volume.",
-                    .timed_out => "Bootloader request timed out; no retry. Use physical positions 0 + 4.",
-                    .rejected => "Bootloader request rejected. Use physical positions 0 + 4.",
-                    else => "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
-                };
                 editor.?.connection_text = if (driver.session.phase == .incompatible) "Device identity differs" else if (driver.status != .connected) "No device · draft only" else if (driver.session.phase != .live or driver.session.stale) "Device · verifying" else blk: {
                     const draft_identity = try @import("keymap-project").snapshot.identity(init.gpa, editor.?.model.current.snapshot, @import("keymap-project").profiles.board);
                     break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
@@ -343,9 +335,9 @@ pub fn main(init: std.process.Init) !void {
             editor.?.practice_live_stale = !live or stale or driver.session.phase != .live;
             editor.?.draw() catch |err| editor.?.report(err);
             if (editor.?.bootloader_requested) {
-                editor.?.bootloader_requested = false;
-                if (live) driver.enterBootloader(now) catch |err| editor.?.report(err) else editor.?.report(error.BootloaderUnavailable);
+                if (live) driver.disconnect(now);
             }
+            editor.?.pollBootloader(path);
             if (editor.?.should_close) editor_open = false;
         }
         const end_micros = try win.end(.{});

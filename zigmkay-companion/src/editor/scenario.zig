@@ -78,8 +78,10 @@ pub fn setup(editor: anytype, state: State) !void {
                 .firmware_stale => .stale,
                 .flash_transferred => .transferred,
                 .flash_reconnect_timeout => .reconnect_timeout,
+                .bootloader_fallback => .transferring,
                 else => .idle,
             };
+            if (state == .bootloader_fallback) editor.bootloader_status = "HID unavailable · enter BOOTSEL manually to continue flashing.";
             if (state == .firmware_failed) try editor.firmware.diagnostic.appendSlice(editor.gpa, "callback_0.zig:12:9: error: invalid callback argument type");
             editor.firmware.transferred = state == .flash_transferred or state == .flash_reconnect_timeout;
         },

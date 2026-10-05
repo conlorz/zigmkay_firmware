@@ -47,8 +47,9 @@ pub const Editor = struct {
     testing: Testing,
     firmware: Firmware,
     bootloader_requested: bool = false,
-    bootloader_available: bool = false,
-    bootloader_status: []const u8 = "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
+    try_hid_bootloader: bool = true,
+    bootloader: ?@import("../live_adapter.zig").BootloaderAttempt(@import("../main.zig").Native) = null,
+    bootloader_status: []const u8 = "",
     text: Text,
     practice: @import("practice.zig").Session = .{},
     practice_open: bool = false,
@@ -119,6 +120,7 @@ pub const Editor = struct {
         return self;
     }
     pub fn deinit(self: *Editor) void {
+        if (self.bootloader) |*attempt| attempt.driver.transport.close();
         if (self.external_job) |job| {
             job.deinit();
             self.gpa.destroy(job);
@@ -129,6 +131,29 @@ pub const Editor = struct {
         if (self.practice_labels) |*labels_cache| labels_cache.deinit();
         self.model.deinit();
         if (self.source) |*source| source.deinit();
+    }
+    pub fn bootloaderBusy(self: *const Editor) bool {
+        return self.bootloader_requested or if (self.bootloader) |*attempt| attempt.active() else false;
+    }
+    /// Called by both editor hosts only after an explicit successful Flash click.
+    pub fn pollBootloader(self: *Editor, path: ?[]const u8) void {
+        if (self.fixture) return;
+        if (self.bootloader_requested) {
+            self.bootloader_requested = false;
+            if (self.bootloader) |*old| old.driver.transport.close();
+            self.bootloader = null;
+            self.bootloader_status = "HID unavailable · enter BOOTSEL manually to continue flashing.";
+            if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return;
+            var seed: u32 = undefined;
+            self.io.randomSecure(std.mem.asBytes(&seed)) catch return;
+            self.bootloader = @import("../live_adapter.zig").BootloaderAttempt(@import("../main.zig").Native).init(.{ .io = self.io }, self.firmware.expected orelse return, seed, path) catch return;
+            const attempt = &self.bootloader.?;
+            attempt.start(attempt.driver.transport.now());
+        }
+        if (self.bootloader) |*attempt| {
+            attempt.poll(attempt.driver.transport.now());
+            self.bootloader_status = attempt.message();
+        }
     }
     pub fn syncRename(self: *Editor) void {
         self.rename_buffer = @splat(0);
@@ -400,8 +425,15 @@ pub const Editor = struct {
         if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) {
             if (!self.fixture) {
                 if (self.firmware.state == .built) {
-                    if (self.bootloader_available) self.bootloader_requested = true;
-                    self.firmware.flash(try self.model.id(), "", true) catch |err| self.report(err);
+                    self.firmware.flash(try self.model.id(), "", true) catch |err| {
+                        self.report(err);
+                        return;
+                    };
+                    if (self.bootloader) |*old| old.driver.transport.close();
+                    self.bootloader = null;
+                    self.diagnostic = @splat(0);
+                    self.bootloader_requested = self.try_hid_bootloader;
+                    self.bootloader_status = if (self.try_hid_bootloader) "Checking HID bootloader support…" else "Enter BOOTSEL manually to continue flashing.";
                 } else self.report(error.BuildFirmwareFirst);
             }
         }
@@ -418,6 +450,7 @@ pub const Editor = struct {
             .reconnect_timeout => "Flashed · reconnect keyboard",
         };
         if (firmware_status.len != 0) label(t, firmware_status, .{ .x = 1166, .y = 52, .w = 230, .h = 14 }, 10);
+        _ = dvui.checkbox(@src(), &self.try_hid_bootloader, "Enter bootloader via HID", options(t, .{ .x = 927, .y = 49, .w = 230, .h = 18 }, 10).override(.{ .tag = "firmware.bootloader.toggle", .padding = .{} }));
         if (button(t, if (self.light) "Dark" else "Light", "theme.toggle", .{ .x = 1410, .y = 16, .w = 100, .h = 36 })) self.light = !self.light;
     }
     fn sidebar(self: *Editor, t: Theme) !void {
@@ -753,7 +786,7 @@ pub const Editor = struct {
             const line = logs[start..];
             const end = std.mem.indexOfScalar(u8, line, '\n') orelse line.len;
             label(t, std.mem.trim(u8, line[0..end], " \r"), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
-        } else if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
+        } else if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12) else if (self.firmware.state == .transferring and self.bootloader_status.len != 0) label(t, self.bootloader_status, .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
     }
     pub fn openCallback(self: *Editor, index: usize) !void {
         const callback = self.model.document().callbacks[index];
@@ -1149,10 +1182,15 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             4 => try scenario.click(&window, "key.select.31", window.natural_scale, true),
             6 => try scenario.click(&window, "layer.duplicate.1", window.natural_scale, false),
             7 => try scenario.click(&window, "layer.duplicate.1", window.natural_scale, true),
+            8 => try scenario.click(&window, "firmware.bootloader.toggle", window.natural_scale, false),
+            9 => try scenario.click(&window, "firmware.bootloader.toggle", window.natural_scale, true),
+            10 => if (editor.try_hid_bootloader) return error.BootloaderToggleFailed,
             11 => try scenario.click(&window, "edit.undo", window.natural_scale, false),
             12 => try scenario.click(&window, "edit.undo", window.natural_scale, true),
             14 => try scenario.click(&window, "edit.redo", window.natural_scale, false),
             15 => try scenario.click(&window, "edit.redo", window.natural_scale, true),
+            16 => try scenario.click(&window, "firmware.bootloader.toggle", window.natural_scale, false),
+            17 => try scenario.click(&window, "firmware.bootloader.toggle", window.natural_scale, true),
             18 => try scenario.click(&window, "inspector.tap", window.natural_scale, false),
             19 => try scenario.click(&window, "inspector.tap", window.natural_scale, true),
             20 => editor.action_draft = forms.Draft.from(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 4 } } }),
@@ -1168,28 +1206,27 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             _ = try window.end(.{});
             break;
         }
-        if (!fixture and !flash_ui_check) {
-            if (editor.firmware.expectedIdentity()) |expected| {
-                if (reconnect == null) {
-                    if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
-                    var seed: u32 = undefined;
-                    try init.io.randomSecure(std.mem.asBytes(&seed));
-                    reconnect = try @import("../live_adapter.zig").Driver(@import("../main.zig").Native).init(.{ .io = init.io }, expected, seed, null);
-                }
-                const driver = &reconnect.?;
-                const now = driver.transport.now();
-                if (!std.meta.eql(expected, driver.session.expected)) {
-                    driver.disconnect(now);
-                    driver.session = try @import("companion-model").Session.init(expected);
-                    driver.retry_at = now;
-                }
-                driver.poll(now);
-                const coherent = driver.session.phase == .live and !driver.session.stale;
-                editor.firmware.observeRunning(if (coherent) driver.session.expected else null, coherent, now);
-                editor.bootloader_available = driver.connected and driver.session.bootloaderAvailable();
-                if (editor.bootloader_requested) {
-                    editor.bootloader_requested = false;
-                    driver.enterBootloader(now) catch |err| editor.report(err);
+        if (!fixture) {
+            if (editor.bootloader_requested) if (reconnect) |*driver| driver.disconnect(driver.transport.now());
+            editor.pollBootloader(null);
+            if (!flash_ui_check and !editor.bootloaderBusy()) {
+                if (editor.firmware.expectedIdentity()) |expected| {
+                    if (reconnect == null) {
+                        if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+                        var seed: u32 = undefined;
+                        try init.io.randomSecure(std.mem.asBytes(&seed));
+                        reconnect = try @import("../live_adapter.zig").Driver(@import("../main.zig").Native).init(.{ .io = init.io }, expected, seed, null);
+                    }
+                    const driver = &reconnect.?;
+                    const now = driver.transport.now();
+                    if (!std.meta.eql(expected, driver.session.expected)) {
+                        driver.disconnect(now);
+                        driver.session = try @import("companion-model").Session.init(expected);
+                        driver.retry_at = now;
+                    }
+                    driver.poll(now);
+                    const coherent = driver.session.phase == .live and !driver.session.stale;
+                    editor.firmware.observeRunning(if (coherent) driver.session.expected else null, coherent, now);
                 }
             }
         }
@@ -1216,6 +1253,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             std.log.info("Chord drag passed: Shift+Option to split key, Tap and Hold drops, preserved timing, undo/redo", .{});
         }
         if (interactions and frames == 26) {
+            if (!editor.try_hid_bootloader or editor.bootloader_requested or editor.bootloader != null) return error.BootloaderToggleFailed;
             if (editor.model.primary != 31 or editor.model.document().layers.len != 7 or editor.model.layer != 5) return error.InteractionScenarioFailed;
             if (editor.advanced or editor.model.action().? != .tap_only or editor.model.action().?.tap_only.key_press.?.tap_keycode != 4) return error.FormInteractionFailed;
             std.log.info("Semantic input scenario passed: thumb selection, isolated duplication, undo/redo and advanced form apply", .{});

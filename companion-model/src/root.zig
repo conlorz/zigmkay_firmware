@@ -113,6 +113,9 @@ pub const pending_capacity = 8;
 /// Pure bounded live-session reducer. All times are monotonic milliseconds.
 pub const Session = struct {
     expected: protocol.Identity,
+    /// Only an explicit bootloader-only connection may bind the running profile.
+    /// Overlay sessions must continue requiring the complete expected identity.
+    bootloader_identity_discovery: bool = false,
     state: State,
     phase: Phase = .disconnected,
     stale: bool = true,
@@ -167,6 +170,11 @@ pub const Session = struct {
     pub fn init(expected: protocol.Identity) protocol.ProtocolError!Session {
         try protocol.validateIdentity(expected);
         return .{ .expected = expected, .state = try State.init(expected.dimensions) };
+    }
+    pub fn initBootloader(expected_board: protocol.Identity) protocol.ProtocolError!Session {
+        var session = try init(expected_board);
+        session.bootloader_identity_discovery = true;
+        return session;
     }
     fn clearAssembly(self: *Session) void {
         self.identity_seen = 0;
@@ -317,12 +325,17 @@ pub const Session = struct {
                 self.identity_seen |= bit;
                 if (self.identity_seen != 7) return .{};
                 const identity = protocol.decodeIdentityBody(self.identity_body, self.token) catch |err| return self.malformed(now, err);
-                if (!@import("std").meta.eql(identity, self.expected)) {
+                const board_matches = @import("std").mem.eql(u8, &identity.board_id, &self.expected.board_id) and identity.dimensions.key_count == self.expected.dimensions.key_count;
+                if (!@import("std").meta.eql(identity, self.expected) and !(self.bootloader_identity_discovery and board_matches)) {
                     self.phase = .incompatible;
                     self.stale = true;
                     self.state.needs_resync = true;
                     self.clearAssembly();
                     return .{};
+                }
+                if (self.bootloader_identity_discovery) {
+                    self.expected = identity;
+                    self.state = State.init(identity.dimensions) catch |err| return self.malformed(now, err);
                 }
                 return self.startSnapshot(now, false, false);
             },
