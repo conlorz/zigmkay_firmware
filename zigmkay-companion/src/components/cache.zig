@@ -82,6 +82,17 @@ pub const LabelCache = struct {
         const idx = (layer * self.key_count + key_index) * 256 + @as(usize, mods.toByte());
         return &self.entries[idx];
     }
+    /// Resolve transparent keys against the layers actually enabled by the
+    /// processor, rather than treating every lower numbered layer as active.
+    pub fn lookupActive(self: *const LabelCache, layer: usize, key_index: usize, mods: Modifiers, active: u16) *const CachedKeyContent {
+        var selected = @min(layer, self.layer_count - 1);
+        while (true) {
+            const entry = self.lookup(selected, key_index, mods);
+            const inherited = if (entry.label) |label| std.mem.eql(u8, label, "---") else false;
+            if (selected == 0 or (active & (@as(u16, 1) << @intCast(selected)) != 0 and !inherited)) return entry;
+            selected -= 1;
+        }
+    }
 
     pub fn deinit(self: *LabelCache) void {
         self.arena.deinit();
@@ -494,4 +505,16 @@ test "fixture label cache rebuild replaces source while keeping physical metadat
         if (a.label != null and b.label != null and !std.mem.eql(u8, a.label.?, b.label.?)) changed += 1;
     }
     try testing.expect(changed > 0);
+}
+
+test "practice labels resolve transparent keys only through enabled layers" {
+    var labels = try LabelCache.init(testing.allocator, 3, 1);
+    defer labels.deinit();
+    labels.entries[0] = .{ .label = "base" };
+    labels.entries[256] = .{ .label = "navigation" };
+    labels.entries[512] = .{ .label = "---" };
+    try testing.expectEqualStrings("base", labels.lookupActive(2, 0, .{}, 0b101).label.?);
+    try testing.expectEqualStrings("navigation", labels.lookupActive(2, 0, .{}, 0b111).label.?);
+    labels.entries[512] = .{ .label = "" };
+    try testing.expectEqualStrings("", labels.lookupActive(2, 0, .{}, 0b111).label.?);
 }

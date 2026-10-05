@@ -111,13 +111,16 @@ pub fn drawKey(current_layer: usize, index: usize, x: f32, y: f32, size: f32, sc
 }
 
 pub fn drawPhysicalKey(current_layer: usize, index: usize, rect: dvui.Rect, rotation: f32, scale: f32, content: CachedKeyContent, active: bool) !void {
+    return drawGuidedKey(current_layer, index, rect, rotation, scale, content, active, false);
+}
+pub fn drawGuidedKey(current_layer: usize, index: usize, rect: dvui.Rect, rotation: f32, scale: f32, content: CachedKeyContent, active: bool, target: bool) !void {
     const size = @min(rect.w, rect.h);
 
     const layer_color = if (current_layer < layer_colors.len) layer_colors[current_layer] else dvui.Color.white;
     const muted_layer_color = getMutedColor(layer_color);
 
-    const bg_color = if (active) muted_layer_color else dvui.Color.black;
-    const border_color = if (active) layer_color else muted_layer_color;
+    const bg_color = if (active) muted_layer_color else if (target) dvui.Color{ .r = 58, .g = 47, .b = 22, .a = 255 } else dvui.Color.black;
+    const border_color = if (target) dvui.Color{ .r = 255, .g = 201, .b = 83, .a = 255 } else if (active) layer_color else muted_layer_color;
     const text_color = dvui.Color.white;
     const mod_color = dvui.Color{ .r = 0, .g = 255, .b = 255, .a = 255 }; // Cyan
 
@@ -128,7 +131,7 @@ pub fn drawPhysicalKey(current_layer: usize, index: usize, rect: dvui.Rect, rota
         .background = true,
         .color_fill = .{ .color = bg_color },
         .color_border = .{ .color = border_color },
-        .border = dvui.Rect.all(1.5 * scale),
+        .border = dvui.Rect.all((if (target) @as(f32, 3) else 1.5) * scale),
         .corners = .all(8 * scale),
     });
     defer b.deinit();

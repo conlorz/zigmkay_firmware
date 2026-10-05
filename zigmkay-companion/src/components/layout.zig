@@ -42,6 +42,9 @@ pub fn fit(items: []const model.physical_layout.Key, bounds: dvui.Rect) Fit {
     return .{ .scale = scale, .offset_x = bounds.x + (bounds.w - (max_x - min_x) * scale) / 2 - min_x * scale, .offset_y = bounds.y + (bounds.h - (max_y - min_y) * scale) / 2 - min_y * scale };
 }
 pub fn draw(label_cache: *const cache.LabelCache, layer: usize, pressed: *const [128]bool, mods: model.Modifiers, stale: bool, bounds: dvui.Rect) !void {
+    return drawGuided(label_cache, layer, pressed, mods, stale, bounds, null, null);
+}
+pub fn drawGuided(label_cache: *const cache.LabelCache, layer: usize, pressed: *const [128]bool, mods: model.Modifiers, stale: bool, bounds: dvui.Rect, targets: ?*const [128]bool, active_layers: ?u16) !void {
     const fitted = fit(&physical.keys, bounds);
     if (fitted.scale <= 0) return;
     for (physical.keys) |item| {
@@ -52,7 +55,8 @@ pub fn draw(label_cache: *const cache.LabelCache, layer: usize, pressed: *const 
         rect.y += padding;
         rect.w -= padding * 2;
         rect.h -= padding * 2;
-        try key.drawPhysicalKey(layer, placed.id, rect, placed.rotation, fitted.scale / 45, label_cache.lookup(layer, placed.key_index, mods).*, !stale and pressed[placed.key_index]);
+        const entry = if (active_layers) |active| label_cache.lookupActive(layer, placed.key_index, mods, active) else label_cache.lookup(layer, placed.key_index, mods);
+        try key.drawGuidedKey(layer, placed.id, rect, placed.rotation, fitted.scale / 45, entry.*, !stale and pressed[placed.key_index], if (targets) |hints| hints[placed.key_index] else false);
     }
 }
 test "shared physical identity thumbs and resized fitted bounds" {
