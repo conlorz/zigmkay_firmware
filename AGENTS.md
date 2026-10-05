@@ -7,9 +7,12 @@ in Zig: production code, build logic, utilities, generators, and tests.
 - Other languages may be introduced or used for new implementation only with
   explicit user permission. Existing imported C interoperability bridges and
   upstream dependencies may be retained; do not expand them without permission.
-- This is a local fork. Never push changes, publish branches, or create pull
-  requests. Make frequent, focused local commits inside `zigmkay_firmware` so
-  mistakes can be rolled back easily.
+- This fork uses `origin` at `git@github.com:conlorz/zigmkay_firmware.git`
+  for fetches and pushes. Keep `upstream` at
+  `git@github.com:zigmkay/zigmkay_firmware.git` for reference; upstream pushes
+  remain disabled. Push only to the fork, never upstream. Do not create pull
+  requests unless the user asks. Make frequent, focused commits inside
+  `zigmkay_firmware` so mistakes can be rolled back easily.
 - Keep first-party packages inside the monorepo. Pin external dependencies in
   `build.zig.zon` with immutable revisions and hashes. Do not recreate sibling
   clones or branch worktrees unless the user asks for them.
