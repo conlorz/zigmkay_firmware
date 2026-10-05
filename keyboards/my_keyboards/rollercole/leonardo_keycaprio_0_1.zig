@@ -45,8 +45,7 @@ pub const clacky_pin_cols = [_]rp2xxx.gpio.Pin{ p.col0, p.col1, p.col2, p.col3, 
 pub const clacky_pin_rows = [_]rp2xxx.gpio.Pin{ p.row0, p.row1, p.row2, p.row3, p.row4, p.row5 };
 
 pub fn main() !void {
-    _ = pin_config.apply();
-    blink_led(1, 300); // Show the user that the keyboard has actually booted up.
+    zigmkay.board_signals.start(pin_config, p.led, time.sleep_us, 1, 300); // Show the user that the keyboard has actually booted up.
 
     // Mandatory
     comptime var config = zigmkay.loops.GetUnibodyConfigType(&rollercole_shared_keymap.dimensions){
@@ -68,18 +67,6 @@ pub fn main() !void {
     };
 
     // Optionals
-    comptime var runner = config.build();
-    runner.run_unibody() catch {
-        blink_led(10000000, 500); // in case of an error, let the keyboard start blinking
-    };
-}
-
-pub fn blink_led(blink_count: u32, interval_ms: u32) void {
-    var counter = blink_count;
-    while (counter > 0) : (counter -= 1) {
-        p.led.put(1);
-        time.sleep_us(interval_ms * 1000);
-        p.led.put(0);
-        time.sleep_us(interval_ms * 1000);
-    }
+    const runner = comptime config.build();
+    zigmkay.board_signals.runUnibody(runner, p.led, time.sleep_us);
 }

@@ -186,11 +186,9 @@ pub fn main() !void {
         },
     };
 
-    comptime var runner = config.build();
+    const runner = comptime config.build();
 
-    runner.run_unibody() catch {
-        blink_led(10000000, 500); // in case of an error, let the keyboard start blinking
-    };
+    zigmkay.board_signals.runUnibody(runner, p.led, time.sleep_us);
 }
 
 // =============================================================================
@@ -205,11 +203,5 @@ pub fn main() !void {
 ///   blink_count: Number of times to blink
 ///   interval_ms: Milliseconds between on/off cycles
 pub fn blink_led(blink_count: u32, interval_ms: u32) void {
-    var counter = blink_count;
-    while (counter > 0) : (counter -= 1) {
-        p.led.put(1); // LED on
-        time.sleep_us(interval_ms * 1000); // Wait
-        p.led.put(0); // LED off
-        time.sleep_us(interval_ms * 1000); // Wait
-    }
+    zigmkay.board_signals.blink(p.led, time.sleep_us, blink_count, interval_ms);
 }

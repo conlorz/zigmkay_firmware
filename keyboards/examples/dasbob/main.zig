@@ -143,11 +143,5 @@ pub fn init_pio_uart() zigmkay.split_communication.UartClient {
 }
 
 pub fn blink_led(blink_count: u32, interval_ms: u32) void {
-    var counter = blink_count;
-    while (counter > 0) : (counter -= 1) {
-        p.led.put(1);
-        time.sleep_us(interval_ms * 1000);
-        p.led.put(0);
-        time.sleep_us(interval_ms * 1000);
-    }
+    zigmkay.board_signals.blink(p.led, time.sleep_us, blink_count, interval_ms);
 }

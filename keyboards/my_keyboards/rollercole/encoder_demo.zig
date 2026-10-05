@@ -61,8 +61,7 @@ var encoder_pin_configs = [_]encoder_scanning.EncoderPinConfig{encoder_scanning.
     .action_index_ccw = 1,
 }};
 pub fn run() !void {
-    _ = pin_config.apply();
-    blink_led(1, 300); // Show the user that the keyboard has actually booted up.
+    zigmkay.board_signals.start(pin_config, p.led, time.sleep_us, 1, 300); // Show the user that the keyboard has actually booted up.
 
     // Mandatory
     comptime var config = zigmkay.loops.GetUnibodyConfigType(&dimensions){
@@ -82,24 +81,12 @@ pub fn run() !void {
         },
     };
 
-    comptime var runner = config.build();
-    runner.run_unibody() catch {
-        blink_led(10000000, 500); // in case of an error, let the keyboard start blinking
-    };
+    const runner = comptime config.build();
+    zigmkay.board_signals.runUnibody(runner, p.led, time.sleep_us);
 }
 
 fn get_current_time() core.TimeSinceBoot {
     return core.TimeSinceBoot{
         .time_since_boot_us = time.get_time_since_boot().to_us(),
     };
-}
-
-pub fn blink_led(blink_count: u32, interval_ms: u32) void {
-    var counter = blink_count;
-    while (counter > 0) : (counter -= 1) {
-        p.led.put(1);
-        time.sleep_us(interval_ms * 1000);
-        p.led.put(0);
-        time.sleep_us(interval_ms * 1000);
-    }
 }
