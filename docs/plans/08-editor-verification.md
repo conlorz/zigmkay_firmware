@@ -11,6 +11,13 @@ Builds wait during transfer, HID bootloader entry and reconnect verification.
 Changed/missing external callback files must be refreshed/reviewed first. A
 failed build is not retried automatically until another change; Build remains
 available for an explicit retry. Automatic builds never initiate flashing.
+An explicit **Flash** click rebuilds a missing/stale artifact immediately or
+waits for the already running matching build, then transfers the verified result.
+The status reads **Building · Flash queued…** while waiting. The click captures
+the draft digest and HID checkbox choice. Editing the draft again, build failure,
+cancellation or unresolved callback-source changes discards the queued transfer;
+click Flash again after resolving the change. Artifact/input freshness is checked
+again before transfer; outdated or modified artifacts are rebuilt rather than used.
 Compiler diagnostics retain source paths and line numbers. Cancel ends the
 bounded build job; a failed or cancelled build does not restore an older
 artifact as current. Editing the draft or compiler inputs invalidates its build.

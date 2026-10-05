@@ -1,5 +1,15 @@
 # Central milestone tracker
 
+## Flash waits for a current build (2026-10-05)
+
+The user requested rebuilding when Flash encounters an old build, unless a build
+is already running. Flash now immediately builds missing/stale results, reuses a
+running matching build and queues transfer of its verified result. Draft changes,
+failed/cancelled builds and callback-review problems discard the queued transfer.
+Freshness failures at transfer time rebuild the artifact. The queued request
+captures the HID checkbox choice and is consumed once. Pure gate tests and the
+real offline changed-layout UF2 test pass; no hardware session was started.
+
 ## Automatic firmware builds after layout edits (2026-10-05)
 
 User-requested layout changes now schedule a firmware build after a 750 ms
