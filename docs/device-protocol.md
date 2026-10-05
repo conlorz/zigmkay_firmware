@@ -214,3 +214,36 @@ Literal Q press is `A7 01 03 04 00 00 00 00 01 00 00 00`; Q release changes sequ
 to 1 and pressed to 0. Existing eight-report `tests/fixtures/lk7_trace.bin` and
 independent golden-byte tests remain authoritative and unchanged. V1 first event
 sets the start sequence; any duplicate/gap permanently requires a new State.
+
+## Plan 08 capability and bootloader extension
+
+The optional v2 extension keeps the existing profile identity and report framing.
+All four messages use a nonzero current session, a nonzero correlated request,
+sequence zero, and strict zero padding:
+
+| Kind | Direction | Payload |
+| --- | --- | --- |
+| 18 CapabilitiesRequest | host to device | empty |
+| 19 Capabilities | device to host | little-endian u16; bit 0 supports bootloader entry |
+| 20 EnterBootloader | host to device | empty |
+| 21 BootloaderResult | device to host | u8: 1 accepted, 2 unsupported, 3 duplicate, 4 busy |
+
+The companion queries capabilities once after identity and coherent snapshot
+verification. Older firmware can ignore the query; its 500 ms timeout leaves
+physical recovery available. Unknown capability bits do not grant permission.
+Only an explicit user action sends EnterBootloader. Replies must match both
+session and request. No timeout, reconnect, startup or build resends this action.
+Session isolation is not authentication.
+
+Firmware receive callbacks only fill the bounded control mailbox. The processor
+boundary handles acceptance and rejects stale, malformed and duplicate requests.
+The main loop allows 20 ms USB drain after the acceptance report enters the
+endpoint, then invokes the existing ROM boot path once. If endpoint backpressure
+prevents acceptance for 100 ms, it abandons the operation. Host acknowledgment
+and HID removal do not prove a recovery volume exists or uniquely identify LK7;
+the flasher still validates the explicitly selected RP2 volume.
+
+Timed capture retains its existing record framing and adds reducer-input kinds
+6 (capability query) and 7 (explicit bootloader action), both with empty data.
+Existing captures replay unchanged; older replay tools reject the new kinds.
+Replay evaluates pure session actions and never dispatches HID or ROM calls.

@@ -1,6 +1,13 @@
 # Central milestone tracker
 
-## Recovery, G04, G06 and full G07 accepted
+## Recovery, G04, G06 and full G07 accepted; 08 integrated offline
+
+Step 08 implementation was authorized on 2026-10-05 from clean `3543b42`.
+Backend `0686909`, bootloader `888ed37` and native workflow `77a3dc4` are locally
+committed. Full offline checks pass, including ten boards and LK7 artifact parity.
+See the [08 handover](handovers/08-build-flash.md) for frozen APIs and evidence.
+No worker remains active. G08 still requires new visual approval and a separately
+authorized hardware session; no BOOTSEL, transfer or typing result is claimed.
 
 07 implementation authorized on 2026-10-04, starting from clean planning HEAD
 `eef2c45`. G07-export is frozen at `016cf7d`: versioned schema, lossless
@@ -28,8 +35,9 @@ editor, full existing action set, named layers and bulk editing, offline draft
 runner with EurKEY text, attached externally edited Zig callbacks. See the
 [decision](06-editor-architecture-decision.md) and
 [requirements](06-editor-requirements.md). That decision accepted planning only;
-07 implementation is complete under the separate authorization above. No 08
-implementation or new hardware session has started.
+07 implementation is complete under the separate authorization above. Step 08 now
+has the separate implementation authorization recorded above; no new hardware
+session has started.
 
 User-revised order: **04 → 06 → 07 → 08 → 05 → 09**. Build shared profile
 selection in 07/08; use existing profiles and representative fixtures for editor
@@ -124,7 +132,7 @@ remains none. Exact active ownership is recorded below.
 | 04 | [Live acceptance](04-lk7-hardware-acceptance.md) / [handover](handovers/04-hardware.md) | Accepted | Plan 11 baseline plus focused user session | All required baseline/highlight/snapshot/recovery checks passed; limits in handover | Coordinator with user / `0aa2ca7` implementation |
 | 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Accepted planning | G04; 06A already accepted | Consume final 06B; implementation checks assigned to 07 | Coordinator / final decision linked above |
 | 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Accepted | G04 and G06 | Frozen contracts and approved native editor; future 08 integration | Coordinator / 07A `016cf7d`, 07B `7168c13` |
-| 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Planned | 08A: G06, G07-export; 08B: G07 | Reuse recovery backend, integrate editor build/flash and manually accept | Unassigned / none |
+| 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Integrated offline | 08A: G06, G07-export; 08B: G07 | Review new captures; separately authorize small edited-profile hardware acceptance | Coordinator / `77a3dc4` |
 | 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
 | 09 | [Expansion](09-platform-and-board-expansion.md) / [handover](handovers/09-expansion.md) | Planned | 09A may start now; target work needs selection and accepted baseline | Capability inventory and separately scoped target plans | Unassigned / none |
 
@@ -136,8 +144,8 @@ remains none. Exact active ownership is recorded below.
 | 06B | Accepted | Architecture decision; revised 07/08 plans | Source-backed native decision and explicit user feature answers; planning only |
 | 07A | Accepted | Frozen model/export/source/selector/runner/jobs contract 1 | `016cf7d`; full offline matrix/parity and emitted traces; maintenance only |
 | 07B | Accepted | Native editor, complete workflow and approved dark/light captures | `7168c13`; full checks, 40 tests, 64 captures and approved goldens; GUI lease released for future 08B |
-| 08A | Planned | Build/flasher backend and dedicated fake tests | G06/G07-export; no GUI/hardware; partial backend only |
-| 08B | Planned | Build/flash GUI after ownership transfer | G07 and accepted 08A; offline integration then manual acceptance |
+| 08A | Accepted offline | Immutable build/artifact manifests and reused flasher/hash boundary | `0686909`, corrections in `77a3dc4`; seven jobs/backend tests and full checks pass |
+| 08B | Integrated offline | Native selected-profile build/explicit transfer/reconnect/bootloader integration | `77a3dc4`; full checks and 88 captures; visual/manual G08 pending |
 | 09A | Accepted | Platform/board capability documents | `99c1dbe`; documentation only; refresh after G04/G05, no support claims |
 | 09B | Deferred | A selected target's new plan, then assigned source | User selects target/environment; own implementation and hardware gates |
 

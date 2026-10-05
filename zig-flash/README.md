@@ -18,6 +18,8 @@ coverage. Unsupported/invalid UF2s fail before waiting for BOOTSEL. The exact
 validated bytes are retained while waiting. Progress distinguishes volume
 detection, opening, writing and synchronization; a stall at opening is a
 filesystem operation rather than device discovery.
+Editor transfers add `--expected-sha256 <64 hex digits>` to enforce the frozen
+manifest hash on the exact bytes read by the flasher, before device discovery.
 macOS uses `/Volumes/<label>`; Linux uses `/run/media/$USER/<label>`;
 Windows queries volume labels through native Win32 APIs. No PowerShell is used.
 Device operations require an explicit hardware task from the user.

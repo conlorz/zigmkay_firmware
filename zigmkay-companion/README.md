@@ -17,11 +17,22 @@ The separate native LK7 editor is available with `mise //zigmkay-companion:edito
 named layers, bulk edits, combos, undo/redo, atomic project persistence, immutable
 callback snapshots, deterministic export and an explicit isolated native draft
 test runner. Only LK7 geometry is selected in this milestone. Draft/export IDs
-remain separate from running firmware; Build/Flash are reserved for plan 08.
+remain separate from running firmware. Build captures the selected draft into an
+immutable export and builds an identified LK7 UF2 with Zig 0.16.0. Flash opens
+the explicit transfer workflow with artifact hash, selected absolute recovery
+volume and confirmation. No build or startup performs a device operation.
+See [plan 08 verification](../docs/plans/08-editor-verification.md).
+
+With the live overlay, compatible firmware advertises explicit Enter bootloader.
+After transfer the overlay negotiates the frozen profile identity and displays
+its labels. Transfer, coherent running identity and user-confirmed typing are
+recorded separately. Physical boot positions 0 + 4 remain available. The exact
+G04 accepted rollback is retained when present in the local cache; later
+artifacts become rollback candidates only after typing confirmation.
 
 Follow [the self-verification guide](../docs/plans/07-editor-verification.md)
 for edit/save/reopen/export/testing and native macOS probes. Run
-`mise //zigmkay-companion:editor-check` for 64 deterministic screenshots plus
+`mise //zigmkay-companion:editor-check` for 88 deterministic screenshots plus
 geometry/interaction checks. Capture artifacts are under root
 `.zig-cache/editor-acceptance`. `editor-golden-check` reads explicitly approved
 baselines without updating them. Both screenshot commands remain offline and

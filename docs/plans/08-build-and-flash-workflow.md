@@ -1,6 +1,8 @@
 # 08: Companion build and deliberate firmware flashing
 
-Status: planned. 08A backend depends on accepted 06 and 07A export contract;
+Status: offline backend and native editor integration implemented on 2026-10-05;
+separate hardware acceptance remains pending. See the [handover](handovers/08-build-flash.md)
+and [verification guide](08-editor-verification.md). 08A backend depends on accepted 06 and 07A export contract;
 08B GUI integration depends on full 07 and accepted 08A. Manual flashing in 04/05
 remains sufficient until this integration is implemented. Plan 05 now follows
 this milestone: the user creates their profile through the finished editor.
