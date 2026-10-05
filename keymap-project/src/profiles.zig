@@ -6,8 +6,8 @@ const physical = @import("lk7-physical");
 pub const registered_source = @embedFile("rollercole-source");
 pub const registered_binding = "rollercole_v1";
 pub const registered_entry = "rollercole.zig";
-pub const Profile = enum { danish, qwerty, eurkey };
-pub const names = [_][]const u8{ "Danish Rollercole", "QWERTY", "EurKEY draft" };
+pub const Profile = enum { danish, qwerty, eurkey, eurmac };
+pub const names = [_][]const u8{ "Danish Rollercole", "QWERTY", "EurKEY draft", "EurKEY Next Mac candidate" };
 pub const key_ids: [34][]const u8 = blk: {
     var ids: [34][]const u8 = undefined;
     for (physical.keys, 0..) |key, index| ids[index] = std.fmt.comptimePrint("lk7_{x:0>4}", .{key.id});
@@ -19,7 +19,11 @@ pub fn create(gpa: std.mem.Allocator, profile: Profile) !p.snapshot.Loaded {
     var arena: std.heap.ArenaAllocator = .init(gpa);
     defer arena.deinit();
     const a = arena.allocator();
-    const layer_count: usize = if (profile == .danish) original.keymap.len else 6;
+    const layer_count: usize = switch (profile) {
+        .danish => original.keymap.len,
+        .eurmac => 4,
+        else => 6,
+    };
     const layers = try a.alloc(p.Layer, layer_count);
     const layer_names = [_][]const u8{ "Base", "Navigation", "Numbers", "Symbols", "Gaming", "Media" };
     for (layers, 0..) |*layer, index| layer.* = .{ .id = @intCast(index + 1), .name = layer_names[index], .actions = try a.alloc(?p.Action, 34) };
@@ -27,6 +31,7 @@ pub fn create(gpa: std.mem.Allocator, profile: Profile) !p.snapshot.Loaded {
         .danish => .{ 'd', 'a', 'n', 'i', 's', 'h', 0, 0 },
         .qwerty => .{ 'q', 'w', 'e', 'r', 't', 'y', 0, 0 },
         .eurkey => .{ 'e', 'u', 'r', 'k', 'e', 'y', 0, 0 },
+        .eurmac => .{ 'e', 'u', 'r', 'm', 'a', 'c', 0, 0 },
     }, .name = names[@intFromEnum(profile)], .physical_layout = board.physical_layout, .key_ids = board.key_ids, .layers = layers };
     var sources: []const p.snapshot.SourceBytes = &.{};
     if (profile == .danish) {
@@ -47,6 +52,10 @@ pub fn create(gpa: std.mem.Allocator, profile: Profile) !p.snapshot.Loaded {
         const bytes = try a.alloc(p.snapshot.SourceBytes, 1);
         bytes[0] = .{ .callback_index = 0, .path = registered_entry, .bytes = registered_source };
         sources = bytes;
+    } else if (profile == .eurmac) {
+        @import("eurmac.zig").populate(layers);
+        // Deliberate recovery chord, separate from ordinary letters and thumbs.
+        doc.combos = &.{.{ .key_ids = .{ key_ids[0], key_ids[4] }, .layer_id = 1, .timeout = .{ .ms = 40 }, .action = .{ .tap_only = .{ .key_press = .{ .tap_keycode = 252 } } } }};
     } else {
         const usages = [_]u8{ 20, 26, 8, 21, 23, 28, 24, 12, 18, 19, 4, 22, 7, 9, 10, 11, 13, 14, 15, 51, 29, 27, 6, 25, 5, 17, 16, 54, 55, 56, 44, 40, 42, 43 };
         for (layers, 0..) |layer, li| for (@constCast(layer.actions), 0..) |*action, ki| {
