@@ -23,12 +23,17 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
     if (self.bootloader_available and dvui.button(@src(), "Enter bootloader", .{}, .{ .tag = "firmware.bootloader" })) {
         if (!self.fixture) self.bootloader_requested = true;
     }
-    dvui.label(@src(), "Select the absolute mounted recovery volume path. RP2040 metadata cannot prove a unique LK7 serial.", .{}, .{});
-    const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.recovery_volume } }, .{ .expand = .horizontal, .tag = "firmware.volume" });
-    entry.deinit();
-    _ = dvui.checkbox(@src(), &self.flash_confirmed, "I selected the intended LK7 in recovery mode and authorize transferring this artifact.", .{});
-    if (self.firmware.state == .built and self.flash_confirmed and dvui.button(@src(), "Transfer firmware to selected volume", .{}, .{ .tag = "firmware.transfer" })) {
-        if (!self.fixture) self.firmware.flash(try self.model.id(), std.mem.sliceTo(&self.recovery_volume, 0), true) catch |err| self.report(err);
+    dvui.label(@src(), "The RP2040 recovery drive is detected automatically. Flash waits up to 30 seconds for it to mount.", .{}, .{});
+    dvui.label(@src(), "If several recovery drives are connected, disconnect the others or use the advanced override.", .{}, .{});
+    if (dvui.checkbox(@src(), &self.recovery_manual, "Advanced: choose a recovery drive manually", .{})) self.flash_confirmed = false;
+    if (self.recovery_manual) {
+        const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.recovery_volume }, .placeholder = "Absolute recovery drive path" }, .{ .expand = .horizontal, .tag = "firmware.volume" });
+        entry.deinit();
+    }
+    _ = dvui.checkbox(@src(), &self.flash_confirmed, "My LK7 is in recovery mode and ready to flash.", .{});
+    if (self.firmware.state == .built and self.flash_confirmed and dvui.button(@src(), "Flash firmware", .{}, .{ .tag = "firmware.transfer" })) {
+        const target = if (self.recovery_manual) std.mem.sliceTo(&self.recovery_volume, 0) else "";
+        if (!self.fixture) self.firmware.flash(try self.model.id(), target, true) catch |err| self.report(err);
         self.flash_confirmed = false;
     }
     dvui.label(@src(), "Transfer: {} · Running identity verified: {} · Typing accepted: {}", .{ self.firmware.transferred, self.firmware.running_verified, self.firmware.typing_verified }, .{});

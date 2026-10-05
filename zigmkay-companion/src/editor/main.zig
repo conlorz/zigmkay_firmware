@@ -50,6 +50,7 @@ pub const Editor = struct {
     bootloader_available: bool = false,
     bootloader_status: []const u8 = "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
     recovery_volume: [1024]u8 = @splat(0),
+    recovery_manual: bool = false,
     flash_confirmed: bool = false,
     text: Text,
     test_start: i64 = 0,

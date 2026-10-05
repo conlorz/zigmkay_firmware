@@ -5,6 +5,11 @@ const jobs = @import("companion-jobs");
 const backend = jobs.firmware;
 const toolchain = @import("editor-toolchain");
 pub const State = enum { idle, building, built, stale, failed, cancelled, transferring, transferred, awaiting_reconnect, verified, reconnect_timeout };
+pub fn recoveryTarget(override: []const u8) ![]const u8 {
+    if (override.len == 0) return "RPI-RP2";
+    if (!std.fs.path.isAbsolute(override) or std.mem.indexOfScalar(u8, override, 0) != null) return error.AbsoluteRecoveryVolumeRequired;
+    return override;
+}
 pub const Controller = struct {
     gpa: std.mem.Allocator,
     io: std.Io,
@@ -208,7 +213,7 @@ pub const Controller = struct {
     pub fn flash(self: *Controller, current: [32]u8, volume: []const u8, confirmed: bool) !void {
         if (!confirmed) return error.FlashConfirmationRequired;
         if (self.state != .built or self.manifest == null) return error.NoCurrentArtifact;
-        if (!std.fs.path.isAbsolute(volume) or std.mem.indexOfScalar(u8, volume, 0) != null) return error.AbsoluteRecoveryVolumeRequired;
+        const target = try recoveryTarget(volume);
         const bytes = try std.Io.Dir.cwd().readFileAlloc(self.io, self.artifact_path.?, self.gpa, .limited(16 * 1024 * 1024));
         defer self.gpa.free(bytes);
         self.manifest.?.verify(self.gpa, try self.currentInputs(current), bytes) catch |err| {
@@ -220,7 +225,7 @@ pub const Controller = struct {
         const job = try self.gpa.create(jobs.Job);
         errdefer self.gpa.destroy(job);
         const expected_hash = std.fmt.bytesToHex(self.manifest.?.uf2_hash, .lower);
-        job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ toolchain.flash_exe, self.artifact_path.?, volume, "--expected-sha256", &expected_hash }, .cwd = self.root, .snapshot_id = self.snapshot_id, .timeout_ms = 60_000 });
+        job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ toolchain.flash_exe, self.artifact_path.?, target, "--expected-sha256", &expected_hash }, .cwd = self.root, .snapshot_id = self.snapshot_id, .timeout_ms = 60_000 });
         errdefer job.deinit();
         try job.start();
         self.job = job;
@@ -269,6 +274,12 @@ test "firmware startup cancellation and unconfirmed flashing remain hardware fre
     controller.cancel();
     try std.testing.expectEqual(State.cancelled, controller.state);
     try std.testing.expect(controller.artifact_path == null and !controller.transferred);
+}
+test "automatic recovery uses flasher discovery and manual overrides stay literal" {
+    try std.testing.expectEqualStrings("RPI-RP2", try recoveryTarget(""));
+    try std.testing.expectEqualStrings("/Volumes/RPI-RP2 1", try recoveryTarget("/Volumes/RPI-RP2 1"));
+    try std.testing.expectError(error.AbsoluteRecoveryVolumeRequired, recoveryTarget("../other"));
+    try std.testing.expectError(error.AbsoluteRecoveryVolumeRequired, recoveryTarget("/Volumes/RPI-RP2\x00other"));
 }
 
 test "selected frozen LK7 draft builds UF2 and rejects edits without flashing" {
