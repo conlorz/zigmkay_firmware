@@ -47,6 +47,7 @@ pub const Editor = struct {
     testing: Testing,
     firmware: Firmware,
     auto_build: @import("auto_build.zig").Scheduler = .{},
+    pending_flash: @import("pending_flash.zig").Gate = .{},
     bootloader_requested: bool = false,
     try_hid_bootloader: bool = true,
     bootloader: ?@import("../live_adapter.zig").BootloaderAttempt(@import("../main.zig").Native) = null,
@@ -136,6 +137,37 @@ pub const Editor = struct {
     }
     pub fn bootloaderBusy(self: *const Editor) bool {
         return self.bootloader_requested or if (self.bootloader) |*attempt| attempt.active() else false;
+    }
+    fn requestFlash(self: *Editor) !void {
+        if (self.fixture) return;
+        if (self.firmware.state == .transferring or self.firmware.state == .transferred or self.firmware.state == .awaiting_reconnect or self.bootloaderBusy()) return error.TransferInProgress;
+        if (self.callback_state == .changed or self.callback_state == .missing or self.callback_state == .failed) return error.RefreshCallbackSourcesFirst;
+        const current = try self.model.id();
+        self.firmware.poll(current);
+        if (self.firmware.state != .built and self.firmware.state != .building) {
+            try self.firmware.build(self.model.current.snapshot);
+            self.auto_build.manual(current);
+        }
+        self.pending_flash.request(current, self.try_hid_bootloader);
+        self.auto_build.manual(current);
+        try self.finishPendingFlash(current);
+    }
+    fn finishPendingFlash(self: *Editor, current: [32]u8) !void {
+        if (!self.pending_flash.take(current, self.firmware.state == .built, self.firmware.state == .failed or self.firmware.state == .cancelled or self.callback_state == .changed or self.callback_state == .missing or self.callback_state == .failed)) return;
+        self.firmware.flash(current, "", true) catch |err| {
+            if (err == error.StaleBuild or err == error.ArtifactChanged or err == error.FileNotFound or err == error.NoCurrentArtifact) {
+                try self.firmware.build(self.model.current.snapshot);
+                self.auto_build.manual(current);
+                self.pending_flash.request(current, self.pending_flash.hid);
+                return;
+            }
+            return err;
+        };
+        if (self.bootloader) |*old| old.driver.transport.close();
+        self.bootloader = null;
+        self.diagnostic = @splat(0);
+        self.bootloader_requested = self.pending_flash.hid;
+        self.bootloader_status = if (self.pending_flash.hid) "Checking HID bootloader support…" else "Enter BOOTSEL manually to continue flashing.";
     }
     /// Called by both editor hosts only after an explicit successful Flash click.
     pub fn pollBootloader(self: *Editor, path: ?[]const u8) void {
@@ -325,6 +357,7 @@ pub const Editor = struct {
         self.testing.poll(current_id);
         self.firmware.poll(current_id);
         if (self.callback_state == .changed or self.callback_state == .missing) self.firmware.invalidateExternalSources();
+        if (!self.fixture) self.finishPendingFlash(current_id) catch |err| self.report(err);
         if (!self.fixture) {
             self.auto_build.observe(current_id, @intCast(now));
             const blocked = switch (self.firmware.state) {
@@ -440,23 +473,11 @@ pub const Editor = struct {
             }
         }
         if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) {
-            if (!self.fixture) {
-                if (self.firmware.state == .built) {
-                    self.firmware.flash(try self.model.id(), "", true) catch |err| {
-                        self.report(err);
-                        return;
-                    };
-                    if (self.bootloader) |*old| old.driver.transport.close();
-                    self.bootloader = null;
-                    self.diagnostic = @splat(0);
-                    self.bootloader_requested = self.try_hid_bootloader;
-                    self.bootloader_status = if (self.try_hid_bootloader) "Checking HID bootloader support…" else "Enter BOOTSEL manually to continue flashing.";
-                } else self.report(error.BuildFirmwareFirst);
-            }
+            self.requestFlash() catch |err| self.report(err);
         }
         const firmware_status: []const u8 = switch (self.firmware.state) {
             .idle => "",
-            .building => "Building…",
+            .building => if (self.pending_flash.id != null) "Building · Flash queued…" else "Building…",
             .built => "Ready to flash",
             .transferring => "Flashing…",
             .transferred, .awaiting_reconnect => "Flashed · reconnecting…",

@@ -311,6 +311,9 @@ test "settled layout change builds frozen LK7 UF2 and rejects later edits withou
     try std.testing.expect(!scheduler.take(750, false));
     try std.testing.expect(scheduler.take(751, false));
     try controller.build(model.current.snapshot);
+    var flash_gate = @import("pending_flash.zig").Gate{};
+    flash_gate.request(current, false);
+    try std.testing.expect(!flash_gate.take(current, controller.state == .built, false));
     const deadline = std.Io.Clock.awake.now(io).toMilliseconds() + 120_000;
     while (controller.state == .building) {
         controller.poll(current);
@@ -319,6 +322,8 @@ test "settled layout change builds frozen LK7 UF2 and rejects later edits withou
     }
     if (controller.state != .built) std.debug.print("Firmware build diagnostic: {s}\n", .{controller.diagnostic.items});
     try std.testing.expectEqual(State.built, controller.state);
+    try std.testing.expect(flash_gate.take(current, controller.state == .built, false));
+    try std.testing.expect(!flash_gate.take(current, true, false));
     try std.testing.expect(controller.manifest != null and !controller.transferred);
     try std.testing.expect(controller.expectedIdentity() == null);
     try std.testing.expectError(error.AbsoluteRecoveryVolumeRequired, controller.flash(current, "RPI-RP2", true));
