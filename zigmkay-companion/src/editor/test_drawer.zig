@@ -11,9 +11,9 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
     if (self.text.native_session) |*session| dvui.label(@src(), "Actual source: {s} · EurKEY selected: {}", .{ session.source.id(), session.eurkey() }, .{});
     if (self.testing.last) |output| {
         dvui.label(@src(), "Sequence {d} · layers {x} · highest {d} · modifiers {x} · commands {d} · events {d} · signals {d}", .{ output.sequence, output.active_layers, output.highest_layer, output.modifiers, output.commands.len, output.events.len, output.signals.len }, .{});
-        for (output.commands) |command| dvui.label(@src(), "Command: {any}", .{command}, .{});
-        for (output.events) |event| dvui.label(@src(), "Event: {any}", .{event}, .{});
-        for (output.signals) |signal| dvui.label(@src(), "Signal: {any}", .{signal}, .{});
+        for (output.commands, 0..) |command, i| dvui.label(@src(), "Command: {any}", .{command}, .{ .id_extra = i });
+        for (output.events, 0..) |event, i| dvui.label(@src(), "Event: {any}", .{event}, .{ .id_extra = i });
+        for (output.signals, 0..) |signal, i| dvui.label(@src(), "Signal: {any}", .{signal}, .{ .id_extra = i });
     }
     if (self.testing.state == .running) {
         if (dvui.button(@src(), "Selected key down", .{}, .{})) try self.testing.input(.{ .key_down = @intCast(self.model.primary) }, self.testTime());

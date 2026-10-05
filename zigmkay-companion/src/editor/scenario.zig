@@ -28,6 +28,24 @@ pub fn setup(editor: anytype, state: State) !void {
         .callback_changed => editor.callback_state = .changed,
         .test_preparing => editor.testing.state = .preparing,
         .test_running => editor.testing.state = .running,
+        .test_output => {
+            const wire = @import("runner-protocol");
+            const output = wire.Output{
+                .sequence = 1,
+                .snapshot_id = editor.testing.snapshot_id,
+                .state = .processed,
+                .commands = &.{ .{ .KeyCodePress = 4 }, .{ .KeyCodeRelease = 4 } },
+                .events = &.{ .Tick, .Tick },
+                .signals = &.{ .{ .kind = .overlay_toggle, .pressed = true }, .{ .kind = .overlay_toggle, .pressed = false } },
+            };
+            var writer: std.Io.Writer.Allocating = .init(editor.gpa);
+            defer writer.deinit();
+            try std.zon.stringify.serializeMaxDepth(output, .{}, &writer.writer, 16);
+            const bytes = try editor.gpa.dupeZ(u8, writer.written());
+            defer editor.gpa.free(bytes);
+            editor.testing.last = try std.zon.parse.fromSliceAlloc(wire.Output, editor.gpa, bytes, null, .{});
+            editor.test_details = true;
+        },
         .test_stale => editor.testing.state = .stale,
         .test_failed => {
             editor.testing.state = .failed;
