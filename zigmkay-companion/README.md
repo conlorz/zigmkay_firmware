@@ -51,10 +51,14 @@ Use `--window-size <width> <height>` with `--editor` to choose an initial size.
 ## Typing practice
 
 Run `mise //zigmkay-companion:editor` and click **Practice** in **Try your draft**.
+Use `mise //zigmkay-companion:editor --practice` to open practice directly.
 Choose English (2, 5 or 10 generated sentences) or Zig (three complete, formatted
 and tested Zig 0.16.0 files), then press Start. The typed buffer starts empty.
-Reference and input share scrolling; green characters match, red characters are
-mistakes, and the blue caret/current line follows your progress. Tab inserts four
+The current word stays large and centered. Its next character is boxed in blue;
+mistakes turn red and show the typed character and correction needed. Surrounding
+text scrolls smoothly with the current line centered; completed characters are
+green and upcoming text is muted. The view fills the resized editor, including
+at 900×600. Tab inserts four
 spaces, Enter inserts a newline, and Backspace corrects a character. Completion
 requires an exact copy of the entire exercise. Restart repeats it; New exercise
 changes the English seed or selects the next Zig lesson.
@@ -65,6 +69,16 @@ then press Resume. Physical QWERTY keys use the existing LK7 position mapping.
 Changing the draft pauses practice and requires Restart to prepare its new layout.
 Focus loss and Escape pause; Resume is deliberate and simulated held keys are
 released. Practice never flashes firmware or changes your keymap.
+
+**Show companion** is enabled by default. It keeps the physical LK7 keyboard
+below the text, with gold borders for the next key, modifier or layer access.
+Standalone practice previews the selected draft and names its profile. When
+practice is opened from a connected live companion, the embedded keyboard uses
+that companion's verified running profile, pressed keys, active layers and
+modifiers. Draft-runner practice shows its simulated pressed keys and layers.
+The guide labels these sources separately. Hiding it gives the text more space
+and does not pause or reset the exercise. Dead-key compositions and callbacks
+without a directly matching label do not receive an invented key hint.
 
 Results include WPM, accuracy, active duration, corrections, file progress, CPM
 and the most troublesome expected character. Errors remain in accuracy after

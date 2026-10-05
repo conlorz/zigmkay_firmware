@@ -16,6 +16,15 @@ Use a dedicated Practice panel in the editor, with English and Zig modes. Keep t
 
 ## User experience
 
+The user's layout-learning refinement supersedes the original two-column copy
+presentation below: keep the current word large and centered, box the next
+character, show immediate correction feedback, and smoothly scroll surrounding
+text. Embed the optional companion view (enabled by default), with accurate
+profile/layer/modifier labels and next-key guidance. In a live companion session
+reuse the verified running-profile state; standalone sessions explicitly preview
+the draft, and draft-runner input shows simulated presses. See the
+[refinement evidence](../evidence/typing-practice-refinement-2026-10-05.md).
+
 1. Choose English or Zig, then a length/difficulty and input source. Start opens the exercise inline. Timing begins on the first accepted character.
 2. Show the reference text, current caret, correct characters and mistakes using the existing theme. Keep Restart, New exercise and Stop visible. Focus loss pauses and releases simulated draft keys; resume requires a deliberate action.
 3. English defaults to five grammatical sentences, with punctuation and capitals. Offer short, normal and long exercises. Generate offline from an original vocabulary and grammatical templates using a stored seed; retry repeats the same exercise and New changes the seed. Avoid immediately repeating templates and subjects.

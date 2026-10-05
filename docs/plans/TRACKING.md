@@ -21,6 +21,13 @@ native acceptance scenarios pass; user hands-on testing remains pending. See
 [implementation evidence](../evidence/typing-practice-2026-10-05.md). Personal
 bests are session-local; persistent history and typed-file saving are deferred.
 
+User feedback prioritized learning the layout while practising. Practice now
+centers a large current word, highlights the next character, scrolls the context
+and embeds an optional companion keyboard, enabled by default. Live companion
+sessions share verified running-profile telemetry; standalone practice names the
+draft preview. Gold hints distinguish expected keys from actual pressed states.
+See [refinement evidence](../evidence/typing-practice-refinement-2026-10-05.md).
+
 ## Recovery, G04, G06 and full G07 accepted; 08 integrated offline
 
 Step 08 implementation was authorized on 2026-10-05 from clean `3543b42`.
