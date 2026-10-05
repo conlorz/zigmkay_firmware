@@ -7,6 +7,7 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath) Published {
     return .{ .exe = exe, .tests = tests };
 }
 pub fn build(b: *std.Build) void {
+    _ = b.addModule("uf2", .{ .root_source_file = b.path("src/uf2.zig") });
     const published = publish(b, b.path("."));
     b.installArtifact(published.exe);
     b.step("test", "Run volume path tests without device access").dependOn(published.tests);
