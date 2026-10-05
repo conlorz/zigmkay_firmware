@@ -77,6 +77,27 @@ pub const Signal = struct { kind: SignalKind, pressed: bool };
 pub const RecoveryReason = enum(u8) { overflow = 1, snapshot_invalidated = 2 };
 pub const IdentityPart = struct { index: u8, bytes: [16]u8 = @splat(0) };
 pub const SnapshotPart = struct { index: u8, bytes: [10]u8 };
+pub const capability_bootloader: u16 = 1;
+pub const BootloaderResult = enum(u8) { accepted = 1, unsupported = 2, duplicate = 3, busy = 4 };
+
+test "bootloader extension keeps strict session correlation framing" {
+    const dimensions = model.KeymapDimensions{ .key_count = 1, .layer_count = 1 };
+    const request = Packet{ .session = 42, .request = 7, .payload = .enter_bootloader };
+    const bytes = try encodePacket(request, dimensions, .host_to_device);
+    try std.testing.expectEqualDeep(request, try decodePacket(&bytes, dimensions, .host_to_device));
+    try std.testing.expectError(error.WrongDirection, decodePacket(&bytes, dimensions, .device_to_host));
+    try std.testing.expectError(error.InvalidSession, encodePacket(.{ .session = 0, .request = 7, .payload = .enter_bootloader }, dimensions, .host_to_device));
+    try std.testing.expectError(error.InvalidRequest, encodePacket(.{ .session = 42, .payload = .enter_bootloader }, dimensions, .host_to_device));
+    var malformed = bytes;
+    malformed[12] = 1;
+    try std.testing.expectError(error.InvalidPadding, decodePacket(&malformed, dimensions, .host_to_device));
+    const result = Packet{ .session = 42, .request = 7, .payload = .{ .bootloader_result = .accepted } };
+    const reply = try encodePacket(result, dimensions, .device_to_host);
+    try std.testing.expectEqualDeep(result, try decodePacket(&reply, dimensions, .device_to_host));
+    const capabilities = Packet{ .session = 42, .request = 8, .payload = .{ .capabilities = capability_bootloader } };
+    const capability_bytes = try encodePacket(capabilities, dimensions, .device_to_host);
+    try std.testing.expectEqualDeep(capabilities, try decodePacket(&capability_bytes, dimensions, .device_to_host));
+}
 pub const Payload = union(enum(u8)) {
     hello = 10,
     identity: IdentityPart = 11,
@@ -86,6 +107,10 @@ pub const Payload = union(enum(u8)) {
     layers: LayerState = 15,
     recovery: RecoveryReason = 16,
     signal: Signal = 17,
+    capabilities_request = 18,
+    capabilities: u16 = 19,
+    enter_bootloader = 20,
+    bootloader_result: BootloaderResult = 21,
 };
 pub const Packet = struct {
     session: u32,
@@ -184,7 +209,9 @@ pub fn snapshotPackets(snapshot: Snapshot, dimensions: model.KeymapDimensions, s
 fn payloadLength(payload: Payload) ProtocolError!u8 {
     return switch (payload) {
         .hello => 4,
-        .snapshot_request => 0,
+        .snapshot_request, .capabilities_request, .enter_bootloader => 0,
+        .capabilities => 2,
+        .bootloader_result => 1,
         .key, .layers => 4,
         .recovery => 1,
         .signal => 2,
@@ -195,7 +222,7 @@ fn payloadLength(payload: Payload) ProtocolError!u8 {
 pub fn validatePacket(packet: Packet, dimensions: model.KeymapDimensions, direction: Direction) ProtocolError!void {
     if (dimensions.key_count == 0 or dimensions.layer_count == 0) return error.InvalidDimensions;
     const host = switch (packet.payload) {
-        .hello, .snapshot_request => true,
+        .hello, .snapshot_request, .capabilities_request, .enter_bootloader => true,
         else => false,
     };
     if (host != (direction == .host_to_device)) return error.WrongDirection;
@@ -203,7 +230,7 @@ pub fn validatePacket(packet: Packet, dimensions: model.KeymapDimensions, direct
         if (packet.session != 0 or packet.nonce == 0) return error.InvalidSession;
     } else if (packet.session == 0 or packet.nonce != 0) return error.InvalidSession;
     const transaction = switch (packet.payload) {
-        .hello, .identity, .snapshot_request, .snapshot => true,
+        .hello, .identity, .snapshot_request, .snapshot, .capabilities_request, .capabilities, .enter_bootloader, .bootloader_result => true,
         else => false,
     };
     if ((packet.request != 0) != transaction) return error.InvalidRequest;
@@ -256,7 +283,9 @@ pub fn encodePacket(packet: Packet, dimensions: model.KeymapDimensions, directio
             bytes[12] = @intFromEnum(signal.kind);
             bytes[13] = @intFromBool(signal.pressed);
         },
-        .snapshot_request => {},
+        .snapshot_request, .capabilities_request, .enter_bootloader => {},
+        .capabilities => |value| std.mem.writeInt(u16, bytes[12..14], value, .little),
+        .bootloader_result => |value| bytes[12] = @intFromEnum(value),
     }
     return bytes;
 }
@@ -297,6 +326,10 @@ pub fn decodePacket(bytes: []const u8, dimensions: model.KeymapDimensions, direc
             if (bytes[13] > 1) return error.InvalidBoolean;
             break :blk .{ .signal = .{ .kind = std.enums.fromInt(SignalKind, bytes[12]) orelse return error.InvalidSignal, .pressed = bytes[13] != 0 } };
         },
+        18 => .capabilities_request,
+        19 => .{ .capabilities = std.mem.readInt(u16, bytes[12..14], .little) },
+        20 => .enter_bootloader,
+        21 => .{ .bootloader_result = std.enums.fromInt(BootloaderResult, bytes[12]) orelse return error.InvalidReason },
         else => return error.UnsupportedKind,
     };
     const len = try payloadLength(packet.payload);

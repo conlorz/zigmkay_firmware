@@ -44,6 +44,55 @@ pub const State = struct {
 };
 
 pub const Phase = enum { disconnected, negotiating, synchronizing, live, recovering, incompatible };
+pub const BootloaderStatus = enum { idle, requested, accepted, rejected, timed_out, disconnected };
+
+test "bootloader capability and explicit request are correlated and never retried" {
+    const std = @import("std");
+    const identity = protocol.Identity{ .board_id = "lk7\x00\x00\x00\x00\x00".*, .profile_id = "default\x00".*, .digest = @splat(0), .dimensions = .{ .key_count = 1, .layer_count = 1 } };
+    var session = try Session.init(identity);
+    try std.testing.expectEqual(@as(u8, 0), session.requestBootloader(0).count);
+    session.phase = .live;
+    session.stale = false;
+    session.token = 42;
+    session.refresh_at = 10_000;
+    const query = session.queryCapabilities(0);
+    try std.testing.expectEqual(@as(u8, 1), query.count);
+    _ = session.apply(.{ .session = 41, .request = session.capability_request, .payload = .{ .capabilities = protocol.capability_bootloader } }, 1);
+    try std.testing.expect(!session.bootloaderAvailable());
+    _ = session.apply(.{ .session = 42, .request = session.capability_request, .payload = .{ .capabilities = protocol.capability_bootloader } }, 1);
+    try std.testing.expect(session.bootloaderAvailable());
+    try std.testing.expectEqual(@as(u8, 0), (try session.tick(2, 43)).count);
+    try std.testing.expectEqual(@as(u8, 1), session.requestBootloader(3).count);
+    try std.testing.expectEqual(@as(u8, 0), session.requestBootloader(4).count);
+    _ = session.apply(.{ .session = 42, .request = session.bootloader_request + 1, .payload = .{ .bootloader_result = .accepted } }, 4);
+    try std.testing.expectEqual(BootloaderStatus.requested, session.bootloader_status);
+    try std.testing.expectEqual(@as(u8, 0), (try session.tick(3 + timeout_ms, 43)).count);
+    try std.testing.expectEqual(BootloaderStatus.timed_out, session.bootloader_status);
+    try std.testing.expectEqual(@as(u8, 0), session.requestBootloader(10_000).count);
+    _ = session.apply(.{ .session = 42, .request = session.bootloader_request, .payload = .{ .bootloader_result = .accepted } }, 10_000);
+    try std.testing.expectEqual(BootloaderStatus.timed_out, session.bootloader_status);
+    session.disconnect();
+    _ = try session.connect(20_000, 43);
+    try std.testing.expect(!session.bootloaderAvailable());
+    session.phase = .live;
+    session.stale = false;
+    session.refresh_at = 100_000;
+    _ = session.queryCapabilities(20_001);
+    _ = try session.tick(20_001 + timeout_ms, 44);
+    try std.testing.expect(!session.bootloaderAvailable());
+    try std.testing.expectEqual(@as(u8, 0), session.queryCapabilities(30_000).count);
+    session.disconnect();
+    _ = try session.connect(40_000, 44);
+    session.phase = .live;
+    session.stale = false;
+    _ = session.queryCapabilities(40_001);
+    _ = session.apply(.{ .session = 44, .request = session.capability_request, .payload = .{ .capabilities = protocol.capability_bootloader } }, 40_002);
+    _ = session.requestBootloader(40_003);
+    _ = session.apply(.{ .session = 44, .request = session.bootloader_request, .payload = .{ .bootloader_result = .accepted } }, 40_004);
+    try std.testing.expectEqual(BootloaderStatus.accepted, session.bootloader_status);
+    session.disconnect();
+    try std.testing.expectEqual(BootloaderStatus.disconnected, session.bootloader_status);
+}
 pub const Action = union(enum) { send: protocol.Packet, signal: protocol.SignalKind };
 pub const Actions = struct {
     items: [2]Action = undefined,
@@ -83,6 +132,37 @@ pub const Session = struct {
     pending_count: u4 = 0,
     expected_sequence: u16 = 0,
     last_error: ?protocol.ProtocolError = null,
+    capabilities: u16 = 0,
+    capabilities_queried: bool = false,
+    capability_request: u16 = 0,
+    capability_deadline: u64 = 0,
+    bootloader_status: BootloaderStatus = .idle,
+    bootloader_request: u16 = 0,
+    bootloader_deadline: u64 = 0,
+
+    pub fn bootloaderAvailable(self: *const Session) bool {
+        return self.phase == .live and !self.stale and self.capabilities & protocol.capability_bootloader != 0 and self.bootloader_status == .idle;
+    }
+    pub fn queryCapabilities(self: *Session, now: u64) Actions {
+        if (self.phase != .live or self.stale or self.capabilities_queried) return .{};
+        self.capabilities_queried = true;
+        if (!self.allocateRequest(now)) return .{};
+        self.capability_request = self.request;
+        self.capability_deadline = now +| timeout_ms;
+        var actions = Actions{};
+        actions.add(.{ .send = .{ .session = self.token, .request = self.capability_request, .payload = .capabilities_request } });
+        return actions;
+    }
+    /// Explicit caller action only. No retry is emitted by tick or reconnect.
+    pub fn requestBootloader(self: *Session, now: u64) Actions {
+        if (!self.bootloaderAvailable() or !self.allocateRequest(now)) return .{};
+        self.bootloader_request = self.request;
+        self.bootloader_status = .requested;
+        self.bootloader_deadline = now +| timeout_ms;
+        var actions = Actions{};
+        actions.add(.{ .send = .{ .session = self.token, .request = self.bootloader_request, .payload = .enter_bootloader } });
+        return actions;
+    }
 
     pub fn init(expected: protocol.Identity) protocol.ProtocolError!Session {
         try protocol.validateIdentity(expected);
@@ -95,6 +175,9 @@ pub const Session = struct {
         self.pending_count = 0;
     }
     pub fn disconnect(self: *Session) void {
+        if (self.bootloader_status == .requested or self.bootloader_status == .accepted) self.bootloader_status = .disconnected;
+        self.capabilities = 0;
+        self.capability_request = 0;
         self.phase = .disconnected;
         self.stale = true;
         self.state.needs_resync = true;
@@ -103,6 +186,11 @@ pub const Session = struct {
         self.clearAssembly();
     }
     fn hello(self: *Session, now: u64, nonce: u32) Actions {
+        self.capabilities = 0;
+        self.capabilities_queried = false;
+        self.capability_request = 0;
+        self.bootloader_status = .idle;
+        self.bootloader_request = 0;
         self.token = nonce;
         self.request_counter = 1;
         self.request = 1;
@@ -174,6 +262,9 @@ pub const Session = struct {
         return self.startSnapshot(now, true, true);
     }
     pub fn tick(self: *Session, now: u64, fresh_nonce: u32) protocol.ProtocolError!Actions {
+        if (self.capability_request != 0 and now >= self.capability_deadline) self.capability_request = 0;
+        if (self.bootloader_status == .requested and now >= self.bootloader_deadline) self.bootloader_status = .timed_out;
+        if (self.bootloader_status == .requested or self.bootloader_status == .accepted or self.bootloader_status == .timed_out) return .{};
         switch (self.phase) {
             .disconnected, .incompatible => return .{},
             .live => if (now >= self.refresh_at) return self.startSnapshot(now, false, false),
@@ -265,7 +356,18 @@ pub const Session = struct {
                 if (self.phase == .live) return self.startSnapshot(now, true, false);
                 return self.failTransaction(now);
             },
-            .hello, .snapshot_request => unreachable,
+            .capabilities => |value| {
+                if (packet.request == self.capability_request and self.capability_request != 0 and now < self.capability_deadline) {
+                    self.capabilities = value;
+                    self.capability_request = 0;
+                }
+                return .{};
+            },
+            .bootloader_result => |result| {
+                if (self.bootloader_status == .requested and packet.request == self.bootloader_request and now < self.bootloader_deadline) self.bootloader_status = if (result == .accepted) .accepted else .rejected;
+                return .{};
+            },
+            .hello, .snapshot_request, .capabilities_request, .enter_bootloader => unreachable,
         }
     }
     fn applyDelta(candidate: *State, packet: protocol.Packet) void {

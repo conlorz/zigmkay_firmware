@@ -126,6 +126,7 @@ fn run_primary_internal(
         try usb_command_executor.HouseKeepAndProcessCommands(&usb_command_queue, current_time);
         if (comptime config.telemetry_identity != null) {
             telemetry_transport.boundary();
+            if (telemetry_transport.takeBootloader(current_time.time_since_boot_us)) rp2xxx.rom.reset_to_usb_boot();
             telemetry_transport.pump(usb_if.telemetry_endpoint());
         }
     }

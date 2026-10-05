@@ -9,6 +9,59 @@ pub const Endpoint = struct {
     send: *const fn (*anyopaque, *const protocol.Report) bool,
 };
 
+test "bootloader requires explicit session control and bounded acknowledged drain" {
+    const std = @import("std");
+    const identity = protocol.Identity{ .board_id = "lk7\x00\x00\x00\x00\x00".*, .profile_id = "default\x00".*, .digest = @splat(0), .dimensions = .{ .key_count = 1, .layer_count = 1 } };
+    const Fake = struct {
+        ready: bool = false,
+        response: ?protocol.Report = null,
+        fn send(context: *anyopaque, report: *const protocol.Report) bool {
+            const self: *@This() = @ptrCast(@alignCast(context));
+            if (!self.ready) return false;
+            self.response = report.*;
+            return true;
+        }
+    };
+    var t = Transport.init(identity);
+    var fake = Fake{};
+    const endpoint = Endpoint{ .context = &fake, .send = Fake.send };
+    try std.testing.expect(!t.takeBootloader(0));
+    t.session = 42;
+    const stale = try protocol.encodePacket(.{ .session = 41, .request = 1, .payload = .enter_bootloader }, identity.dimensions, .host_to_device);
+    t.receive(&stale);
+    t.boundary();
+    try std.testing.expect(t.bootloader_request == null);
+    var malformed = stale;
+    malformed[31] = 1;
+    t.receive(&malformed);
+    try std.testing.expectEqual(@as(u32, 2), t.rejected_controls);
+    const request = try protocol.encodePacket(.{ .session = 42, .request = 2, .payload = .enter_bootloader }, identity.dimensions, .host_to_device);
+    t.receive(&request);
+    try std.testing.expect(t.bootloader_request == null);
+    t.boundary();
+    try std.testing.expect(!t.takeBootloader(1));
+    t.pump(endpoint);
+    try std.testing.expect(!t.takeBootloader(100_001));
+    try std.testing.expect(t.bootloader_request == null);
+    t.receive(&request);
+    t.boundary();
+    fake.ready = true;
+    t.pump(endpoint);
+    const duplicate = try protocol.decodePacket(&fake.response.?, identity.dimensions, .device_to_host);
+    try std.testing.expectEqual(protocol.BootloaderResult.duplicate, duplicate.payload.bootloader_result);
+    const next = try protocol.encodePacket(.{ .session = 42, .request = 3, .payload = .enter_bootloader }, identity.dimensions, .host_to_device);
+    t.receive(&next);
+    t.boundary();
+    try std.testing.expect(!t.takeBootloader(200_000));
+    t.pump(endpoint);
+    const accepted = try protocol.decodePacket(&fake.response.?, identity.dimensions, .device_to_host);
+    try std.testing.expectEqual(@as(u16, 3), accepted.request);
+    try std.testing.expectEqual(protocol.BootloaderResult.accepted, accepted.payload.bootloader_result);
+    try std.testing.expect(!t.takeBootloader(219_999));
+    try std.testing.expect(t.takeBootloader(220_000));
+    try std.testing.expect(!t.takeBootloader(240_000));
+}
+
 pub const Transport = struct {
     identity: protocol.Identity,
     state: protocol.Snapshot = .{},
@@ -26,6 +79,11 @@ pub const Transport = struct {
     pending: ?protocol.Packet = null,
     rejected_controls: u32 = 0,
     dropped_events: u32 = 0,
+    bootloader_request: ?u16 = null,
+    bootloader_started: ?u64 = null,
+    bootloader_acknowledged: ?u64 = null,
+    last_bootloader_request: u16 = 0,
+    clock_us: u64 = 0,
 
     pub fn init(identity: protocol.Identity) Transport {
         return .{ .identity = identity };
@@ -98,12 +156,16 @@ pub const Transport = struct {
         };
         switch (packet.payload) {
             .hello => self.pending = packet,
-            .snapshot_request => {
+            .snapshot_request, .capabilities_request, .enter_bootloader => {
                 if (packet.session != self.session or self.session == 0) {
                     self.rejected_controls +%= 1;
                     return;
                 }
-                if (self.pending == null) self.pending = packet;
+                if (self.bootloader_request != null or self.pending != null) {
+                    self.rejected_controls +%= 1;
+                    return;
+                }
+                self.pending = packet;
             },
             else => self.rejected_controls +%= 1,
         }
@@ -134,8 +196,46 @@ pub const Transport = struct {
                 self.snapshot_pending = true;
                 self.synchronized = true;
             },
+            .capabilities_request => self.reply(packet.request, .{ .capabilities = protocol.capability_bootloader }),
+            .enter_bootloader => {
+                if (packet.request <= self.last_bootloader_request) {
+                    self.reply(packet.request, .{ .bootloader_result = .duplicate });
+                    self.rejected_controls +%= 1;
+                } else {
+                    self.last_bootloader_request = packet.request;
+                    self.bootloader_request = packet.request;
+                    self.bootloader_started = null;
+                    self.bootloader_acknowledged = null;
+                    self.reply(packet.request, .{ .bootloader_result = .accepted });
+                }
+            },
             else => unreachable,
         }
+    }
+
+    fn reply(self: *Transport, request: u16, payload: protocol.Payload) void {
+        self.controls[0] = protocol.encodePacket(.{ .session = self.session, .request = request, .payload = payload }, self.identity.dimensions, .device_to_host) catch unreachable;
+        self.control_head = 0;
+        self.control_count = 1;
+    }
+
+    /// Main-loop only. Permit USB drain for 20 ms after acceptance; abandon the
+    /// operation after 100 ms of backpressure rather than reboot without an ack.
+    pub fn takeBootloader(self: *Transport, now_us: u64) bool {
+        self.clock_us = now_us;
+        if (self.bootloader_request == null) return false;
+        if (self.bootloader_started == null) self.bootloader_started = now_us;
+        if (self.bootloader_acknowledged) |accepted| {
+            if (now_us -| accepted < 20_000) return false;
+            self.disconnect();
+            return true;
+        }
+        if (now_us -| self.bootloader_started.? >= 100_000) {
+            self.bootloader_request = null;
+            self.control_count = 0;
+            self.control_head = 0;
+        }
+        return false;
     }
 
     /// At most one send attempt per tick. No readiness loops or allocations.
@@ -143,6 +243,7 @@ pub const Transport = struct {
         if (self.session == 0) return;
         if (self.control_count != 0) {
             if (!endpoint.send(endpoint.context, &self.controls[self.control_head])) return;
+            if (self.bootloader_request != null) self.bootloader_acknowledged = self.clock_us;
             self.control_head += 1;
             self.control_count -= 1;
             if (self.control_count == 0) self.snapshot_pending = false;
@@ -168,5 +269,9 @@ pub const Transport = struct {
         self.synchronized = false;
         self.recovery = null;
         self.pending = null;
+        self.bootloader_request = null;
+        self.bootloader_started = null;
+        self.bootloader_acknowledged = null;
+        self.last_bootloader_request = 0;
     }
 };

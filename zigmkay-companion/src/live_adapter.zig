@@ -122,6 +122,12 @@ pub fn Driver(comptime Transport: type) type {
             };
             return true;
         }
+        /// Explicit UI action only. Never retried after timeout or reconnect.
+        pub fn enterBootloader(self: *Self, now: u64) !void {
+            if (!self.connected or !self.session.bootloaderAvailable()) return error.BootloaderUnavailable;
+            const actions = self.session.requestBootloader(now);
+            if (!self.execute(actions, now)) return error.BootloaderTransportFailed;
+        }
         pub fn poll(self: *Self, now: u64) void {
             self.signal_count = 0;
             self.key_event_count = 0;
@@ -187,6 +193,7 @@ pub fn Driver(comptime Transport: type) type {
                 return;
             };
             _ = self.execute(actions, now);
+            if (self.connected) _ = self.execute(self.session.queryCapabilities(now), now);
         }
         fn receive(self: *Self, bytes: []const u8, now: u64) bool {
             if (self.recording) |recording| recording.add(.receive, now, bytes);
@@ -365,4 +372,24 @@ test "fake elapsed drain budget returns UI and capture replays final state" {
     try std.testing.expectEqual(recorded.session.phase, replayed.phase);
     try std.testing.expectEqual(recorded.session.stale, replayed.stale);
     try std.testing.expectEqual(recorded.session.state.pressed, replayed.state.pressed);
+}
+
+test "live bootloader requires capability and one explicit action without retry" {
+    var driver = try Driver(Fake).init(.{}, fixture(), 300, null);
+    try std.testing.expectError(error.BootloaderUnavailable, driver.enterBootloader(0));
+    try attach(&driver, fixture(), false);
+    const query = try protocol.decodePacket(driver.transport.writes[driver.transport.write_count - 1][1..], fixture().dimensions, .host_to_device);
+    try std.testing.expect(query.payload == .capabilities_request);
+    try driver.transport.queue(.{ .session = driver.session.token, .request = query.request, .payload = .{ .capabilities = protocol.capability_bootloader } }, fixture().dimensions);
+    driver.poll(3);
+    const before = driver.transport.write_count;
+    try std.testing.expect(driver.session.bootloaderAvailable());
+    try driver.enterBootloader(4);
+    try std.testing.expectEqual(before + 1, driver.transport.write_count);
+    const request = try protocol.decodePacket(driver.transport.writes[before][1..], fixture().dimensions, .host_to_device);
+    try std.testing.expect(request.payload == .enter_bootloader);
+    try std.testing.expectError(error.BootloaderUnavailable, driver.enterBootloader(5));
+    driver.poll(10000);
+    try std.testing.expectEqual(before + 1, driver.transport.write_count);
+    try std.testing.expectEqual(companion.BootloaderStatus.timed_out, driver.session.bootloader_status);
 }
