@@ -31,9 +31,14 @@ pub fn label(t: Theme, text: []const u8, r: dvui.Rect, size: f32) void {
     dvui.labelNoFmt(@src(), text, .{}, opts);
 }
 pub fn button(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect) bool {
+    var data: dvui.WidgetData = undefined;
+    return buttonData(t, text, tag, r, &data);
+}
+pub fn buttonData(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect, data: *dvui.WidgetData) bool {
     var opts = options(t, r, 13);
     opts.font = fonts.font(text, 15);
     opts.tag = tag;
+    opts.data_out = data;
     opts.id_extra = std.hash.Wyhash.hash(0, tag);
     opts.background = true;
     if (r.w < 40) opts.padding = .all(2);
@@ -58,4 +63,10 @@ pub fn panel(t: Theme, which: geometry.Panel) *dvui.BoxWidget {
 
 pub fn drawer(src: std.builtin.SourceLocation, t: Theme, bounds: dvui.Rect, modal: bool) *dvui.FloatingWindowWidget {
     return dvui.floatingWindow(src, .{ .modal = modal }, .{ .rect = bounds, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
+}
+pub fn editDrawer(src: std.builtin.SourceLocation, t: Theme, width: f32) *dvui.FloatingWindowWidget {
+    const screen = dvui.windowRect();
+    const w = @min(width, screen.w - 48);
+    const h = @min(@as(f32, 960), screen.h - 48);
+    return drawer(src, t, .{ .x = (screen.w - w) / 2, .y = (screen.h - h) / 2, .w = w, .h = h }, true);
 }

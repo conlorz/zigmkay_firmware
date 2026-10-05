@@ -7,7 +7,9 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
-        .normal => {},
+        .normal, .key_drag => {},
+        .paths => editor.paths_open = true,
+        .callback_editor => editor.callback_open = true,
         .no_device => editor.connection_text = "Offline · No device",
         .multiselect => editor.model.select(11, true),
         .layer_add_rename => {
@@ -17,7 +19,7 @@ pub fn setup(editor: anytype, state: State) !void {
         },
         .deletion_constraint => editor.model.deleteLayer(1) catch |err| editor.report(err),
         .combo => editor.combo_open = true,
-        .advanced => editor.openAction(),
+        .advanced, .key_search => editor.openAction(),
         .dirty => try editor.model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 5 } } }),
         .wrong_identity => {
             editor.connection_text = "Fixture · profile mismatch";
@@ -86,4 +88,9 @@ pub fn click(window: *dvui.Window, tag: []const u8, scale: f32, release: bool) !
     if (!target.visible) return error.ControlNotVisible;
     _ = try window.addEventMouseMotion(.{ .pt = .{ .x = target.rect.x + target.rect.w / 2, .y = target.rect.y + target.rect.h / 2 } });
     _ = try window.addEventMouseButton(.left, if (release) .release else .press);
+}
+pub fn move(window: *dvui.Window, tag: []const u8) !void {
+    const target = dvui.tagGet(tag) orelse return error.MissingControlTag;
+    if (!target.visible) return error.ControlNotVisible;
+    _ = try window.addEventMouseMotion(.{ .pt = .{ .x = target.rect.x + target.rect.w / 2, .y = target.rect.y + target.rect.h / 2 } });
 }

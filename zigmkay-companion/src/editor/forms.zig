@@ -92,11 +92,7 @@ pub fn tap(value: *p.Tap, doc: p.Document) void {
     var has_key = value.key_press != null;
     if (dvui.checkbox(@src(), &has_key, "Key / modifier chord", .{})) value.key_press = if (has_key) .{ .tap_keycode = 4 } else null;
     if (value.key_press) |*key| {
-        var name_buffers: [256][64]u8 = undefined;
-        var names: [256][]const u8 = undefined;
-        for (&names, 0..) |*name, code| name.* = labels.usage(@intCast(code), &name_buffers[code]);
-        var choice: usize = key.tap_keycode;
-        if (dvui.dropdown(@src(), &names, .{ .choice = &choice }, .{}, .{ .expand = .horizontal })) key.tap_keycode = @intCast(choice);
+        keyChoice(&key.tap_keycode);
         number(u8, &key.tap_keycode, "HID usage (252 = recovery)");
         modifiers(&key.tap_modifiers, "Tap modifiers (left/right)");
         _ = dvui.checkbox(@src(), &key.dead, "Dead-key chord", .{});
@@ -127,6 +123,46 @@ pub fn tap(value: *p.Tap, doc: p.Document) void {
     var has_mouse = value.mouse_action != null;
     if (dvui.checkbox(@src(), &has_mouse, "Mouse action", .{})) value.mouse_action = if (has_mouse) .WheelDown else null;
     if (value.mouse_action) |*mouse| _ = dvui.dropdownEnum(@src(), types.MouseAction, .{ .choice = mouse }, .{}, .{ .expand = .horizontal });
+}
+fn keyChoice(code: *u8) void {
+    const combo = dvui.comboBox(@src(), .{ .placeholder = "Type a key name or HID code…" }, .{ .expand = .horizontal, .tag = "action.key.search" });
+    defer combo.deinit();
+    const id = combo.te.data().id;
+    const previous = dvui.dataGet(null, id, "selected_code", u8);
+    var filtering = dvui.dataGet(null, id, "filtering", bool) orelse false;
+    if (previous == null or previous.? != code.*) {
+        var buffer: [64]u8 = undefined;
+        combo.te.textSet(labels.usage(code.*, &buffer), false);
+        filtering = false;
+    }
+    if (combo.te.text_changed) {
+        filtering = true;
+        combo.sug.selected_index = 0;
+        combo.sug.open();
+    }
+    combo.sug.options.max_size_content = .height(240);
+    const query = if (filtering) combo.te.getText() else "";
+    var name_buffers: [256][80]u8 = undefined;
+    var names: [256][]const u8 = undefined;
+    var codes: [256]u8 = undefined;
+    var count: usize = 0;
+    for (0..256) |candidate| {
+        var buffer: [64]u8 = undefined;
+        const name = labels.usage(@intCast(candidate), &buffer);
+        const caption = std.fmt.bufPrint(&name_buffers[count], "{s} ({d})", .{ name, candidate }) catch unreachable;
+        if (query.len != 0 and std.ascii.indexOfIgnoreCase(caption, query) == null) continue;
+        names[count] = caption;
+        codes[count] = @intCast(candidate);
+        count += 1;
+    }
+    if (combo.entries(names[0..count])) |choice| {
+        code.* = codes[choice];
+        var buffer: [64]u8 = undefined;
+        combo.te.textSet(labels.usage(code.*, &buffer), false);
+        filtering = false;
+    }
+    dvui.dataSet(null, id, "selected_code", code.*);
+    dvui.dataSet(null, id, "filtering", filtering);
 }
 pub fn draw(draft: *Draft, doc: p.Document) void {
     if (draft.tap.key_press != null and (draft.mode == 2 or draft.mode == 4)) {

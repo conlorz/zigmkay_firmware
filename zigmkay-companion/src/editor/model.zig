@@ -100,6 +100,27 @@ pub const Model = struct {
         self.clipboard = self.action();
         self.clipboard_set = true;
     }
+    pub fn assignChord(self: *Model, chord: @import("assignment.zig").Chord, held: bool, target: ?usize) !void {
+        var arena: std.heap.ArenaAllocator = .init(self.gpa);
+        defer arena.deinit();
+        var snapshot = self.current.snapshot;
+        const layers = try arena.allocator().dupe(p.Layer, self.document().layers);
+        const actions = try arena.allocator().dupe(?p.Action, layers[self.layer].actions);
+        for (actions, 0..) |*entry, index| {
+            if (if (target) |key| index != key else !self.selected[index]) continue;
+            var resolved = entry.*;
+            var layer_index = self.layer;
+            while (resolved == null and layer_index > 0) {
+                layer_index -= 1;
+                resolved = layers[layer_index].actions[index];
+            }
+            entry.* = if (held) try @import("assignment.zig").hold(resolved, chord) else @import("assignment.zig").tap(resolved, chord);
+        }
+        layers[self.layer].actions = actions;
+        snapshot.document.layers = layers;
+        try self.commit(snapshot);
+        if (target) |key| self.select(key, false);
+    }
     pub fn paste(self: *Model) !void {
         if (self.clipboard_set) try self.apply(self.clipboard);
     }

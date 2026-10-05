@@ -38,6 +38,7 @@ pub const Editor = struct {
     source: ?input.Source = null,
     shift: bool = false,
     option: bool = false,
+    drag_chord: ?@import("assignment.zig").Chord = null,
     extend: bool = false,
     canvas_focus: bool = true,
     fonts_loaded: bool = false,
@@ -116,6 +117,10 @@ pub const Editor = struct {
     }
     pub fn report(self: *Editor, err: anyerror) void {
         self.diagnostic = @splat(0);
+        if (err == error.DropModifierKeyOnHold) {
+            _ = std.fmt.bufPrint(&self.diagnostic, "Drop a Control, Shift, Option or Command key onto Hold.", .{}) catch {};
+            return;
+        }
         _ = std.fmt.bufPrint(&self.diagnostic, "{s}", .{@errorName(err)}) catch {};
     }
     pub fn raw(self: *Editor, event: sdl.SDL_Event) !bool {
@@ -448,6 +453,7 @@ pub const Editor = struct {
                 }
             }
             if (dvui.focusedWidgetId() == data.id) self.canvas_focus = true;
+            self.chordDrop(&data, false, key.key_index);
             if (direct == null) label(t, "inherited", .{ .x = x + 7, .y = y + 56, .w = 55, .h = 8 }, 6);
         }
     }
@@ -464,11 +470,15 @@ pub const Editor = struct {
         const selected_key = physical.keys[self.model.primary];
         label(t, try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · {s} · index {d}/34", .{ @tagName(selected_key.hand), @tagName(selected_key.group), self.model.primary + 1 }), .{ .x = 113, .y = 138, .w = 225, .h = 22 }, 11);
         label(t, "Tap", .{ .x = 20, .y = 177, .w = 90, .h = 25 }, 15);
-        if (button(t, labels.action(self.model.action(), &buffer), "inspector.tap", .{ .x = 114, .y = 168, .w = 230, .h = 39 })) self.openAction();
+        var tap_data: dvui.WidgetData = undefined;
+        if (ui.buttonData(t, labels.action(self.model.action(), &buffer), "inspector.tap", .{ .x = 114, .y = 168, .w = 230, .h = 39 }, &tap_data)) self.openAction();
+        self.chordDrop(&tap_data, false, null);
         label(t, "Hold", .{ .x = 20, .y = 229, .w = 90, .h = 25 }, 15);
         const draft = forms.Draft.from(self.model.action());
         const hold_caption = if (draft.mode == 3 or draft.mode == 4) labels.hold(draft.hold, self.model.document(), &buffer) else "No hold";
-        if (button(t, hold_caption, "inspector.hold", .{ .x = 114, .y = 220, .w = 230, .h = 39 })) self.openAction();
+        var hold_data: dvui.WidgetData = undefined;
+        if (ui.buttonData(t, hold_caption, "inspector.hold", .{ .x = 114, .y = 220, .w = 230, .h = 39 }, &hold_data)) self.openAction();
+        self.chordDrop(&hold_data, true, null);
         label(t, "Tapping term", .{ .x = 20, .y = 281, .w = 115, .h = 25 }, 12);
         var timing: u16 = if (self.model.action()) |a| switch (a) {
             .tap_hold => |th| th.tapping_term.ms,
@@ -493,7 +503,7 @@ pub const Editor = struct {
         defer box.deinit();
         label(t, "OS keyboard", .{ .x = 20, .y = 18, .w = 205, .h = 25 }, 19);
         label(t, if (self.source) |*source| source.id() else "EurKEY fixture · ANSI", .{ .x = 225, .y = 23, .w = 570, .h = 25 }, 13);
-        label(t, "Show characters with modifiers", .{ .x = 811, .y = 23, .w = 265, .h = 25 }, 12);
+        label(t, "Drag keys to assign · click for selected key", .{ .x = 760, .y = 23, .w = 310, .h = 25 }, 12);
         var shift_theme = t;
         var option_theme = t;
         if (self.shift) {
@@ -512,8 +522,12 @@ pub const Editor = struct {
                 var buffer: [64]u8 = undefined;
                 var modified_buffer: [64]u8 = undefined;
                 var caption = if (key.name.len != 0) key.name else labels.usage(key.code, &buffer);
+                if (self.source == null and key.code >= 4 and key.code <= 29 and !self.shift) {
+                    buffer[0] = 'a' + key.code - 4;
+                    caption = buffer[0..1];
+                }
                 var modified: []const u8 = if (key.name.len == 0 and self.option) @import("fixture.zig").optionLabel(key.code, self.shift) else if (key.name.len == 0 and self.shift) @import("fixture.zig").shiftLabel(key.code) else "";
-                if (self.source) |*source| if (key.name.len == 0 and key.code >= 4 and key.code <= 56) {
+                if (self.source) |*source| if (key.name.len == 0 and key.code >= 4 and key.code <= 56 and (key.code < 40 or key.code > 44)) {
                     const result = source.keyToText(.{ .tap_keycode = key.code });
                     if (result.len > 0) {
                         @memcpy(buffer[0..result.len], result.data[0..result.len]);
@@ -535,18 +549,60 @@ pub const Editor = struct {
                 opts.gravity_x = 0.5;
                 opts.gravity_y = 0.5;
                 opts.border = .all(1);
-                dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = if (modified.len == 0) 0.5 else 0.8 }, opts);
-                if (modified.len != 0 and !std.mem.eql(u8, modified, caption)) {
-                    var secondary = options(t, .{ .x = x + 2, .y = opts.rect.?.y + 2, .w = opts.rect.?.w - 4, .h = 17 }, 11);
-                    secondary.font = fonts.font(modified, 12);
-                    secondary.id_extra = ri * 100 + ki;
-                    secondary.padding = .{};
-                    secondary.color_text = .{ .color = color(if (self.light) 0x126ACC else 0x65B1FF) };
-                    dvui.labelNoFmt(@src(), modified, .{ .align_x = 0.5, .align_y = 0.5 }, secondary);
-                }
+                if (modified.len != 0) caption = modified;
+                opts.font = fonts.font(caption, if (caption.len > 3) 13 else 18);
+                opts.tag = std.fmt.allocPrint(dvui.currentWindow().arena(), "os.key.{d}", .{key.code}) catch unreachable;
+                self.chordSource(key.code, caption, opts);
                 x += 76 * key.units;
             }
         }
+    }
+    fn chordDrop(self: *Editor, data: *dvui.WidgetData, held: bool, target: ?usize) void {
+        const chord = self.drag_chord orelse return;
+        if (!dvui.dragName("key_chord")) return;
+        for (dvui.events()) |*event| {
+            if (!dvui.eventMatch(event, .{ .id = data.id, .r = data.borderRectScale().r, .drag_name = "key_chord" })) continue;
+            if (event.evt == .mouse) {
+                const mouse = event.evt.mouse;
+                if (mouse.action == .position) data.focusBorder();
+                if (mouse.action == .release and mouse.button == .left) {
+                    event.handle(@src(), data);
+                    dvui.dragEnd();
+                    self.drag_chord = null;
+                    self.model.assignChord(chord, held, target) catch |err| self.report(err);
+                }
+            }
+        }
+    }
+    fn chordSource(self: *Editor, code: u8, caption: []const u8, opts: dvui.Options) void {
+        var key: dvui.ButtonWidget = undefined;
+        key.init(@src(), .{}, opts);
+        defer key.deinit();
+        for (dvui.events()) |*event| {
+            if (!key.matchEvent(event) or event.evt != .mouse) continue;
+            const mouse = event.evt.mouse;
+            if (mouse.action == .press and mouse.button == .left) {
+                event.handle(@src(), key.data());
+                dvui.captureMouse(key.data(), event.num);
+                dvui.focusWidget(key.data().id, null, null);
+                self.drag_chord = .{ .tap_keycode = code, .tap_modifiers = .{ .left_shift = self.shift, .left_alt = self.option } };
+                dvui.dragPreStart(.left, mouse.p, .{ .name = "key_chord", .cursor = .crosshair });
+            } else if (mouse.action == .motion and dvui.captured(key.data().id)) {
+                if (dvui.dragging(mouse.p, "key_chord")) |_| {
+                    event.handle(@src(), key.data());
+                    dvui.captureMouse(null, event.num);
+                }
+            } else if (mouse.action == .release and mouse.button == .left and dvui.captured(key.data().id)) {
+                event.handle(@src(), key.data());
+                dvui.captureMouse(null, event.num);
+                dvui.dragEnd();
+                if (self.drag_chord) |chord| self.model.assignChord(chord, false, null) catch |err| self.report(err);
+                self.drag_chord = null;
+            } else if (mouse.action == .position) key.hover = true;
+        }
+        key.drawBackground();
+        dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = 0.5 }, .{ .expand = .both, .gravity_x = 0.5, .gravity_y = 0.5, .font = opts.font, .color_text = opts.color_text });
+        key.drawFocus();
     }
     fn bottom(self: *Editor, t: Theme) !void {
         {
@@ -626,73 +682,75 @@ pub const Editor = struct {
         self.external_job = job;
     }
     fn paths(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 400, .y = 120, .w = 740, .h = 720 }, .padding = .all(20), .background = true, .color_fill = .{ .color = t.panel } });
+        const window = ui.editDrawer(@src(), t, 800);
         defer window.deinit();
-        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
-        defer area.deinit();
-        dvui.label(@src(), "Project directory (atomic project.zon + immutable sources)", .{}, .{});
         {
-            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.project_path } }, .{ .expand = .horizontal });
-            entry.deinit();
-        }
-        if (dvui.button(@src(), "Choose project folder…", .{}, .{})) {
-            self.dialog_target = .project;
-            dialog.start(self.backend_window.?) catch |err| self.report(err);
-        }
-        if (dvui.button(@src(), "Open", .{}, .{})) {
-            var dir = try std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
-            defer dir.close(self.io);
-            self.model.open(self.io, dir) catch |err| self.report(err);
-            self.syncRename();
-        }
-        if (dvui.button(@src(), "Save", .{}, .{})) self.save() catch |err| self.report(err);
-        dvui.label(@src(), "Owned export directory (existing differing files are refused)", .{}, .{});
-        {
-            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.export_path } }, .{ .expand = .horizontal });
-            entry.deinit();
-        }
-        if (dvui.button(@src(), "Choose export folder…", .{}, .{})) {
-            self.dialog_target = .exported;
-            dialog.start(self.backend_window.?) catch |err| self.report(err);
-        }
-        if (dvui.button(@src(), "Export Zig", .{}, .{})) {
-            if (self.export_path[0] == 0) {
-                self.report(error.ChooseExportDirectoryFirst);
-                return;
+            const area = dvui.scrollArea(@src(), .{}, .{ .rect = .{ .x = 0, .y = 0, .w = window.data().rect.w - 36, .h = window.data().rect.h - 112 } });
+            defer area.deinit();
+            dvui.label(@src(), "Project directory (atomic project.zon + immutable sources)", .{}, .{});
+            {
+                const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.project_path } }, .{ .expand = .horizontal });
+                entry.deinit();
             }
-            var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, std.mem.sliceTo(&self.export_path, 0), .{});
-            defer dir.close(self.io);
-            const manifest = p.exporter.write(self.gpa, self.io, dir, self.model.current.snapshot, p.profiles.board) catch |err| {
-                self.report(err);
-                return;
-            };
-            std.zon.parse.free(self.gpa, manifest);
-            self.exported_id = manifest.snapshot_id;
+            if (dvui.button(@src(), "Choose project folder…", .{}, .{})) {
+                self.dialog_target = .project;
+                dialog.start(self.backend_window.?) catch |err| self.report(err);
+            }
+            if (dvui.button(@src(), "Open", .{}, .{})) {
+                var dir = try std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
+                defer dir.close(self.io);
+                self.model.open(self.io, dir) catch |err| self.report(err);
+                self.syncRename();
+            }
+            if (dvui.button(@src(), "Save", .{}, .{})) self.save() catch |err| self.report(err);
+            dvui.label(@src(), "Owned export directory (existing differing files are refused)", .{}, .{});
+            {
+                const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.export_path } }, .{ .expand = .horizontal });
+                entry.deinit();
+            }
+            if (dvui.button(@src(), "Choose export folder…", .{}, .{})) {
+                self.dialog_target = .exported;
+                dialog.start(self.backend_window.?) catch |err| self.report(err);
+            }
+            if (dvui.button(@src(), "Export Zig", .{}, .{})) {
+                if (self.export_path[0] == 0) {
+                    self.report(error.ChooseExportDirectoryFirst);
+                    return;
+                }
+                var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, std.mem.sliceTo(&self.export_path, 0), .{});
+                defer dir.close(self.io);
+                const manifest = p.exporter.write(self.gpa, self.io, dir, self.model.current.snapshot, p.profiles.board) catch |err| {
+                    self.report(err);
+                    return;
+                };
+                std.zon.parse.free(self.gpa, manifest);
+                self.exported_id = manifest.snapshot_id;
+            }
+            const current_id = try self.model.id();
+            dvui.label(@src(), "Draft snapshot: {s}", .{std.fmt.bytesToHex(current_id, .lower)}, .{});
+            if (self.exported_id) |id| dvui.label(@src(), "Export {s}: {s} · running firmware remains unverified", .{ if (std.mem.eql(u8, &id, &current_id)) "matches draft" else "is stale", std.fmt.bytesToHex(id, .lower) }, .{});
+            const advisory = try p.assessment.assess(self.model.document());
+            dvui.label(@src(), "Declarative recovery action reachable: {} · callbacks require review: {}", .{ advisory.recovery_found, advisory.callbacks_require_review }, .{});
+            for (self.model.document().layers, 0..) |layer, index| if (!advisory.reachable[index]) dvui.label(@src(), "Layer {s}: no declarative path from Base", .{layer.name}, .{ .id_extra = index });
+            if (dvui.button(@src(), "Separate overlay", .{}, .{})) self.overlay_open = true;
+            if (dvui.button(@src(), "Restore recovery draft", .{}, .{})) {
+                const path = try std.fs.path.join(self.gpa, &.{ self.testing.root, ".zig-cache", "editor-recovery" });
+                defer self.gpa.free(path);
+                var dir = std.Io.Dir.cwd().openDir(self.io, path, .{}) catch |err| {
+                    self.report(err);
+                    return;
+                };
+                defer dir.close(self.io);
+                var loaded = p.snapshot.load(self.gpa, self.io, dir, p.profiles.board) catch |err| {
+                    self.report(err);
+                    return;
+                };
+                defer loaded.deinit();
+                try self.model.commit(loaded.snapshot);
+                self.syncRename();
+            }
         }
-        const current_id = try self.model.id();
-        dvui.label(@src(), "Draft snapshot: {s}", .{std.fmt.bytesToHex(current_id, .lower)}, .{});
-        if (self.exported_id) |id| dvui.label(@src(), "Export {s}: {s} · running firmware remains unverified", .{ if (std.mem.eql(u8, &id, &current_id)) "matches draft" else "is stale", std.fmt.bytesToHex(id, .lower) }, .{});
-        const advisory = try p.assessment.assess(self.model.document());
-        dvui.label(@src(), "Declarative recovery action reachable: {} · callbacks require review: {}", .{ advisory.recovery_found, advisory.callbacks_require_review }, .{});
-        for (self.model.document().layers, 0..) |layer, index| if (!advisory.reachable[index]) dvui.label(@src(), "Layer {s}: no declarative path from Base", .{layer.name}, .{ .id_extra = index });
-        if (dvui.button(@src(), "Separate overlay", .{}, .{})) self.overlay_open = true;
-        if (dvui.button(@src(), "Restore recovery draft", .{}, .{})) {
-            const path = try std.fs.path.join(self.gpa, &.{ self.testing.root, ".zig-cache", "editor-recovery" });
-            defer self.gpa.free(path);
-            var dir = std.Io.Dir.cwd().openDir(self.io, path, .{}) catch |err| {
-                self.report(err);
-                return;
-            };
-            defer dir.close(self.io);
-            var loaded = p.snapshot.load(self.gpa, self.io, dir, p.profiles.board) catch |err| {
-                self.report(err);
-                return;
-            };
-            defer loaded.deinit();
-            try self.model.commit(loaded.snapshot);
-            self.syncRename();
-        }
-        if (dvui.button(@src(), "Close", .{}, .{})) self.paths_open = false;
+        if (ui.button(t, "Close", "file.close", .{ .x = 0, .y = window.data().rect.h - 86, .w = 100, .h = 40 })) self.paths_open = false;
     }
     fn save(self: *Editor) !void {
         if (self.project_path[0] == 0) {
@@ -717,7 +775,7 @@ pub const Editor = struct {
         try @import("combo_drawer.zig").draw(self, t);
     }
     fn picker(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 1000, .y = 230, .w = 490, .h = 650 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
+        const window = ui.editDrawer(@src(), t, 620);
         defer window.deinit();
         dvui.label(@src(), "Search actions · key choice preserves existing hold fields", .{}, .{});
         {
@@ -726,7 +784,7 @@ pub const Editor = struct {
         }
         const query = std.mem.sliceTo(&self.search, 0);
         {
-            const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+            const area = dvui.scrollArea(@src(), .{}, .{ .rect = .{ .x = 0, .y = 90, .w = window.data().rect.w - 36, .h = window.data().rect.h - 194 } });
             defer area.deinit();
             for (0..256) |index| {
                 var buffer: [64]u8 = undefined;
@@ -763,29 +821,29 @@ pub const Editor = struct {
                 };
             }
         }
-        if (dvui.button(@src(), "Advanced fields…", .{}, .{})) {
+        if (ui.button(t, "Advanced fields…", "picker.advanced", .{ .x = 0, .y = window.data().rect.h - 86, .w = 190, .h = 40 })) {
             self.picker_open = false;
             self.openAction();
         }
-        if (dvui.button(@src(), "Cancel search", .{}, .{})) self.picker_open = false;
+        if (ui.button(t, "Cancel", "picker.cancel", .{ .x = 200, .y = window.data().rect.h - 86, .w = 100, .h = 40 })) self.picker_open = false;
     }
     fn actionForm(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 690, .y = 90, .w = 700, .h = 810 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
+        const window = ui.editDrawer(@src(), t, 800);
         defer window.deinit();
         dvui.label(@src(), "Advanced action · selected positions · one undo operation", .{}, .{});
         {
-            const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+            const area = dvui.scrollArea(@src(), .{}, .{ .rect = .{ .x = 0, .y = 36, .w = window.data().rect.w - 36, .h = window.data().rect.h - 140 } });
             defer area.deinit();
             forms.draw(&self.action_draft, self.model.document());
         }
-        if (dvui.button(@src(), "Apply to selection", .{}, .{ .tag = "advanced.apply" })) {
+        if (ui.button(t, "Apply to selection", "advanced.apply", .{ .x = 0, .y = window.data().rect.h - 86, .w = 190, .h = 40 })) {
             self.model.apply(self.action_draft.action()) catch |err| {
                 self.report(err);
                 return;
             };
             self.advanced = false;
         }
-        if (dvui.button(@src(), "Cancel", .{}, .{})) self.advanced = false;
+        if (ui.button(t, "Cancel", "advanced.cancel", .{ .x = 200, .y = window.data().rect.h - 86, .w = 100, .h = 40 })) self.advanced = false;
     }
     fn testDrawer(self: *Editor, t: Theme) !void {
         try @import("test_drawer.zig").draw(self, t);
@@ -864,6 +922,28 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         try window.begin(window.beginWait(false));
         try @import("events.zig").pump(&backend, &window, &editor);
         if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
+        if (state == .key_search) switch (frames) {
+            3 => try scenario.click(&window, "action.key.search", window.natural_scale, false),
+            4 => try scenario.click(&window, "action.key.search", window.natural_scale, true),
+            5 => _ = try window.addEventKey(.{ .code = .a, .action = .down, .mod = if (@import("builtin").os.tag == .macos) .lcommand else .lcontrol }),
+            6 => _ = try window.addEventText(.{ .text = "page" }),
+            8 => _ = try window.addEventKey(.{ .code = .enter, .action = .down, .mod = .none }),
+            else => {},
+        };
+        if (state == .key_drag) switch (frames) {
+            3 => try scenario.click(&window, "os.shift", window.natural_scale, false),
+            4 => try scenario.click(&window, "os.shift", window.natural_scale, true),
+            5 => try scenario.click(&window, "os.key.4", window.natural_scale, false),
+            6 => try scenario.move(&window, "key.select.10"),
+            8 => try scenario.click(&window, "key.select.10", window.natural_scale, true),
+            11 => try scenario.click(&window, "os.key.5", window.natural_scale, false),
+            12 => try scenario.move(&window, "inspector.tap"),
+            13 => try scenario.click(&window, "inspector.tap", window.natural_scale, true),
+            15 => try scenario.click(&window, "os.key.225", window.natural_scale, false),
+            16 => try scenario.move(&window, "inspector.hold"),
+            17 => try scenario.click(&window, "inspector.hold", window.natural_scale, true),
+            else => {},
+        };
         if (interactions) switch (frames) {
             3 => try scenario.click(&window, "key.select.31", window.natural_scale, false),
             4 => try scenario.click(&window, "key.select.31", window.natural_scale, true),
@@ -916,6 +996,26 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         }
         if (editor.should_close) open = false;
         if (frames == 2 and screenshot != null) try scenario.verifyPanels(window.natural_scale);
+        if (frames == 10 and state == .key_search) {
+            if (editor.action_draft.tap.key_press.?.tap_keycode != 75) return error.KeySearchSelectionFailed;
+            const apply = dvui.tagGet("advanced.apply") orelse return error.MissingApplyButton;
+            if (!apply.visible or apply.rect.y + apply.rect.h > window.rect_pixels.h) return error.ClippedApplyButton;
+            std.log.info("Key search input passed: typed page, selected Page Up, footer visible", .{});
+        }
+        if (frames == 19 and state == .key_drag) {
+            const changed = editor.model.action().?.tap_hold;
+            if (changed.tap.key_press.?.tap_keycode != 5 or changed.tap.key_press.?.tap_modifiers.toByte() != 6 or changed.hold.hold_modifiers.toByte() != 6 or changed.tapping_term.ms != 180) return error.ChordDragFailed;
+            try editor.model.undo();
+            if (!editor.model.action().?.tap_hold.hold.hold_modifiers.left_gui) return error.ChordDragUndoFailed;
+            try editor.model.undo();
+            if (editor.model.action().?.tap_hold.tap.key_press.?.tap_keycode != 4) return error.ChordDragUndoFailed;
+            try editor.model.undo();
+            if (editor.model.action().?.tap_hold.tap.key_press.?.tap_modifiers.toByte() != 0) return error.ChordDragUndoFailed;
+            try editor.model.redo();
+            try editor.model.redo();
+            try editor.model.redo();
+            std.log.info("Chord drag passed: Shift+Option to split key, Tap and Hold drops, preserved timing, undo/redo", .{});
+        }
         if (interactions and frames == 26) {
             if (editor.model.primary != 31 or editor.model.document().layers.len != 7 or editor.model.layer != 5) return error.InteractionScenarioFailed;
             if (editor.advanced or editor.model.action().? != .tap_only or editor.model.action().?.tap_only.key_press.?.tap_keycode != 4) return error.FormInteractionFailed;
@@ -925,7 +1025,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 break;
             }
         }
-        if (screenshot != null and frames == (if (interactions) @as(usize, 28) else 5)) {
+        const capture_frame: usize = if (interactions) 28 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
+        if (screenshot != null and frames == capture_frame) {
             if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});
             const size = window.rect_pixels;
