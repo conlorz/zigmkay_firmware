@@ -37,11 +37,23 @@ prove binary readback or typing correctness. If a filesystem call stalls,
 stop the writer once and reconnect in physical BOOTSEL; ensure the old writer
 has exited before starting another.
 
-The editor's Enter bootloader action requires a verified compatible live
-session and firmware advertising that capability. Older firmware retains the
-physical fallback. A timeout never causes automatic retransmission. HID removal
-is expected after acceptance, but recovery-volume validation is still required.
-Startup, monitoring, saving, exporting and building never request BOOTSEL.
+The toolbar checkbox **Enter bootloader via HID** is enabled by default and can
+be disabled before clicking **Flash**. After verifying the current built artifact,
+Flash starts recovery-volume discovery and, when enabled, one bounded HID attempt.
+This also works in the standalone editor: it opens a unique matching vendor HID
+collection, verifies the LK7 board/key count, binds the running profile, obtains a
+coherent snapshot and checks the advertised capability. The running profile can
+differ from the unflashed draft; normal overlay identity checks remain exact.
+An existing live session is paused while the bootloader session owns the device.
+
+Missing/ambiguous devices, unsupported firmware, rejection and timeout display
+a manual BOOTSEL fallback without cancelling the transfer's volume wait. Disable
+the checkbox to use manual recovery directly, including an unprogrammed keyboard.
+The HID attempt is bounded to 2.5 seconds and sends the bootloader command at most
+once per Flash click. No timeout/reconnect automatically retries the command.
+HID removal is expected after acceptance; recovery-volume validation remains
+required. Startup, monitoring, saving, exporting and building never request
+BOOTSEL. The existing flasher still verifies the artifact hash and RP2040 volume.
 
 ## Pending hardware worksheet
 

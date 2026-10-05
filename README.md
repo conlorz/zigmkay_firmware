@@ -158,5 +158,9 @@ The separate native LK7 draft editor is available through
 [plan 07 self-verification guide](docs/plans/07-editor-verification.md) for
 editing, atomic save/reopen, deterministic export and isolated draft testing.
 `mise //zigmkay-companion:editor-golden-check` checks the user-approved dark/light
-captures without refreshing them. These editor workflows remain offline;
-Build/Flash integration belongs to plan 08 and plan 12 remains deferred.
+captures without refreshing them. Editing, exporting, building and checks remain
+offline. The explicit **Flash** button waits for the RP2040 recovery drive and
+optionally requests bootloader entry over HID. Disable **Enter bootloader via
+HID** for manual BOOTSEL or keyboards without supporting firmware; missing HID
+support also falls back to manual recovery. See the
+[build/flash guide](docs/plans/08-editor-verification.md). Plan 12 remains deferred.

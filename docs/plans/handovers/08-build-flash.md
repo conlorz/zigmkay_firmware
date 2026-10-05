@@ -1,5 +1,13 @@
 # 08 handover: build, transfer, and running firmware verification
 
+2026-10-05 follow-up: Flash now optionally requests bootloader entry over HID,
+including in the standalone editor. The enabled-by-default toolbar checkbox
+can be disabled for manual recovery. See [current behavior and offline evidence](../../evidence/editor-hid-bootloader-2026-10-05.md).
+The running profile may differ from the draft in the dedicated bootloader
+session; normal overlay identity matching remains exact. This supersedes the
+old inspection-popup and verified-live-editor prerequisite descriptions below.
+Hardware acceptance of this follow-up remains deferred.
+
 08A offline backend: **Accepted**. 08B offline integration: **Integrated**.
 Full G08: **pending a separately authorized hardware session and visual approval**.
 Producer/reviewer: coordinator with scoped backend, protocol and editor workers;

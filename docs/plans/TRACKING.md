@@ -1,5 +1,19 @@
 # Central milestone tracker
 
+## Optional HID bootloader on Flash (2026-10-05)
+
+The user requested completion of HID bootloader entry and an optional attempt
+when clicking Flash; hardware acceptance remains deferred. The native editor
+now provides **Enter bootloader via HID**, enabled by default. Standalone and
+companion-hosted editors use one bounded attempt, bind the verified running
+profile independently of the draft, require advertised support and never resend
+the bootloader command automatically. Unsupported/absent devices use manual
+BOOTSEL while the existing transfer keeps waiting for the recovery volume.
+See [implementation evidence](../evidence/editor-hid-bootloader-2026-10-05.md).
+Implementation `300b52a`: 65 companion-package tests, full offline checks and
+142 native captures/semantic interactions pass. This does not accept the physical HID
+transition, edited-profile typing or full G08.
+
 ## Autonomous personal-profile preparation (2026-10-05)
 
 The user requested autonomous progress and immediate continuation to the next
