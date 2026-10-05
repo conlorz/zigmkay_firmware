@@ -152,6 +152,8 @@ fn keyboard(self: anytype, t: ui.Theme, bounds: dvui.Rect, focus: usize) !void {
     }
     layer = @min(layer, labels.layer_count - 1);
     const next = if (self.practice_active and focus < self.practice.reference_len) guide.hintActive(labels, layer, mods, self.practice.reference[focus], active) else null;
+    const guidance = guide.guidance(labels, layer, mods, next);
+    const hold_source_layer = layer;
     if (!live and !running_draft) {
         if (next) |hint| {
             layer = hint.layer;
@@ -159,16 +161,15 @@ fn keyboard(self: anytype, t: ui.Theme, bounds: dvui.Rect, focus: usize) !void {
             active = 1 | (@as(u16, 1) << @intCast(layer));
         }
     }
-    const targets = guide.targets(labels, layer, if (!live and !running_draft) .{} else mods, next);
     const title = if (live) (if (self.practice_live_stale) "Companion · reconnecting" else "Live companion") else if (running_draft) "Draft companion · simulated key presses" else "Draft layout guide";
     const profile = if (live) std.mem.sliceTo(&self.practice_live_profile, 0) else self.model.document().name;
-    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · {s} · layer {d} · gold = next key / modifier", .{ title, profile, layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, @min(18, bounds.h * 0.09), t.text, "practice.keyboard.source");
+    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · {s} · layer {d}", .{ title, profile, layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, @min(18, bounds.h * 0.09), t.text, "practice.keyboard.source");
     if (next) |hint| {
-        var mod_buffer: [96]u8 = undefined;
-        const instruction = try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s}{s}{s}{s}", .{ if (hint.layer != 0) "Layer " else "", if (hint.layer != 0) try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d} · ", .{hint.layer}) else "", if (hint.mods.toByte() != 0) @import("labels.zig").modifierNames(hint.mods.toByte(), &mod_buffer) else "", if (hint.mods.toByte() != 0) " + highlighted key" else "Highlighted key" });
+        const has_holds = std.mem.indexOfScalar(bool, &guidance.hold, true) != null;
+        const instruction = try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · layer {d}", .{ if (has_holds) "Hold blue HOLD keys first; keep holding, then tap gold TAP" else "Tap the gold TAP key", hint.layer });
         caption(instruction, .{ .x = 8, .y = 28, .w = bounds.w - 16, .h = 23 }, 14, ui.color(if (t.bg.r > 100) 0x8B6318 else 0xFFD179), null);
     } else if (self.practice_active and self.practice.state != .complete) caption("Use your layout's composition or custom action for this character", .{ .x = 8, .y = 28, .w = bounds.w - 16, .h = 23 }, 14, t.muted, null);
-    try geometry.drawGuided(labels, layer, &pressed, mods, live and self.practice_live_stale, .{ .x = 18, .y = 52, .w = bounds.w - 36, .h = @max(0, bounds.h - 62) }, &targets, active);
+    try geometry.drawPractice(labels, layer, &pressed, mods, live and self.practice_live_stale, .{ .x = 18, .y = 52, .w = bounds.w - 36, .h = @max(0, bounds.h - 62) }, &guidance.tap, &guidance.hold, hold_source_layer, active);
 }
 pub fn draw(self: anytype, t: ui.Theme) !void {
     const screen = dvui.windowRect();

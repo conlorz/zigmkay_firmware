@@ -114,13 +114,16 @@ pub fn drawPhysicalKey(current_layer: usize, index: usize, rect: dvui.Rect, rota
     return drawGuidedKey(current_layer, index, rect, rotation, scale, content, active, false);
 }
 pub fn drawGuidedKey(current_layer: usize, index: usize, rect: dvui.Rect, rotation: f32, scale: f32, content: CachedKeyContent, active: bool, target: bool) !void {
+    return drawPracticeKey(current_layer, index, rect, rotation, scale, content, active, target, false);
+}
+pub fn drawPracticeKey(current_layer: usize, index: usize, rect: dvui.Rect, rotation: f32, scale: f32, content: CachedKeyContent, active: bool, target: bool, hold: bool) !void {
     const size = @min(rect.w, rect.h);
 
     const layer_color = if (current_layer < layer_colors.len) layer_colors[current_layer] else dvui.Color.white;
     const muted_layer_color = getMutedColor(layer_color);
 
     const bg_color = if (active) muted_layer_color else if (target) dvui.Color{ .r = 58, .g = 47, .b = 22, .a = 255 } else dvui.Color.black;
-    const border_color = if (target) dvui.Color{ .r = 255, .g = 201, .b = 83, .a = 255 } else if (active) layer_color else muted_layer_color;
+    const border_color = if (hold) dvui.Color{ .r = 80, .g = 210, .b = 255, .a = 255 } else if (target) dvui.Color{ .r = 255, .g = 201, .b = 83, .a = 255 } else if (active) layer_color else muted_layer_color;
     const text_color = dvui.Color.white;
     const mod_color = dvui.Color{ .r = 0, .g = 255, .b = 255, .a = 255 }; // Cyan
 
@@ -131,10 +134,16 @@ pub fn drawGuidedKey(current_layer: usize, index: usize, rect: dvui.Rect, rotati
         .background = true,
         .color_fill = .{ .color = bg_color },
         .color_border = .{ .color = border_color },
-        .border = dvui.Rect.all((if (target) @as(f32, 3) else 1.5) * scale),
+        .border = dvui.Rect.all((if (target or hold) @as(f32, 3) else 1.5) * scale),
         .corners = .all(8 * scale),
     });
     defer b.deinit();
+    if (target or hold) dvui.label(@src(), "{s}", .{if (hold) "HOLD" else "TAP"}, .{
+        .gravity_x = 0.5,
+        .gravity_y = 1,
+        .font = dvui.Font.theme(.body).larger(-3 * scale),
+        .color_text = .{ .color = border_color },
+    });
 
     // 1. Main Content (Center)
     if (content.icon) |icon_bytes| {
