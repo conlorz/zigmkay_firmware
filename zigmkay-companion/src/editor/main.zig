@@ -87,6 +87,7 @@ pub const Editor = struct {
     search: [128]u8 = @splat(0),
     picker_open: bool = false,
     profile_choice: usize = 2,
+    profile_projects: @import("profile_projects.zig").Registry = .{},
     diagnostic: [512]u8 = @splat(0),
     project_path: [1024]u8 = @splat(0),
     export_path: [1024]u8 = @splat(0),
@@ -133,6 +134,8 @@ pub const Editor = struct {
         var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, directory, .{});
         defer dir.close(self.io);
         try @import("startup_project.zig").save(self.gpa, self.io, dir, path);
+        try self.profile_projects.set(self.profile_choice, path);
+        try self.profile_projects.save(self.gpa, self.io, dir);
         self.project_path = @splat(0);
         @memcpy(self.project_path[0..path.len], path);
     }
@@ -160,6 +163,7 @@ pub const Editor = struct {
             else => return err,
         };
         defer dir.close(self.io);
+        self.profile_projects = try @import("profile_projects.zig").Registry.load(self.gpa, self.io, dir);
         if (try @import("startup_project.zig").load(self.gpa, self.io, dir)) |path| {
             defer self.gpa.free(path);
             try self.openProject(path);
@@ -171,6 +175,27 @@ pub const Editor = struct {
                 else => return err,
             };
         }
+    }
+    fn selectProfile(self: *Editor, index: usize) !void {
+        const profile: p.profiles.Profile = @enumFromInt(index);
+        if (self.fixture) {
+            var loaded = try p.profiles.create(self.gpa, profile);
+            defer loaded.deinit();
+            try self.model.commit(loaded.snapshot);
+            self.profile_choice = index;
+        } else {
+            const associated = self.profile_projects.path(index);
+            const directory = if (associated.len != 0) try self.gpa.dupe(u8, associated) else try std.fs.path.join(self.gpa, &.{ self.testing.root, "projects", @tagName(profile) });
+            defer self.gpa.free(directory);
+            try @import("profile_projects.zig").open(&self.model, self.io, directory, profile);
+            self.profile_choice = index;
+            self.project_path = @splat(0);
+            if (directory.len >= self.project_path.len) return error.InvalidProjectPath;
+            @memcpy(self.project_path[0..directory.len], directory);
+            try self.rememberProject();
+        }
+        self.model.layer = 0;
+        self.syncRename();
     }
     pub fn deinit(self: *Editor) void {
         if (self.bootloader) |*attempt| attempt.driver.transport.close();
@@ -497,12 +522,9 @@ pub const Editor = struct {
         label(t, self.connection_text, .{ .x = 230, .y = 25, .w = 165, .h = 25 }, 12);
         var profile_names = p.profiles.names;
         profile_names[self.profile_choice] = self.model.document().name;
-        if (dvui.dropdown(@src(), &profile_names, .{ .choice = &self.profile_choice }, .{}, options(t, .{ .x = 405, .y = 16, .w = 270, .h = 36 }, 14))) {
-            var loaded = try p.profiles.create(self.gpa, @enumFromInt(self.profile_choice));
-            defer loaded.deinit();
-            try self.model.commit(loaded.snapshot);
-            self.model.layer = 0;
-            self.syncRename();
+        var selected_profile = self.profile_choice;
+        if (dvui.dropdown(@src(), &profile_names, .{ .choice = &selected_profile }, .{}, options(t, .{ .x = 405, .y = 16, .w = 270, .h = 36 }, 14))) {
+            self.selectProfile(selected_profile) catch |err| self.report(err);
         }
         if (self.model.dirty()) label(t, "Unsaved", .{ .x = 686, .y = 27, .w = 85, .h = 23 }, 12);
         if (button(t, "Open / Export", "file.paths", .{ .x = 775, .y = 16, .w = 130, .h = 36 })) self.paths_open = true;
@@ -967,8 +989,14 @@ pub const Editor = struct {
     }
     fn save(self: *Editor) !void {
         if (self.project_path[0] == 0) {
-            self.paths_open = true;
-            return;
+            if (self.fixture) {
+                self.paths_open = true;
+                return;
+            }
+            const directory = try std.fs.path.join(self.gpa, &.{ self.testing.root, "projects", @tagName(@as(p.profiles.Profile, @enumFromInt(self.profile_choice))) });
+            defer self.gpa.free(directory);
+            if (directory.len >= self.project_path.len) return error.InvalidProjectPath;
+            @memcpy(self.project_path[0..directory.len], directory);
         }
         var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
         defer dir.close(self.io);
@@ -1382,6 +1410,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     }
 }
 test {
+    _ = @import("profile_projects.zig");
     _ = geometry;
     _ = @import("model.zig");
     _ = forms;

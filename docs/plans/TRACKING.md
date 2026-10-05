@@ -1,5 +1,15 @@
 # Central milestone tracker
 
+## Save the selected dropdown project (2026-10-06)
+
+Profile selection now opens its associated project file instead of regenerating
+the built-in template. Save updates that selected directory. New dropdown
+projects are materialized under `projects/<profile>/project.zon`, and custom
+directories opened through Open are remembered per profile in the atomic local
+`projects/profile-projects.zon` registry. Fixtures remain isolated from personal
+files. Regression tests cover editing, saving, switching away and back, restart,
+and refusing to replace an unreadable existing project with a template.
+
 ## Remember personal editor project (2026-10-05)
 
 The user requested opening their real layout directly after restart. The editor
