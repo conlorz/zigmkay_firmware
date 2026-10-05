@@ -336,6 +336,11 @@ pub fn main(init: std.process.Init) !void {
                     break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
                 };
             }
+            const practice_live = live and driver.session.phase == .live;
+            editor.?.practice_live_labels = if (practice_live) &labels else null;
+            editor.?.practice_live_state = if (practice_live) state else null;
+            editor.?.practice_live_profile = driver.session.expected.profile_id;
+            editor.?.practice_live_stale = !live or stale or driver.session.phase != .live;
             editor.?.draw() catch |err| editor.?.report(err);
             if (editor.?.bootloader_requested) {
                 editor.?.bootloader_requested = false;

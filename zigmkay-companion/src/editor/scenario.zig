@@ -7,11 +7,22 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
-        .practice_english, .practice_zig, .practice_scroll, .practice_input => {
+        .practice_guidance, .practice_live, .practice_hidden, .practice_error, .practice_english, .practice_zig, .practice_scroll, .practice_input => {
             editor.practice_open = true;
             editor.practice_mode = if (state == .practice_zig or state == .practice_scroll) 1 else 0;
             try editor.startPractice(true);
             if (state == .practice_input) try editor.practice.load("a\n    b", .os);
+            if (state == .practice_guidance) try editor.practice.load("a b", .os);
+            if (state == .practice_hidden) editor.practice_show_keyboard = false;
+            if (state == .practice_error) try editor.practice.insert("X", editor.practiceTime(), false);
+            if (state == .practice_live) {
+                editor.practice_live_labels = try editor.practiceLabels();
+                editor.practice_live_profile = editor.model.document().profile_id;
+                editor.practice_live_state = try @import("companion-model").State.init(.{ .layer_count = @intCast(editor.model.document().layers.len), .key_count = 34 });
+                editor.practice_live_state.?.pressed[10] = true;
+                editor.practice_live_state.?.modifiers = .{ .left_shift = true };
+                editor.practice_live_stale = false;
+            }
         },
         .normal, .key_drag => {},
         .paths => editor.paths_open = true,

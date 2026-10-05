@@ -19,8 +19,9 @@ description = "Open the separate offline LK7 draft editor"
 usage = '''
 flag "--light" help="Start in light mode"
 flag "--fixture" help="Use inert deterministic visual fixtures"
+flag "--practice" help="Open typing practice directly"
 '''
-run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- --editor {% if usage.light %}--light{% endif %} {% if usage.fixture %}--fixture{% endif %}'
+run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- --editor {% if usage.light %}--light{% endif %} {% if usage.fixture %}--fixture{% endif %} {% if usage.practice %}--practice{% endif %}'
 
 [tasks.editor-check]
 description = "Capture all editor states/themes/scales and check semantic interactions offline"

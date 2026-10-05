@@ -29,6 +29,8 @@ pub const CachedKeyContent = struct {
     hold_layer: ?core.LayerIndex = null,
     hold_mods: ?core.Modifiers = null,
     hid_code: ?u8 = null,
+    dead: bool = false,
+    shortcut: bool = false,
 
     pub fn withIcon(self: CachedKeyContent, icon: []const u8, name: []const u8) CachedKeyContent {
         var c = self;
@@ -187,6 +189,9 @@ pub fn computeKeyContent(km: anytype, maybe_def: ?core.KeyDef, physical_mods: Mo
     const key_code_fire = maybe_key_code_fire orelse return content;
 
     content.hid_code = key_code_fire.tap_keycode;
+    content.dead = key_code_fire.dead;
+    const tap_mods = key_code_fire.tap_modifiers;
+    content.shortcut = tap_mods.left_ctrl or tap_mods.right_ctrl or tap_mods.left_gui or tap_mods.right_gui;
 
     const scancode = scanCodeFromInt(key_code_fire.tap_keycode) catch {
         content.label = "???";

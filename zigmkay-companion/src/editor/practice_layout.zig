@@ -3,6 +3,7 @@ const cache = @import("../components/cache.zig");
 const Modifiers = @import("layout-model").Modifiers;
 pub const Hint = struct { layer: usize, key: usize, mods: Modifiers };
 fn matches(entry: cache.CachedKeyContent, cp: u21) bool {
+    if (entry.dead or entry.shortcut) return false;
     if (entry.hid_code) |code| {
         if (cp == '\n' and code == 40) return true;
         if (cp == '\t' and code == 43) return true;
@@ -85,4 +86,13 @@ test "guidance finds shifted keys, other layers, hold access and missing charact
     try std.testing.expect(targets(&labels, 0, .{}, punctuation)[1]);
     try std.testing.expect(targets(&labels, 1, .{}, punctuation)[2]);
     try std.testing.expect(hint(&labels, 0, .{}, 'é') == null);
+}
+
+test "dead keys and shortcut chords never receive direct character hints" {
+    var labels = try cache.LabelCache.init(std.testing.allocator, 1, 2);
+    defer labels.deinit();
+    labels.entries[0] = .{ .label = "´", .hid_code = 52, .dead = true };
+    labels.entries[256] = .{ .label = " ", .hid_code = 44, .shortcut = true };
+    try std.testing.expect(hint(&labels, 0, .{}, '´') == null);
+    try std.testing.expect(hint(&labels, 0, .{}, ' ') == null);
 }

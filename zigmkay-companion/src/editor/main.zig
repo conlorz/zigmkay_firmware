@@ -59,6 +59,15 @@ pub const Editor = struct {
     practice_seed: u64 = 1,
     practice_snapshot: [32]u8 = @splat(0),
     practice_drawn_len: usize = 0,
+    practice_show_keyboard: bool = true,
+    practice_scroll_position: f32 = 0,
+    practice_scroll_at: ?u64 = null,
+    practice_labels: ?@import("../components/cache.zig").LabelCache = null,
+    practice_labels_id: [32]u8 = @splat(0),
+    practice_live_labels: ?*const @import("../components/cache.zig").LabelCache = null,
+    practice_live_state: ?@import("companion-model").State = null,
+    practice_live_stale: bool = true,
+    practice_live_profile: [8]u8 = @splat(0),
     practice_best: [2][3][2]f64 = @splat(@splat(@splat(0))),
     test_start: i64 = 0,
     last_text_sequence: ?u64 = null,
@@ -117,6 +126,7 @@ pub const Editor = struct {
         self.testing.deinit();
         self.firmware.deinit();
         self.text.deinit();
+        if (self.practice_labels) |*labels_cache| labels_cache.deinit();
         self.model.deinit();
         if (self.source) |*source| source.deinit();
     }
@@ -196,6 +206,19 @@ pub const Editor = struct {
     pub fn practiceTime(self: *Editor) u64 {
         return @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds()));
     }
+    pub fn practiceLabels(self: *Editor) !*const @import("../components/cache.zig").LabelCache {
+        const id = try self.model.id();
+        const source_changed = if (self.source) |*source| source.refresh() else false;
+        if (self.practice_labels == null or source_changed or !std.mem.eql(u8, &id, &self.practice_labels_id)) {
+            const cache = @import("../components/cache.zig");
+            var fixture_source: @import("practice_layout.zig").Fixture = .{};
+            const replacement = if (self.source) |*source| try cache.buildProjectCache(self.gpa, source, self.model.document()) else try cache.buildProjectCache(self.gpa, &fixture_source, self.model.document());
+            if (self.practice_labels) |*old| old.deinit();
+            self.practice_labels = replacement;
+            self.practice_labels_id = id;
+        }
+        return &self.practice_labels.?;
+    }
     pub fn pausePractice(self: *Editor) void {
         if (!self.practice_active) return;
         self.practice.pause(self.practiceTime());
@@ -213,6 +236,7 @@ pub const Editor = struct {
         } else self.practice.restart();
         self.practice_active = true;
         self.practice_drawn_len = 0;
+        self.practice_scroll_at = null;
         self.practice_snapshot = try self.model.id();
         self.text.reset();
         self.last_text_sequence = null;
@@ -231,6 +255,10 @@ pub const Editor = struct {
         self.advanced = true;
     }
     pub fn draw(self: *Editor) !void {
+        if (self.source) |*source| if (source.refresh()) {
+            if (self.practice_labels) |*old| old.deinit();
+            self.practice_labels = null;
+        };
         if (!self.fonts_loaded) {
             try fonts.install(self.gpa, self.io);
             self.fonts_loaded = true;
@@ -916,6 +944,7 @@ pub const Editor = struct {
 };
 
 pub fn run(init: std.process.Init, args: []const []const u8) !void {
+    var open_practice = false;
     var fixture = false;
     var light = false;
     var screenshot: ?[]const u8 = null;
@@ -928,7 +957,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var requested_size: ?dvui.Size = null;
     var i: usize = 2;
     while (i < args.len) : (i += 1) {
-        if (std.mem.eql(u8, args[i], "--light")) light = true else if (std.mem.eql(u8, args[i], "--fixture")) fixture = true else if (std.mem.eql(u8, args[i], "--screenshot") and i + 1 < args.len) {
+        if (std.mem.eql(u8, args[i], "--practice")) open_practice = true else if (std.mem.eql(u8, args[i], "--light")) light = true else if (std.mem.eql(u8, args[i], "--fixture")) fixture = true else if (std.mem.eql(u8, args[i], "--screenshot") and i + 1 < args.len) {
             i += 1;
             screenshot = args[i];
             fixture = true;
@@ -981,6 +1010,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     editor.light = light;
     editor.window_id = sdl.SDL_GetWindowID(backend.window);
     editor.backend_window = backend.window;
+    editor.practice_open = open_practice;
     scenario.setup(&editor, state) catch |err| editor.report(err);
     var frames: usize = 0;
     var practice_clipboard: ?[]u8 = null;
@@ -989,6 +1019,42 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         try window.begin(window.beginWait(false));
         try @import("events.zig").pump(&backend, &window, &editor);
         if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
+        if (state == .practice_guidance) switch (frames) {
+            3 => _ = try window.addEventText(.{ .text = "a" }),
+            4 => {
+                if (@import("practice_view.zig").focus(&editor.practice) != 1 or !editor.practice_show_keyboard) return error.PracticeGuideDidNotFollowInput;
+                const keyboard = dvui.tagGet("practice.keyboard") orelse return error.PracticeKeyboardMissing;
+                if (!keyboard.visible) return error.PracticeKeyboardClipped;
+            },
+            5 => try scenario.click(&window, "practice.keyboard.toggle", window.natural_scale, false),
+            6 => try scenario.click(&window, "practice.keyboard.toggle", window.natural_scale, true),
+            8 => {
+                if (editor.practice_show_keyboard or editor.practice.len != 1) return error.PracticeKeyboardToggleFailed;
+                _ = try window.addEventKey(.{ .code = .enter, .action = .down, .mod = if (@import("builtin").os.tag == .macos) .lcommand else .lcontrol });
+            },
+            9 => {
+                _ = try window.addEventKey(.{ .code = .space, .action = .down, .mod = .none });
+                _ = try window.addEventText(.{ .text = " " });
+            },
+            11 => {
+                if (editor.practice_show_keyboard or editor.practice.len != 2) return error.PracticeSpaceActivatedControl;
+            },
+            12 => try scenario.click(&window, "practice.keyboard.toggle", window.natural_scale, false),
+            13 => try scenario.click(&window, "practice.keyboard.toggle", window.natural_scale, true),
+            15 => {
+                if (!editor.practice_show_keyboard or @import("practice_view.zig").focus(&editor.practice) != 2) return error.PracticeKeyboardRestoreFailed;
+                const keyboard = dvui.tagGet("practice.keyboard") orelse return error.PracticeKeyboardMissing;
+                if (!keyboard.visible) return error.PracticeKeyboardClipped;
+                std.log.info("Practice companion visibility, next letter and Space input after toggle passed", .{});
+            },
+            else => {},
+        };
+        if (state == .practice_live and frames == 3) {
+            editor.practice_live_state.?.highest_layer = 1;
+            editor.practice_live_state.?.active_layers = 3;
+            editor.practice_live_state.?.pressed[10] = false;
+            editor.practice_live_state.?.pressed[32] = true;
+        }
         if (state == .practice_scroll) switch (frames) {
             3 => _ = try window.addEventText(.{ .text = @import("practice.zig").lessons[1][0..300] }),
             5 => {
@@ -1094,7 +1160,6 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             23 => try scenario.click(&window, "advanced.apply", window.natural_scale, true),
             else => {},
         };
-        if (editor.source) |*source| _ = source.refresh();
         editor.draw() catch |err| {
             if (err == error.OutOfMemory) return err;
             editor.report(err);
@@ -1159,7 +1224,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 break;
             }
         }
-        const capture_frame: usize = if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 28 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
+        const capture_frame: usize = if (state == .practice_guidance) 17 else if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 28 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
         if (screenshot != null and frames == capture_frame) {
             if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});
@@ -1196,4 +1261,6 @@ test {
     _ = forms;
     _ = @import("text.zig");
     _ = @import("practice.zig");
+    _ = @import("practice_view.zig");
+    _ = @import("practice_layout.zig");
 }
