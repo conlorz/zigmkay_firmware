@@ -126,6 +126,7 @@ pub fn Driver(comptime Transport: type) type {
         pub fn enterBootloader(self: *Self, now: u64) !void {
             if (!self.connected or !self.session.bootloaderAvailable()) return error.BootloaderUnavailable;
             const actions = self.session.requestBootloader(now);
+            if (self.recording) |recording| recording.add(.bootloader, now, &.{});
             if (!self.execute(actions, now)) return error.BootloaderTransportFailed;
         }
         pub fn poll(self: *Self, now: u64) void {
@@ -193,7 +194,13 @@ pub fn Driver(comptime Transport: type) type {
                 return;
             };
             _ = self.execute(actions, now);
-            if (self.connected) _ = self.execute(self.session.queryCapabilities(now), now);
+            if (self.connected) {
+                const query = self.session.queryCapabilities(now);
+                if (query.count != 0) {
+                    if (self.recording) |recording| recording.add(.capabilities, now, &.{});
+                    _ = self.execute(query, now);
+                }
+            }
         }
         fn receive(self: *Self, bytes: []const u8, now: u64) bool {
             if (self.recording) |recording| recording.add(.receive, now, bytes);
@@ -390,6 +397,9 @@ test "live bootloader requires capability and one explicit action without retry"
     try std.testing.expect(request.payload == .enter_bootloader);
     try std.testing.expectError(error.BootloaderUnavailable, driver.enterBootloader(5));
     driver.poll(10000);
-    try std.testing.expectEqual(before + 1, driver.transport.write_count);
+    for (driver.transport.writes[before + 1 .. driver.transport.write_count]) |bytes| {
+        const packet = try protocol.decodePacket(bytes[1..], fixture().dimensions, .host_to_device);
+        try std.testing.expect(packet.payload != .enter_bootloader);
+    }
     try std.testing.expectEqual(companion.BootloaderStatus.timed_out, driver.session.bootloader_status);
 }

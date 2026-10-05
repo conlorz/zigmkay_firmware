@@ -203,6 +203,8 @@ pub fn main(init: std.process.Init) !void {
     defer source.deinit();
     var labels = try cache.buildLabelCache(init.gpa, &source);
     defer labels.deinit();
+    var transferred_profile: ?@import("keymap-project").snapshot.Loaded = null;
+    defer if (transferred_profile) |*profile| profile.deinit();
     var seed: u32 = 0;
     if (live) try init.io.randomSecure(std.mem.asBytes(&seed));
     var driver = try adapter.Driver(Native).init(.{ .io = init.io }, keymap.identity, seed, path);
@@ -232,7 +234,7 @@ pub fn main(init: std.process.Init) !void {
         if (now >= refresh_at) {
             refresh_at = now +| 500;
             if (source.refresh()) {
-                var replacement = try cache.buildLabelCache(init.gpa, &source);
+                var replacement = if (transferred_profile) |profile| try cache.buildProjectCache(init.gpa, &source, profile.snapshot.document) else try cache.buildLabelCache(init.gpa, &source);
                 labels.deinit();
                 labels = replacement;
                 replacement = undefined;
@@ -259,7 +261,7 @@ pub fn main(init: std.process.Init) !void {
         }
         const stale = if (live) driver.session.stale else replay_stale;
         const phase_label = if (driver.session.phase == .synchronizing and !stale) "live" else @tagName(driver.session.phase);
-        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(&keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (live) phase_label else "offline", if (stale) " / STALE" else "" }, .{});
+        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(if (live) &driver.session.expected.profile_id else &keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (live) phase_label else "offline", if (stale) " / STALE" else "" }, .{});
         dvui.label(@src(), "Input source: {s} / layout: {s}", .{ source.id(), source.layoutId() }, .{});
         if (live and driver.status != .connected) {
             dvui.label(@src(), "Connection: {s}; select --device-path for multiple devices", .{@tagName(driver.status)}, .{});
@@ -302,12 +304,42 @@ pub fn main(init: std.process.Init) !void {
                 else => return error.NativeEditorWindowUnavailable,
             }
             if (live) {
+                if (editor.?.firmware.expectedIdentity()) |expected| {
+                    if (!std.meta.eql(expected, driver.session.expected)) {
+                        const profile = try @import("keymap-project").snapshot.clone(init.gpa, editor.?.firmware.frozen.?.snapshot);
+                        errdefer {
+                            var owned = profile;
+                            owned.deinit();
+                        }
+                        const replacement = try cache.buildProjectCache(init.gpa, &source, profile.snapshot.document);
+                        if (transferred_profile) |*old| old.deinit();
+                        transferred_profile = profile;
+                        labels.deinit();
+                        labels = replacement;
+                        driver.disconnect(now);
+                        driver.session = try @import("companion-model").Session.init(expected);
+                        driver.retry_at = now;
+                    }
+                    editor.?.firmware.observeRunning(if (driver.session.phase == .live and !driver.session.stale) driver.session.expected else null, driver.session.phase == .live and !driver.session.stale, now);
+                }
+                editor.?.bootloader_available = driver.connected and driver.session.bootloaderAvailable();
+                editor.?.bootloader_status = if (editor.?.bootloader_available) "Verified device supports explicit bootloader entry." else switch (driver.session.bootloader_status) {
+                    .requested => "Bootloader requested; waiting for acknowledgment.",
+                    .accepted => "Bootloader accepted; waiting for device removal and recovery volume.",
+                    .timed_out => "Bootloader request timed out; no retry. Use physical positions 0 + 4.",
+                    .rejected => "Bootloader request rejected. Use physical positions 0 + 4.",
+                    else => "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
+                };
                 editor.?.connection_text = if (driver.session.phase == .incompatible) "Device identity differs" else if (driver.status != .connected) "No device · draft only" else if (driver.session.phase != .live or driver.session.stale) "Device · verifying" else blk: {
                     const draft_identity = try @import("keymap-project").snapshot.identity(init.gpa, editor.?.model.current.snapshot, @import("keymap-project").profiles.board);
                     break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
                 };
             }
             editor.?.draw() catch |err| editor.?.report(err);
+            if (editor.?.bootloader_requested) {
+                editor.?.bootloader_requested = false;
+                if (live) driver.enterBootloader(now) catch |err| editor.?.report(err) else editor.?.report(error.BootloaderUnavailable);
+            }
             if (editor.?.should_close) editor_open = false;
         }
         const end_micros = try win.end(.{});

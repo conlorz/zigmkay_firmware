@@ -11,6 +11,7 @@ const input = @import("../input_source.zig");
 const palette = @import("../components/key.zig").layer_colors;
 const forms = @import("forms.zig");
 const Testing = @import("testing.zig").Controller;
+const Firmware = @import("firmware.zig").Controller;
 const Text = @import("text.zig").Text;
 const dialog = @import("dialog.zig");
 const jobs = @import("companion-jobs");
@@ -87,6 +88,13 @@ pub const Editor = struct {
     advanced: bool = false,
     action_draft: forms.Draft = .{},
     testing: Testing,
+    firmware: Firmware,
+    firmware_open: bool = false,
+    bootloader_requested: bool = false,
+    bootloader_available: bool = false,
+    bootloader_status: []const u8 = "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
+    recovery_volume: [1024]u8 = @splat(0),
+    flash_confirmed: bool = false,
     text: Text,
     test_start: i64 = 0,
     last_text_sequence: ?u64 = null,
@@ -126,7 +134,7 @@ pub const Editor = struct {
     pub fn init(process: std.process.Init, fixture: bool) !Editor {
         const root = try std.Io.Dir.cwd().realPathFileAlloc(process.io, ".", process.gpa);
         defer process.gpa.free(root);
-        var self = Editor{ .model = try Model.init(process.gpa, .eurkey), .io = process.io, .gpa = process.gpa, .fixture = fixture, .testing = try Testing.init(process.gpa, process.io, root), .text = Text.init(fixture) };
+        var self = Editor{ .model = try Model.init(process.gpa, .eurkey), .io = process.io, .gpa = process.gpa, .fixture = fixture, .testing = try Testing.init(process.gpa, process.io, root), .firmware = try Firmware.init(process.gpa, process.io, root), .text = Text.init(fixture) };
         if (!fixture) self.source = input.Source.init();
         if (fixture) {
             try @import("fixture.zig").setup(&self.model);
@@ -143,6 +151,7 @@ pub const Editor = struct {
             self.gpa.destroy(job);
         }
         self.testing.deinit();
+        self.firmware.deinit();
         self.text.deinit();
         self.model.deinit();
         if (self.source) |*source| source.deinit();
@@ -158,6 +167,10 @@ pub const Editor = struct {
     }
     pub fn raw(self: *Editor, event: sdl.SDL_Event) !bool {
         if ((event.type == sdl.SDL_EVENT_WINDOW_CLOSE_REQUESTED and event.window.windowID == self.window_id) or event.type == sdl.SDL_EVENT_QUIT) {
+            if (self.firmware.state == .transferring) {
+                self.report(error.TransferInProgress);
+                return true;
+            }
             if (dialog.active()) {
                 self.report(error.CloseNativeDialogFirst);
                 return true;
@@ -248,6 +261,8 @@ pub const Editor = struct {
             }
         }
         self.testing.poll(try self.model.id());
+        self.firmware.poll(try self.model.id());
+        if (self.callback_state == .changed or self.callback_state == .missing) self.firmware.invalidateExternalSources();
         if (self.text.refresh()) {
             self.testing.stop();
             self.text.reset();
@@ -275,6 +290,7 @@ pub const Editor = struct {
         if (self.paths_open) try self.paths(t);
         if (self.advanced) try self.actionForm(t);
         if (self.test_details) try self.testDrawer(t);
+        if (self.firmware_open) try self.firmwareDrawer(t);
         if (self.callback_open) try self.callbackDrawer(t);
         if (self.combo_open) try self.comboDrawer(t);
         if (self.picker_open) try self.picker(t);
@@ -326,13 +342,12 @@ pub const Editor = struct {
             self.syncRename();
         }
         if (button(t, "Save", "file.save", .{ .x = 1078, .y = 16, .w = 76, .h = 36 })) self.save() catch |err| self.report(err);
-        inline for (.{ "Build · 08", "Flash · 08" }, 0..) |caption, index| {
-            var opts = options(t, .{ .x = 1166 + @as(f32, @floatFromInt(index)) * 122, .y = 16, .w = 110, .h = 36 }, 13);
-            opts.id_extra = index;
-            opts.background = true;
-            opts.color_text = .{ .color = t.muted };
-            dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = 0.5 }, opts);
+        if (button(t, "Build", "firmware.build", .{ .x = 1166, .y = 16, .w = 110, .h = 36 })) {
+            self.firmware_open = true;
+            self.flash_confirmed = false;
+            if (!self.fixture) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
         }
+        if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) self.firmware_open = true;
         if (button(t, if (self.light) "Dark" else "Light", "theme.toggle", .{ .x = 1410, .y = 16, .w = 100, .h = 36 })) self.light = !self.light;
     }
     fn sidebar(self: *Editor, t: Theme) !void {
@@ -937,6 +952,44 @@ pub const Editor = struct {
             self.advanced = false;
         }
         if (dvui.button(@src(), "Cancel", .{}, .{})) self.advanced = false;
+    }
+    fn firmwareDrawer(self: *Editor, t: Theme) !void {
+        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 350, .y = 170, .w = 900, .h = 680 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
+        defer window.deinit();
+        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
+        defer area.deinit();
+        dvui.label(@src(), "LK7 firmware · {s}", .{@tagName(self.firmware.state)}, .{});
+        dvui.label(@src(), "Build freezes the draft, including callback sources. Transfer requires a current artifact.", .{}, .{});
+        if (self.firmware.artifact_path) |path| dvui.label(@src(), "Artifact: {s}", .{path}, .{});
+        if (self.firmware.manifest) |manifest| {
+            const hash = std.fmt.bytesToHex(manifest.uf2_hash, .lower);
+            dvui.label(@src(), "UF2: {d} bytes · SHA-256 {s}", .{ manifest.uf2_size, hash }, .{});
+        }
+        if (self.firmware.rollback_path) |path| dvui.label(@src(), "Known running rollback artifact: {s}", .{path}, .{});
+        if (self.firmware.state == .building and dvui.button(@src(), "Cancel build", .{}, .{ .tag = "firmware.cancel" })) self.firmware.cancel();
+        if (dvui.button(@src(), "Build current draft", .{}, .{ .tag = "firmware.prepare" })) {
+            self.flash_confirmed = false;
+            if (!self.fixture) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
+        }
+        dvui.labelNoFmt(@src(), self.bootloader_status, .{}, .{});
+        if (self.bootloader_available and dvui.button(@src(), "Enter bootloader", .{}, .{ .tag = "firmware.bootloader" })) {
+            if (!self.fixture) self.bootloader_requested = true;
+        }
+        dvui.label(@src(), "Select the absolute mounted recovery volume path. RP2040 metadata cannot prove a unique LK7 serial.", .{}, .{});
+        const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.recovery_volume } }, .{ .expand = .horizontal, .tag = "firmware.volume" });
+        entry.deinit();
+        _ = dvui.checkbox(@src(), &self.flash_confirmed, "I selected the intended LK7 in recovery mode and authorize transferring this artifact.", .{});
+        if (self.firmware.state == .built and self.flash_confirmed and dvui.button(@src(), "Transfer firmware to selected volume", .{}, .{ .tag = "firmware.transfer" })) {
+            if (!self.fixture) self.firmware.flash(try self.model.id(), std.mem.sliceTo(&self.recovery_volume, 0), true) catch |err| self.report(err);
+            self.flash_confirmed = false;
+        }
+        dvui.label(@src(), "Transfer: {} · Running identity verified: {} · Typing accepted: {}", .{ self.firmware.transferred, self.firmware.running_verified, self.firmware.typing_verified }, .{});
+        if (self.firmware.transferred and !self.firmware.running_verified) dvui.label(@src(), "Reconnect the live overlay to verify board/profile identity. On timeout or mismatch, use physical recovery and the rollback artifact.", .{}, .{});
+        if (self.firmware.running_verified and dvui.button(@src(), "I verified actual typing", .{}, .{ .tag = "firmware.typing" })) self.firmware.acceptTyping() catch |err| self.report(err);
+        dvui.label(@src(), "A synchronized UF2 transfer is not transactional; removal or failure can require physical recovery.", .{}, .{});
+        dvui.labelNoFmt(@src(), self.firmware.diagnostic.items, .{}, .{});
+        dvui.labelNoFmt(@src(), std.mem.sliceTo(&self.diagnostic, 0), .{}, .{});
+        if (dvui.button(@src(), "Close firmware workflow", .{}, .{})) self.firmware_open = false;
     }
     fn testDrawer(self: *Editor, t: Theme) !void {
         const window = dvui.floatingWindow(@src(), .{}, .{ .rect = .{ .x = 320, .y = 590, .w = 900, .h = 310 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });

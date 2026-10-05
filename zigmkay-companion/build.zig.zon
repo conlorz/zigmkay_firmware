@@ -4,6 +4,7 @@
     .fingerprint = 0xf34c18abb2711003,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .zig_flash = .{ .path = "../zig-flash" },
         .keymap_project = .{ .path = "../keymap-project" },
         .companion_jobs = .{ .path = "../companion-jobs" },
         .keymap_test = .{ .path = "../apps/keymap-test" },

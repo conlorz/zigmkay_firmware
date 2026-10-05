@@ -112,13 +112,14 @@ pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
     const args = try init.minimal.args.toSlice(gpa);
     if (args.len == 2 and std.mem.eql(u8, args[1], "--help")) {
-        std.debug.print("Usage: zig_flash <firmware.uf2> [mount or label] [--verify-lk7 <companion binary>]\nDefault label: RPI-RP2; discovery: 30s.\n", .{});
+        std.debug.print("Usage: zig_flash <firmware.uf2> [mount or label] [--verify-lk7 <companion binary> | --expected-sha256 <hex>]\nDefault label: RPI-RP2; discovery: 30s.\n", .{});
         return;
     }
     // No implicit input: running the binary without arguments cannot start waiting for hardware.
     if (args.len < 2 or args.len > 5) return error.Usage;
     const verifier: ?[]const u8 = if (args.len == 5 and std.mem.eql(u8, args[3], "--verify-lk7")) args[4] else null;
-    if (args.len > 3 and verifier == null) return error.Usage;
+    const expected_hash: ?[]const u8 = if (args.len == 5 and std.mem.eql(u8, args[3], "--expected-sha256")) args[4] else null;
+    if (args.len > 3 and verifier == null and expected_hash == null) return error.Usage;
     if (verifier) |executable| {
         const file = try std.Io.Dir.cwd().openFile(init.io, executable, .{});
         file.close(init.io);
@@ -132,6 +133,7 @@ pub fn main(init: std.process.Init) !void {
     const hash = std.crypto.hash.sha2.Sha256.hash;
     var digest: [32]u8 = undefined;
     hash(contents, &digest, .{});
+    if (expected_hash) |expected| try verifyExpectedHash(digest, expected);
     std.log.info("Validated RP2040 artifact: {s}, {d} bytes, sha256={x}", .{ source, contents.len, digest });
     const mount = if (args.len >= 3) args[2] else "RPI-RP2";
     const deadline = now(init.io) +| discovery_ms;
@@ -167,6 +169,21 @@ pub fn main(init: std.process.Init) !void {
         }
         std.log.info("Running LK7 identity and coherent snapshot verified; no binary readback was performed", .{});
     }
+}
+
+fn verifyExpectedHash(actual: [32]u8, expected: []const u8) !void {
+    if (expected.len != 64) return error.InvalidExpectedHash;
+    var bytes: [32]u8 = undefined;
+    _ = std.fmt.hexToBytes(&bytes, expected) catch return error.InvalidExpectedHash;
+    if (!std.mem.eql(u8, &actual, &bytes)) return error.ArtifactChanged;
+}
+
+test "manifest hash guards the exact transfer bytes before discovery" {
+    const digest: [32]u8 = @splat(0xa7);
+    const expected = std.fmt.bytesToHex(digest, .lower);
+    try verifyExpectedHash(digest, &expected);
+    try std.testing.expectError(error.ArtifactChanged, verifyExpectedHash(@splat(0), &expected));
+    try std.testing.expectError(error.InvalidExpectedHash, verifyExpectedHash(digest, "not a hash"));
 }
 test "direct firmware write replaces longer files and preserves all chunks" {
     const io = std.testing.io;

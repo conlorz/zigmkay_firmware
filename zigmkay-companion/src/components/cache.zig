@@ -277,6 +277,25 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
     return cache;
 }
 
+/// Display exactly the frozen profile used for the explicit firmware transfer.
+pub fn buildProjectCache(allocator: std.mem.Allocator, km: anytype, document: @import("keymap-project").Document) !LabelCache {
+    const project = @import("keymap-project");
+    var result = try LabelCache.init(allocator, document.layers.len, document.layers[0].actions.len);
+    errdefer result.deinit();
+    for (document.layers, 0..) |layer, layer_index| {
+        for (layer.actions, 0..) |action, key_index| {
+            const def = if (action) |value| try project.lowerAction(document, value) else null;
+            for (0..256) |mods| {
+                var buffer: [64]u8 = @splat(0);
+                var entry = computeKeyContent(km, def, @bitCast(@as(u8, @intCast(mods))), &buffer);
+                if (entry.label) |text| entry.label = try result.arena.allocator().dupe(u8, text);
+                result.entries[(layer_index * result.key_count + key_index) * 256 + mods] = entry;
+            }
+        }
+    }
+    return result;
+}
+
 test "computeKeyContent: KC_A returns lowercase a label" {
     var km: zkeymap.KeyMap = undefined;
     zkeymap.KeyMap.init(&km);

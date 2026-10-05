@@ -40,5 +40,5 @@ pub fn main(init: std.process.Init) !void {
         std.log.err("Interaction failed: {s}", .{result.stderr});
         return error.InteractionFailed;
     }
-    std.log.info("64 captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{});
+    std.log.info("{d} captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{@typeInfo(State).@"enum".fields.len * 4});
 }

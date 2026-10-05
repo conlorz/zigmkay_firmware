@@ -264,7 +264,7 @@ pub const Session = struct {
     pub fn tick(self: *Session, now: u64, fresh_nonce: u32) protocol.ProtocolError!Actions {
         if (self.capability_request != 0 and now >= self.capability_deadline) self.capability_request = 0;
         if (self.bootloader_status == .requested and now >= self.bootloader_deadline) self.bootloader_status = .timed_out;
-        if (self.bootloader_status == .requested or self.bootloader_status == .accepted or self.bootloader_status == .timed_out) return .{};
+        if (self.bootloader_status == .requested or self.bootloader_status == .accepted) return .{};
         switch (self.phase) {
             .disconnected, .incompatible => return .{},
             .live => if (now >= self.refresh_at) return self.startSnapshot(now, false, false),

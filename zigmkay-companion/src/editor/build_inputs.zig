@@ -5,7 +5,7 @@ pub fn digest(gpa: std.mem.Allocator, io: std.Io, root: []const u8) ![32]u8 {
     defer arena.deinit();
     const a = arena.allocator();
     var files: std.ArrayList([]const u8) = .empty;
-    for ([_][]const u8{ "apps/keymap-test", "zigmkay", "layout-model", "zkeycodes", "device-protocol", "keymap-project", "companion-jobs" }) |package| {
+    for ([_][]const u8{ "apps/keymap-test", "keyboards", "zigmkay", "layout-model", "zkeycodes", "device-protocol", "keymap-project", "companion-jobs" }) |package| {
         const path = try std.fs.path.join(a, &.{ root, package });
         var dir = try std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true });
         defer dir.close(io);

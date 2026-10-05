@@ -5,6 +5,7 @@ const geometry = @import("geometry.zig");
 pub const State = @import("states.zig").State;
 pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
+    editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
         .normal => {},
         .no_device => editor.connection_text = "Offline · No device",
@@ -32,6 +33,19 @@ pub fn setup(editor: anytype, state: State) !void {
             editor.testing.state = .failed;
             try editor.testing.diagnostic.appendSlice(editor.gpa, "Fixture compiler diagnostic: callback ABI mismatch");
             editor.test_details = true;
+        },
+        .firmware_building, .firmware_failed, .firmware_stale, .bootloader_fallback, .flash_transferred, .flash_reconnect_timeout => {
+            editor.firmware_open = true;
+            editor.firmware.state = switch (state) {
+                .firmware_building => .building,
+                .firmware_failed => .failed,
+                .firmware_stale => .stale,
+                .flash_transferred => .transferred,
+                .flash_reconnect_timeout => .reconnect_timeout,
+                else => .idle,
+            };
+            if (state == .firmware_failed) try editor.firmware.diagnostic.appendSlice(editor.gpa, "callback_0.zig:12:9: error: invalid callback argument type");
+            editor.firmware.transferred = state == .flash_transferred or state == .flash_reconnect_timeout;
         },
     }
 }

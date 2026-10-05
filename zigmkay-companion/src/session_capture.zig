@@ -21,7 +21,7 @@ pub const magic = "ZMKCAP01";
 pub const record_size = 48;
 pub const max_records = 4096;
 pub const max_bytes = magic.len + record_size * max_records;
-pub const Kind = enum(u8) { connect = 1, tick = 2, receive = 3, disconnect = 4, send = 5 };
+pub const Kind = enum(u8) { connect = 1, tick = 2, receive = 3, disconnect = 4, send = 5, capabilities = 6, bootloader = 7 };
 pub const Recorder = struct {
     records: []u8,
     used: usize = 0,
@@ -100,6 +100,10 @@ pub fn replay(bytes: []const u8, expected: protocol.Identity) !companion.Session
                         break :blk if (kind == .connect) try session.connect(now, token) else try session.tick(now, token);
                     },
                     .receive => session.receive(data, now),
+                    .capabilities, .bootloader => blk: {
+                        if (data.len != 0) return error.InvalidCapture;
+                        break :blk if (kind == .capabilities) session.queryCapabilities(now) else session.requestBootloader(now);
+                    },
                     else => unreachable,
                 };
             },

@@ -82,7 +82,9 @@ pub const Command = struct {
         args[7] = "-Doptimize=ReleaseSafe";
         args[8] = "-p";
         args[9] = try a.dupe(u8, install_directory);
-        return .{ .arena = arena, .argv = args, .cwd = try a.dupe(u8, repository), .uf2_path = try std.fs.path.join(a, &.{ install_directory, "firmware", "lk7", "zigmkay.uf2" }), .build_key = key(input) };
+        const owned_cwd = try a.dupe(u8, repository);
+        const owned_path = try std.fs.path.join(a, &.{ install_directory, "firmware", "lk7", "zigmkay.uf2" });
+        return .{ .arena = arena, .argv = args, .cwd = owned_cwd, .uf2_path = owned_path, .build_key = key(input) };
     }
 
     pub fn deinit(self: *Command) void {
@@ -123,7 +125,8 @@ pub const Manifest = struct {
         owned.target = try a.dupe(u8, captured.target);
         owned.optimize = try a.dupe(u8, captured.optimize);
         if (captured.git_revision) |revision| owned.git_revision = try a.dupe(u8, revision);
-        return .{ .arena = arena, .inputs = owned, .build_key = prepared_key, .uf2_path = try a.dupe(u8, path), .uf2_size = bytes.len, .uf2_hash = digest(bytes) };
+        const owned_path = try a.dupe(u8, path);
+        return .{ .arena = arena, .inputs = owned, .build_key = prepared_key, .uf2_path = owned_path, .uf2_size = bytes.len, .uf2_hash = digest(bytes) };
     }
 
     pub fn fresh(self: Manifest, current: Inputs) bool {
