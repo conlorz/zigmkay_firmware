@@ -1,75 +1,34 @@
 const core = @import("layout-model");
-/// helper to add Left Control modifier to a core.KeyCodeFire.
+fn withModifiers(fire: core.KeyCodeFire, modifiers: core.Modifiers) core.KeyCodeFire {
+    var copy = fire;
+    copy.dead = false;
+    copy.tap_modifiers = copy.tap_modifiers.add(modifiers);
+    return copy;
+}
 pub fn L_CTL(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .left_ctrl = true });
-
-    return copy;
+    return withModifiers(fire, .{ .left_ctrl = true });
 }
-
-/// helper to add Right Control modifier to a core.KeyCodeFire.
 pub fn R_CTL(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .right_ctrl = true });
-
-    return copy;
+    return withModifiers(fire, .{ .right_ctrl = true });
 }
-
-/// helper to add Left Shift modifier to a core.KeyCodeFire.
 pub fn L_SFT(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .left_shift = true });
-    return copy;
+    return withModifiers(fire, .{ .left_shift = true });
 }
-
-/// helper to add Right Shift modifier to a core.KeyCodeFire.
 pub fn R_SFT(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .right_shift = true });
-
-    return copy;
+    return withModifiers(fire, .{ .right_shift = true });
 }
-
-/// helper to add Left GUI (Windows/Command) modifier to a core.KeyCodeFire.
 pub fn L_GUI(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .left_gui = true });
-
-    return copy;
+    return withModifiers(fire, .{ .left_gui = true });
 }
-
-/// helper to add Right GUI (Windows/Command) modifier to a core.KeyCodeFire.
 pub fn R_GUI(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .right_gui = true });
-
-    return copy;
+    return withModifiers(fire, .{ .right_gui = true });
 }
-
-/// helper to add Left Alt modifier to a core.KeyCodeFire.
 pub fn L_ALT(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .left_alt = true });
-
-    return copy;
+    return withModifiers(fire, .{ .left_alt = true });
 }
-
-/// helper to add Right Alt modifier to a core.KeyCodeFire.
 pub fn R_ALT(fire: core.KeyCodeFire) core.KeyCodeFire {
-    var copy = fire;
-    copy.dead = false;
-    copy.tap_modifiers = copy.tap_modifiers.add(.{ .right_alt = true });
-
-    return copy;
+    return withModifiers(fire, .{ .right_alt = true });
 }
-
 /// Sets the dead key flag on a core.KeyCodeFire. Dead keys send the keycode followed by a
 /// spacebar press to cancel the dead key combination.
 pub fn DEAD(fire: core.KeyCodeFire) core.KeyCodeFire {
