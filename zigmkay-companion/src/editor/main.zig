@@ -18,59 +18,14 @@ const jobs = @import("companion-jobs");
 const scenario = @import("scenario.zig");
 const fonts = @import("fonts.zig");
 
-fn color(hex: u24) dvui.Color {
-    return .{ .r = @truncate(hex >> 16), .g = @truncate(hex >> 8), .b = @truncate(hex), .a = 255 };
-}
-pub const Theme = struct {
-    bg: dvui.Color,
-    panel: dvui.Color,
-    control: dvui.Color,
-    border: dvui.Color,
-    text: dvui.Color,
-    muted: dvui.Color,
-    pub fn get(light: bool) Theme {
-        return if (light) .{ .bg = color(0xEEF0F3), .panel = color(0xFFFFFF), .control = color(0xF4F5F7), .border = color(0xD4D9E0), .text = color(0x20242A), .muted = color(0x657080) } else .{ .bg = color(0x191B1F), .panel = color(0x22252A), .control = color(0x30343B), .border = color(0x424852), .text = color(0xF4F5F7), .muted = color(0xAAB2BF) };
-    }
-};
-fn rect(r: geometry.Rect) dvui.Rect {
-    return .{ .x = r.x, .y = r.y, .w = r.w, .h = r.h };
-}
-fn options(t: Theme, r: dvui.Rect, size: f32) dvui.Options {
-    return .{ .rect = r, .font = fonts.font("", size), .color_text = .{ .color = t.text }, .color_fill = .{ .color = t.control }, .color_border = .{ .color = t.border }, .margin = .{}, .padding = .{ .x = 8, .y = 6, .w = 8, .h = 6 }, .corners = .all(6) };
-}
-fn label(t: Theme, text: []const u8, r: dvui.Rect, size: f32) void {
-    var opts = options(t, r, size);
-    opts.font = fonts.font(text, size);
-    if (size >= 18) opts.font = opts.font.?.withWeight(.bold);
-    opts.id_extra = (@as(usize, @intFromFloat(r.x)) << 16) + @as(usize, @intFromFloat(r.y));
-    opts.padding = .{};
-    dvui.labelNoFmt(@src(), text, .{}, opts);
-}
-fn button(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect) bool {
-    var opts = options(t, r, 13);
-    opts.font = fonts.font(text, 15);
-    opts.tag = tag;
-    opts.id_extra = std.hash.Wyhash.hash(0, tag);
-    opts.background = true;
-    if (r.w < 40) opts.padding = .all(2);
-    if (std.mem.startsWith(u8, tag, "layer.duplicate") or std.mem.startsWith(u8, tag, "layer.delete")) opts.background = false;
-    if (std.mem.eql(u8, tag, "test.prepare")) {
-        opts.color_fill = .{ .color = color(0x126AFF) };
-        opts.color_text = .{ .color = color(0xFFFFFF) };
-    }
-    return dvui.button(@src(), text, .{}, opts);
-}
-fn panel(t: Theme, which: geometry.Panel) *dvui.BoxWidget {
-    var opts = options(t, rect(geometry.panel(which)), 14);
-    opts.tag = @tagName(which);
-    opts.id_extra = @intFromEnum(which);
-    opts.color_fill = .{ .color = t.panel };
-    opts.background = true;
-    opts.border = .all(1);
-    opts.padding = .{};
-    opts.corners = .all(12);
-    return dvui.box(@src(), .{}, opts);
-}
+const ui = @import("ui.zig");
+pub const Theme = ui.Theme;
+const options = ui.options;
+const color = ui.color;
+const rect = ui.rect;
+const label = ui.label;
+const button = ui.button;
+const panel = ui.panel;
 
 pub const Editor = struct {
     model: Model,
@@ -218,7 +173,7 @@ pub const Editor = struct {
         }
         return false;
     }
-    fn testTime(self: *Editor) u64 {
+    pub fn testTime(self: *Editor) u64 {
         return @max(self.testing.time_us, @as(u64, @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds() - self.test_start))));
     }
     pub fn openAction(self: *Editor) void {
@@ -630,7 +585,7 @@ pub const Editor = struct {
         }
         if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
     }
-    fn openCallback(self: *Editor, index: usize) !void {
+    pub fn openCallback(self: *Editor, index: usize) !void {
         const callback = self.model.document().callbacks[index];
         if (callback.kind != .attached) return error.RegisteredSourceReadOnly;
         if (self.project_path[0] == 0) return error.SaveProjectDirectoryFirst;
@@ -735,170 +690,10 @@ pub const Editor = struct {
         try p.snapshot.save(self.gpa, self.io, dir, self.model.current.snapshot, p.profiles.board);
     }
     fn callbackDrawer(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 460, .y = 180, .w = 800, .h = 630 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
-        defer window.deinit();
-        dvui.label(@src(), "Callbacks · immutable source snapshots · external Zig editing", .{}, .{});
-        dvui.label(@src(), "Attaching/refreshing reads bytes only. Prepare Test explicitly executes compilation/callbacks.", .{}, .{});
-        {
-            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_root }, .placeholder = "Source root directory" }, .{ .expand = .horizontal });
-            entry.deinit();
-        }
-        if (dvui.button(@src(), "Choose source root…", .{}, .{})) {
-            self.dialog_target = .callback;
-            dialog.start(self.backend_window.?) catch |err| self.report(err);
-        }
-        {
-            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_entry }, .placeholder = "Relative entry module, e.g. callbacks.zig" }, .{ .expand = .horizontal });
-            entry.deinit();
-        }
-        {
-            const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_ids }, .placeholder = "Callback IDs, e.g. 1,2 (1–252)" }, .{ .expand = .horizontal });
-            entry.deinit();
-        }
-        if (dvui.button(@src(), "Attach callback ID and complete import closure", .{}, .{})) {
-            var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.callback_root, 0), .{}) catch |err| {
-                self.report(err);
-                return;
-            };
-            defer dir.close(self.io);
-            var bundle = p.sources.capture(self.gpa, self.io, dir, std.mem.sliceTo(&self.callback_entry, 0)) catch |err| {
-                self.report(err);
-                return;
-            };
-            defer bundle.deinit();
-            var ids: [252]u8 = undefined;
-            var count: usize = 0;
-            var parts = std.mem.splitScalar(u8, std.mem.sliceTo(&self.callback_ids, 0), ',');
-            while (parts.next()) |part| {
-                if (count == ids.len) {
-                    self.report(error.InvalidCallback);
-                    return;
-                }
-                ids[count] = std.fmt.parseInt(u8, std.mem.trim(u8, part, " \t"), 10) catch |err| {
-                    self.report(err);
-                    return;
-                };
-                count += 1;
-            }
-            var loaded = p.sources.attach(self.gpa, self.model.current.snapshot, bundle, ids[0..count], &.{}) catch |err| {
-                self.report(err);
-                return;
-            };
-            defer loaded.deinit();
-            try self.model.commit(loaded.snapshot);
-            self.callback_state = .snapshot;
-        }
-        const doc = self.model.document();
-        if (doc.callbacks.len > 0) {
-            const names = try dvui.currentWindow().arena().alloc([]const u8, doc.callbacks.len);
-            for (doc.callbacks, names) |callback, *name| name.* = callback.binding;
-            self.callback_index = @min(self.callback_index, doc.callbacks.len - 1);
-            _ = dvui.dropdown(@src(), names, .{ .choice = &self.callback_index }, .{}, .{ .expand = .horizontal });
-            const callback = doc.callbacks[self.callback_index];
-            dvui.label(@src(), "{s}; {d} source files; {d} registered IDs; opaque layer index constraints retained", .{ @tagName(callback.kind), callback.sources.len, callback.ids.len }, .{});
-            if (callback.kind == .attached) {
-                if (dvui.button(@src(), "Check external mirror against frozen snapshot", .{}, .{})) {
-                    var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{}) catch |err| {
-                        self.callback_state = .missing;
-                        self.report(err);
-                        return;
-                    };
-                    defer dir.close(self.io);
-                    var loaded = p.sources.refresh(self.gpa, self.io, dir, self.model.current.snapshot, self.callback_index) catch |err| {
-                        self.callback_state = .missing;
-                        self.report(err);
-                        return;
-                    };
-                    defer loaded.deinit();
-                    const current = try self.model.id();
-                    const mirror = try p.snapshot.projectDigest(self.gpa, loaded.snapshot, p.profiles.board);
-                    self.callback_state = if (std.mem.eql(u8, &current, &mirror)) .snapshot else .changed;
-                }
-                if (dvui.button(@src(), "Checkout and open externally", .{}, .{})) {
-                    try self.openCallback(self.callback_index);
-                }
-                if (dvui.button(@src(), "Refresh edited source snapshot (undoable)", .{}, .{})) {
-                    var dir = std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{}) catch |err| {
-                        self.report(err);
-                        return;
-                    };
-                    defer dir.close(self.io);
-                    var loaded = p.sources.refresh(self.gpa, self.io, dir, self.model.current.snapshot, self.callback_index) catch |err| {
-                        self.report(err);
-                        return;
-                    };
-                    defer loaded.deinit();
-                    try self.model.commit(loaded.snapshot);
-                    self.callback_state = .snapshot;
-                }
-            }
-        }
-        dvui.labelNoFmt(@src(), std.mem.sliceTo(&self.diagnostic, 0), .{}, .{});
-        if (dvui.button(@src(), "Close callbacks", .{}, .{})) self.callback_open = false;
+        try @import("callback_drawer.zig").draw(self, t);
     }
     fn comboDrawer(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 430, .y = 100, .w = 810, .h = 810 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
-        defer window.deinit();
-        dvui.label(@src(), "Combos · stable physical positions and stable layer references", .{}, .{});
-        {
-            const row = dvui.box(@src(), .{ .dir = .horizontal }, .{});
-            defer row.deinit();
-            for (self.model.document().combos, 0..) |combo, i| if (dvui.button(@src(), try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} + {s}", .{ combo.key_ids[0], combo.key_ids[1] }), .{}, .{ .id_extra = i })) {
-                self.combo_index = i;
-                for (p.profiles.key_ids, 0..) |id, ki| {
-                    if (std.mem.eql(u8, id, combo.key_ids[0])) self.combo_keys[0] = ki;
-                    if (std.mem.eql(u8, id, combo.key_ids[1])) self.combo_keys[1] = ki;
-                }
-                for (self.model.document().layers, 0..) |layer, li| if (layer.id == combo.layer_id) {
-                    self.combo_layer = li;
-                };
-                self.combo_timeout = combo.timeout.ms;
-                self.combo_draft = forms.Draft.from(combo.action);
-            };
-        }
-        if (dvui.button(@src(), "New combo", .{}, .{})) self.combo_index = null;
-        {
-            const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
-            defer area.deinit();
-            _ = dvui.dropdown(@src(), &p.profiles.key_ids, .{ .choice = &self.combo_keys[0] }, .{}, .{ .expand = .horizontal });
-            _ = dvui.dropdown(@src(), &p.profiles.key_ids, .{ .choice = &self.combo_keys[1] }, .{}, .{ .expand = .horizontal });
-            var layer_names: [15][]const u8 = undefined;
-            for (self.model.document().layers, 0..) |layer, li| layer_names[li] = layer.name;
-            self.combo_layer = @min(self.combo_layer, self.model.document().layers.len - 1);
-            _ = dvui.dropdown(@src(), layer_names[0..self.model.document().layers.len], .{ .choice = &self.combo_layer }, .{}, .{ .expand = .horizontal });
-            dvui.label(@src(), "Combo timeout (ms)", .{}, .{});
-            _ = dvui.textEntryNumber(@src(), u16, .{ .value = &self.combo_timeout }, .{});
-            forms.draw(&self.combo_draft, self.model.document());
-        }
-        if (dvui.button(@src(), "Save combo", .{}, .{})) {
-            const doc = self.model.document();
-            const count = doc.combos.len + @intFromBool(self.combo_index == null);
-            if (count > p.Limits.combos) return error.InvalidCombo;
-            const combos = try self.gpa.alloc(p.Combo, count);
-            defer self.gpa.free(combos);
-            @memcpy(combos[0..doc.combos.len], doc.combos);
-            const index = self.combo_index orelse doc.combos.len;
-            combos[index] = .{ .key_ids = .{ p.profiles.key_ids[self.combo_keys[0]], p.profiles.key_ids[self.combo_keys[1]] }, .layer_id = doc.layers[self.combo_layer].id, .timeout = .{ .ms = self.combo_timeout }, .action = self.combo_draft.action() orelse {
-                self.report(error.ComboCannotBeTransparent);
-                return;
-            } };
-            self.model.setCombos(combos) catch |err| {
-                self.report(err);
-                return;
-            };
-            self.combo_index = index;
-        }
-        if (self.combo_index) |index| if (dvui.button(@src(), "Delete selected combo", .{}, .{})) {
-            const doc = self.model.document();
-            const combos = try self.gpa.alloc(p.Combo, doc.combos.len - 1);
-            defer self.gpa.free(combos);
-            @memcpy(combos[0..index], doc.combos[0..index]);
-            @memcpy(combos[index..], doc.combos[index + 1 ..]);
-            try self.model.setCombos(combos);
-            self.combo_index = null;
-        };
-        dvui.labelNoFmt(@src(), std.mem.sliceTo(&self.diagnostic, 0), .{}, .{});
-        if (dvui.button(@src(), "Close combos", .{}, .{})) self.combo_open = false;
+        try @import("combo_drawer.zig").draw(self, t);
     }
     fn picker(self: *Editor, t: Theme) !void {
         const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 1000, .y = 230, .w = 490, .h = 650 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
@@ -964,63 +759,10 @@ pub const Editor = struct {
         if (dvui.button(@src(), "Cancel", .{}, .{})) self.advanced = false;
     }
     fn firmwareDrawer(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{ .modal = true }, .{ .rect = .{ .x = 350, .y = 170, .w = 900, .h = 680 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
-        defer window.deinit();
-        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
-        defer area.deinit();
-        dvui.label(@src(), "LK7 firmware · {s}", .{@tagName(self.firmware.state)}, .{});
-        dvui.label(@src(), "Build freezes the draft, including callback sources. Transfer requires a current artifact.", .{}, .{});
-        if (self.firmware.artifact_path) |path| dvui.label(@src(), "Artifact: {s}", .{path}, .{});
-        if (self.firmware.manifest) |manifest| {
-            const hash = std.fmt.bytesToHex(manifest.uf2_hash, .lower);
-            dvui.label(@src(), "UF2: {d} bytes · SHA-256 {s}", .{ manifest.uf2_size, hash }, .{});
-        }
-        if (self.firmware.rollback_path) |path| dvui.label(@src(), "Known running rollback artifact: {s}", .{path}, .{});
-        if (self.firmware.state == .building and dvui.button(@src(), "Cancel build", .{}, .{ .tag = "firmware.cancel" })) self.firmware.cancel();
-        if (dvui.button(@src(), "Build current draft", .{}, .{ .tag = "firmware.prepare" })) {
-            self.flash_confirmed = false;
-            if (!self.fixture) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
-        }
-        dvui.labelNoFmt(@src(), self.bootloader_status, .{}, .{});
-        if (self.bootloader_available and dvui.button(@src(), "Enter bootloader", .{}, .{ .tag = "firmware.bootloader" })) {
-            if (!self.fixture) self.bootloader_requested = true;
-        }
-        dvui.label(@src(), "Select the absolute mounted recovery volume path. RP2040 metadata cannot prove a unique LK7 serial.", .{}, .{});
-        const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.recovery_volume } }, .{ .expand = .horizontal, .tag = "firmware.volume" });
-        entry.deinit();
-        _ = dvui.checkbox(@src(), &self.flash_confirmed, "I selected the intended LK7 in recovery mode and authorize transferring this artifact.", .{});
-        if (self.firmware.state == .built and self.flash_confirmed and dvui.button(@src(), "Transfer firmware to selected volume", .{}, .{ .tag = "firmware.transfer" })) {
-            if (!self.fixture) self.firmware.flash(try self.model.id(), std.mem.sliceTo(&self.recovery_volume, 0), true) catch |err| self.report(err);
-            self.flash_confirmed = false;
-        }
-        dvui.label(@src(), "Transfer: {} · Running identity verified: {} · Typing accepted: {}", .{ self.firmware.transferred, self.firmware.running_verified, self.firmware.typing_verified }, .{});
-        if (self.firmware.transferred and !self.firmware.running_verified) dvui.label(@src(), "Reconnect the live overlay to verify board/profile identity. On timeout or mismatch, use physical recovery and the rollback artifact.", .{}, .{});
-        if (self.firmware.running_verified and dvui.button(@src(), "I verified actual typing", .{}, .{ .tag = "firmware.typing" })) self.firmware.acceptTyping() catch |err| self.report(err);
-        dvui.label(@src(), "A synchronized UF2 transfer is not transactional; removal or failure can require physical recovery.", .{}, .{});
-        dvui.labelNoFmt(@src(), self.firmware.diagnostic.items, .{}, .{});
-        dvui.labelNoFmt(@src(), std.mem.sliceTo(&self.diagnostic, 0), .{}, .{});
-        if (dvui.button(@src(), "Close firmware workflow", .{}, .{})) self.firmware_open = false;
+        try @import("firmware_drawer.zig").draw(self, t);
     }
     fn testDrawer(self: *Editor, t: Theme) !void {
-        const window = dvui.floatingWindow(@src(), .{}, .{ .rect = .{ .x = 320, .y = 590, .w = 900, .h = 310 }, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel } });
-        defer window.deinit();
-        const area = dvui.scrollArea(@src(), .{}, .{ .expand = .both });
-        defer area.deinit();
-        dvui.label(@src(), "Test: {s} · preparation {d} ms", .{ @tagName(self.testing.state), @divTrunc(self.testing.elapsed_ns, 1_000_000) }, .{});
-        dvui.label(@src(), "Mapped QWERTY scancodes target LK7 positions; focus loss stops and resets.", .{}, .{});
-        if (self.text.native_session) |*session| dvui.label(@src(), "Actual source: {s} · EurKEY selected: {}", .{ session.source.id(), session.eurkey() }, .{});
-        if (self.testing.last) |output| {
-            dvui.label(@src(), "Sequence {d} · layers {x} · highest {d} · modifiers {x} · commands {d} · events {d} · signals {d}", .{ output.sequence, output.active_layers, output.highest_layer, output.modifiers, output.commands.len, output.events.len, output.signals.len }, .{});
-            for (output.commands) |command| dvui.label(@src(), "Command: {any}", .{command}, .{});
-            for (output.events) |event| dvui.label(@src(), "Event: {any}", .{event}, .{});
-            for (output.signals) |signal| dvui.label(@src(), "Signal: {any}", .{signal}, .{});
-        }
-        if (self.testing.state == .running) {
-            if (dvui.button(@src(), "Selected key down", .{}, .{})) try self.testing.input(.{ .key_down = @intCast(self.model.primary) }, self.testTime());
-            if (dvui.button(@src(), "Selected key up", .{}, .{})) try self.testing.input(.{ .key_up = @intCast(self.model.primary) }, self.testTime());
-        }
-        dvui.labelNoFmt(@src(), self.testing.diagnostic.items, .{}, .{});
-        if (dvui.button(@src(), "Close details", .{}, .{})) self.test_details = false;
+        try @import("test_drawer.zig").draw(self, t);
     }
 };
 
