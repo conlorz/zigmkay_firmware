@@ -8,7 +8,7 @@ pub fn init(options: Backend.InitOptions, low_density: bool) !Backend {
     errdefer sdl.SDL_Quit();
     const window = sdl.SDL_CreateWindow(options.title, @intFromFloat(options.size.w), @intFromFloat(options.size.h), sdl.SDL_WINDOW_HIDDEN | sdl.SDL_WINDOW_RESIZABLE) orelse return error.WindowCreationFailed;
     errdefer sdl.SDL_DestroyWindow(window);
-    if (!sdl.SDL_SetWindowMinimumSize(window, 1536, 1024)) return error.WindowConfigurationFailed;
+    if (!sdl.SDL_SetWindowMinimumSize(window, @intFromFloat(options.min_size.?.w), @intFromFloat(options.min_size.?.h))) return error.WindowConfigurationFailed;
     const renderer = sdl.SDL_CreateRenderer(window, null) orelse return error.RendererCreationFailed;
     errdefer sdl.SDL_DestroyRenderer(renderer);
     const blend = sdl.SDL_ComposeCustomBlendMode(sdl.SDL_BLENDFACTOR_ONE, sdl.SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, sdl.SDL_BLENDOPERATION_ADD, sdl.SDL_BLENDFACTOR_ONE, sdl.SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA, sdl.SDL_BLENDOPERATION_ADD);

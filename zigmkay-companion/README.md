@@ -32,7 +32,7 @@ artifacts become rollback candidates only after typing confirmation.
 
 Follow [the self-verification guide](../docs/plans/07-editor-verification.md)
 for edit/save/reopen/export/testing and native macOS probes. Run
-`mise //zigmkay-companion:editor-check` for 88 deterministic screenshots plus
+`mise //zigmkay-companion:editor-check` for 90 deterministic screenshots plus
 geometry/interaction checks. Capture artifacts are under root
 `.zig-cache/editor-acceptance`. `editor-golden-check` reads explicitly approved
 baselines without updating them. Both screenshot commands remain offline and
@@ -42,3 +42,8 @@ callbacks after explicit Prepare Test; it never sends resulting actions to HID.
 The companion overlay's Open editor button opens a separate opaque normal
 window. Its content preserves the running-profile adapter, while the editor
 owns an independent draft. Closing either window leaves the other usable.
+
+The editor opens at 1152 × 768 and resizes down to 900 × 600. Its complete
+layout, dialogs and click targets scale automatically to fit the window, without
+scrolling the whole canvas. Individual long lists/forms retain their own scrolling.
+Use `--window-size <width> <height>` with `--editor` to choose an initial size.

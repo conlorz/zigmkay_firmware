@@ -74,8 +74,10 @@ mise exec -- zig build run -j4 -- --editor
    and invokes the external editor. Checking the mirror detects changed/missing
    bytes; Refresh explicitly imports edits as an undoable snapshot. Registered
    sources remain read-only. Source refresh is never implicit on Save.
-7. Switch dark/light. Resize to the supported minimum 1280 × 900; the 1536 × 1024
-   content canvas scrolls rather than shrinking controls. The companion's offline
+7. Switch dark/light. Resize to the supported minimum 900 × 600; the 1536 × 1024
+   reference canvas scales together with its dialogs and click targets. The default
+   window is 1152 × 768. Whole-canvas scrolling was replaced by user request on
+   2026-10-05. The companion's offline
    overlay has Open editor, preserving independent native windows.
 
 LK7 has no encoder, so the encoder view explains that constraint. Its project

@@ -77,6 +77,7 @@ pub const Editor = struct {
     io: std.Io,
     gpa: std.mem.Allocator,
     light: bool = false,
+    content_scale: f32 = 1,
     fixture: bool = false,
     connection_text: []const u8 = "Offline · No device",
     source: ?input.Source = null,
@@ -277,8 +278,17 @@ pub const Editor = struct {
             if (held) self.testing.input(.advance, self.testTime()) catch |err| self.report(err);
         }
         const t = Theme.get(self.light);
-        const scroll = dvui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .{ .color = t.bg }, .background = true, .padding = .{}, .margin = .{} });
-        defer scroll.deinit();
+        const current_window = dvui.currentWindow();
+        const available = current_window.backend.windowSize();
+        const system_scale = current_window.backend.contentScale();
+        self.content_scale = geometry.fitScale(available.w / system_scale, available.h / system_scale);
+        current_window.snap_to_pixels = self.content_scale == 1;
+        // Window zoom also covers floating dialogs, menus and input transforms.
+        // DVUI applies it at the next frame boundary after a native resize.
+        if (current_window.content_scale != self.content_scale) {
+            current_window.content_scale = self.content_scale;
+            dvui.refresh(null, @src(), null);
+        }
         const canvas = dvui.box(@src(), .{}, .{ .min_size_content = .{ .w = 1536, .h = 1024 }, .padding = .{}, .margin = .{}, .background = true, .color_fill = .{ .color = t.bg } });
         defer canvas.deinit();
         try self.toolbar(t);
@@ -1023,6 +1033,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var state: scenario.State = .normal;
     var interactions = false;
     var density: ?u8 = null;
+    var requested_size: ?dvui.Size = null;
     var i: usize = 2;
     while (i < args.len) : (i += 1) {
         if (std.mem.eql(u8, args[i], "--light")) light = true else if (std.mem.eql(u8, args[i], "--fixture")) fixture = true else if (std.mem.eql(u8, args[i], "--screenshot") and i + 1 < args.len) {
@@ -1036,6 +1047,12 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             i += 1;
             density = try std.fmt.parseInt(u8, args[i], 10);
             if (density.? != 1 and density.? != 2) return error.InvalidDensity;
+        } else if (std.mem.eql(u8, args[i], "--window-size") and i + 2 < args.len) {
+            const width = try std.fmt.parseInt(u16, args[i + 1], 10);
+            const height = try std.fmt.parseInt(u16, args[i + 2], 10);
+            if (width < 900 or height < 600 or width > 4096 or height > 4096) return error.InvalidWindowSize;
+            requested_size = .{ .w = @floatFromInt(width), .h = @floatFromInt(height) };
+            i += 2;
         } else if (std.mem.eql(u8, args[i], "--compare-reference") and i + 1 < args.len) {
             i += 1;
             reference_path = args[i];
@@ -1049,7 +1066,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     }
     if (density != null and screenshot == null) return error.DensityRequiresScreenshot;
     if (state != .normal and screenshot == null) return error.ScenarioRequiresScreenshot;
-    var backend = try @import("window.zig").init(.{ .io = init.io, .environ_map = init.environ_map, .size = .{ .w = 1536, .h = 1024 }, .min_size = if (screenshot != null) .{ .w = 1536, .h = 1024 } else .{ .w = 1280, .h = 900 }, .title = "Zigmkay — LK7 Keymap Editor", .hidden = screenshot != null, .vsync = true, .persist_window_geometry = false }, density == 1);
+    const window_size = requested_size orelse if (screenshot != null) dvui.Size{ .w = 1536, .h = 1024 } else dvui.Size{ .w = geometry.initial.w, .h = geometry.initial.h };
+    var backend = try @import("window.zig").init(.{ .io = init.io, .environ_map = init.environ_map, .size = window_size, .min_size = .{ .w = geometry.minimum.w, .h = geometry.minimum.h }, .title = "Zigmkay — LK7 Keymap Editor", .hidden = screenshot != null, .vsync = true, .persist_window_geometry = false }, density == 1);
     defer backend.deinit();
     var open = true;
     var window = try dvui.Window.init(@src(), init.gpa, backend.backend(), .{ .theme = if (light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark, .open_flag = &open });
@@ -1097,7 +1115,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             }
         }
         if (screenshot != null and frames == (if (interactions) @as(usize, 28) else 5)) {
-            if (density) |expected| if (window.natural_scale != @as(f32, @floatFromInt(expected))) return error.NativeDensityMismatch;
+            if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});
             const size = window.rect_pixels;
             const width: usize = @intFromFloat(size.w);

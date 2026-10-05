@@ -40,5 +40,16 @@ pub fn main(init: std.process.Init) !void {
         std.log.err("Interaction failed: {s}", .{result.stderr});
         return error.InteractionFailed;
     }
-    std.log.info("{d} captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{@typeInfo(State).@"enum".fields.len * 4});
+    for ([_][]const []const u8{
+        &.{ args[1], "--editor", "--window-size", "1152", "768", "--density", "1", "--interactions", "--screenshot", ".zig-cache/editor-acceptance/resizable-1152.png" },
+        &.{ args[1], "--editor", "--window-size", "900", "600", "--density", "2", "--scenario", "firmware_failed", "--screenshot", ".zig-cache/editor-acceptance/resizable-minimum.png" },
+    }) |argv| {
+        var resized = try jobs.run(init.gpa, init.io, .{ .argv = argv, .cwd = ".", .snapshot_id = @splat(0), .timeout_ms = 20000 });
+        defer resized.deinit(init.gpa);
+        if (!resized.successful() or std.mem.indexOf(u8, resized.process.stderr, "error(dvui)") != null) {
+            std.log.err("Resized editor failed: {s}", .{resized.process.stderr});
+            return error.ResizeCheckFailed;
+        }
+    }
+    std.log.info("{d} captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{@typeInfo(State).@"enum".fields.len * 4 + 2});
 }

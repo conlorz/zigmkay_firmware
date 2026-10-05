@@ -211,10 +211,12 @@ running/stale/failed, and build/flash progress in 08. Preserve the hierarchy and
 use inline messages or bounded drawers rather than unplanned full-screen views.
 
 At the reference viewport, all default panels remain visible without scrolling.
-At smaller windows, preserve sidebar/inspector legibility and offer scrolling or
-explicit collapsible regions. Define minimum supported content size during 07B;
-do not silently shrink fonts/key hit targets below usable sizes. Test Retina and
-non-Retina scales. The editor uses a normal opaque window; overlay opacity and
+User amendment, 2026-10-05: replace whole-canvas scrolling with automatic window
+scaling. Start at 1152 × 768 and support resizing down to 900 × 600, preserving
+panel proportions and scaling text, dialogs and click targets together. Long
+lists and forms retain local scrolling. Check panel visibility and semantic
+interaction at the smaller sizes on Retina and non-Retina renderers.
+The editor uses a normal opaque window; overlay opacity and
 always-on-top behavior do not carry into the editor.
 
 ## Visual verification implementation plan

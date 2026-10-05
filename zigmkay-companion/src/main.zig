@@ -293,7 +293,8 @@ pub fn main(init: std.process.Init) !void {
         if (visible and (!live or (driver.session.phase != .incompatible and driver.session.phase != .negotiating))) try layout.draw(&labels, state.highest_layer, &state.pressed, state.modifiers, stale, .{ .x = 8, .y = header_height, .w = @max(0, bounds.w - 16), .h = @max(0, bounds.h - header_height - 8) });
         if (show_log) try log.draw(&labels, bounds.w / 2, 140, 0.8);
         if (editor_open) {
-            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = 1536, .h = 1024 }, .min_size = .{ .w = 1280, .h = 900 } }, .{ .open_flag = &editor_open });
+            const editor_geometry = @import("editor/geometry.zig");
+            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = editor_geometry.initial.w, .h = editor_geometry.initial.h }, .min_size = .{ .w = editor_geometry.minimum.w, .h = editor_geometry.minimum.h } }, .{ .open_flag = &editor_open });
             defer child.deinit();
             switch (child.inner) {
                 .os => |os| {
