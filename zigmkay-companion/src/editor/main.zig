@@ -117,10 +117,60 @@ pub const Editor = struct {
             self.connection_text = "Fixture · profile match";
             self.option = true;
             try self.text.insert("Hello, Grüß dich!");
+        } else {
+            self.restoreStartupProject() catch |err| self.report(err);
         }
         self.syncRename();
         self.auto_build.manual(try self.model.id());
         return self;
+    }
+    fn rememberProject(self: *Editor) !void {
+        if (self.fixture) return;
+        const path = try std.Io.Dir.cwd().realPathFileAlloc(self.io, std.mem.sliceTo(&self.project_path, 0), self.gpa);
+        defer self.gpa.free(path);
+        const directory = try std.fs.path.join(self.gpa, &.{ self.testing.root, "projects" });
+        defer self.gpa.free(directory);
+        var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, directory, .{});
+        defer dir.close(self.io);
+        try @import("startup_project.zig").save(self.gpa, self.io, dir, path);
+        self.project_path = @splat(0);
+        @memcpy(self.project_path[0..path.len], path);
+    }
+    fn openProject(self: *Editor, path: []const u8) !void {
+        if (path.len >= self.project_path.len) return error.InvalidStartupProject;
+        var dir = try std.Io.Dir.cwd().openDir(self.io, path, .{});
+        defer dir.close(self.io);
+        try self.model.open(self.io, dir);
+        // path can borrow the input buffer; retain bytes before clearing it.
+        var buffer: [1024]u8 = @splat(0);
+        @memcpy(buffer[0..path.len], path);
+        self.project_path = buffer;
+        self.model.layer = 0;
+        for ([_][8]u8{ "danish\x00\x00".*, "qwerty\x00\x00".*, "eurkey\x00\x00".*, "eurmac\x00\x00".* }, 0..) |id, index| {
+            if (std.mem.eql(u8, &id, &self.model.document().profile_id)) self.profile_choice = index;
+        }
+        self.syncRename();
+        try self.rememberProject();
+    }
+    fn restoreStartupProject(self: *Editor) !void {
+        const directory = try std.fs.path.join(self.gpa, &.{ self.testing.root, "projects" });
+        defer self.gpa.free(directory);
+        var dir = std.Io.Dir.cwd().openDir(self.io, directory, .{}) catch |err| switch (err) {
+            error.FileNotFound => return,
+            else => return err,
+        };
+        defer dir.close(self.io);
+        if (try @import("startup_project.zig").load(self.gpa, self.io, dir)) |path| {
+            defer self.gpa.free(path);
+            try self.openProject(path);
+        } else {
+            const starter = try std.fs.path.join(self.gpa, &.{ directory, "eurmac" });
+            defer self.gpa.free(starter);
+            self.openProject(starter) catch |err| switch (err) {
+                error.FileNotFound => return,
+                else => return err,
+            };
+        }
     }
     pub fn deinit(self: *Editor) void {
         if (self.bootloader) |*attempt| attempt.driver.transport.close();
@@ -445,7 +495,9 @@ pub const Editor = struct {
         var board_choice: usize = 0;
         _ = dvui.dropdown(@src(), &.{"LK7"}, .{ .choice = &board_choice }, .{}, options(t, .{ .x = 140, .y = 25, .w = 80, .h = 30 }, 13));
         label(t, self.connection_text, .{ .x = 230, .y = 25, .w = 165, .h = 25 }, 12);
-        if (dvui.dropdown(@src(), &p.profiles.names, .{ .choice = &self.profile_choice }, .{}, options(t, .{ .x = 405, .y = 16, .w = 270, .h = 36 }, 14))) {
+        var profile_names = p.profiles.names;
+        profile_names[self.profile_choice] = self.model.document().name;
+        if (dvui.dropdown(@src(), &profile_names, .{ .choice = &self.profile_choice }, .{}, options(t, .{ .x = 405, .y = 16, .w = 270, .h = 36 }, 14))) {
             var loaded = try p.profiles.create(self.gpa, @enumFromInt(self.profile_choice));
             defer loaded.deinit();
             try self.model.commit(loaded.snapshot);
@@ -861,10 +913,7 @@ pub const Editor = struct {
                 dialog.start(self.backend_window.?) catch |err| self.report(err);
             }
             if (dvui.button(@src(), "Open", .{}, .{})) {
-                var dir = try std.Io.Dir.cwd().openDir(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
-                defer dir.close(self.io);
-                self.model.open(self.io, dir) catch |err| self.report(err);
-                self.syncRename();
+                self.openProject(std.mem.sliceTo(&self.project_path, 0)) catch |err| self.report(err);
             }
             if (dvui.button(@src(), "Save", .{}, .{})) self.save() catch |err| self.report(err);
             dvui.label(@src(), "Owned export directory (existing differing files are refused)", .{}, .{});
@@ -924,6 +973,7 @@ pub const Editor = struct {
         var dir = try std.Io.Dir.cwd().createDirPathOpen(self.io, std.mem.sliceTo(&self.project_path, 0), .{});
         defer dir.close(self.io);
         try self.model.save(self.io, dir);
+        try self.rememberProject();
     }
     fn recover(self: *Editor) !void {
         const path = try std.fs.path.join(self.gpa, &.{ self.testing.root, ".zig-cache", "editor-recovery" });
