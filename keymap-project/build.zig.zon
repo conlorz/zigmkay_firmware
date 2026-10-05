@@ -9,5 +9,5 @@
         .layout_model = .{ .path = "../layout-model" },
         .device_protocol = .{ .path = "../device-protocol" },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "mise.toml", "src", "README.md" },
+    .paths = .{ "build.zig", "build.zig.zon", "build_profiles.zig", "mise.toml", "src", "README.md" },
 }

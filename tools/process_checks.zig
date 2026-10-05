@@ -7,6 +7,9 @@ const Runner = struct {
     io: std.Io,
     root: []const u8,
     fn run(r: Runner, argv: []const []const u8, success: bool, needle: []const u8) ![]const u8 {
+        return r.checked(argv, success, needle, false);
+    }
+    fn checked(r: Runner, argv: []const []const u8, success: bool, needle: []const u8, combined: bool) ![]const u8 {
         const result = try std.process.run(r.gpa, r.io, .{ .argv = argv, .cwd = .{ .path = r.root }, .timeout = .{ .duration = .{ .raw = .fromSeconds(60), .clock = .awake } }, .stdout_limit = .limited(4 * 1024 * 1024), .stderr_limit = .limited(4 * 1024 * 1024) });
         const ok = switch (result.term) {
             .exited => |code| code == 0,
@@ -17,11 +20,12 @@ const Runner = struct {
             std.debug.print("Process check failed: {s}\n{s}\n", .{ argv[0], text });
             return error.ProcessCheckFailed;
         }
-        return result.stdout;
+        return if (combined) text else result.stdout;
     }
 };
 pub fn main(init: std.process.Init) !void {
     const gpa = init.arena.allocator();
+    const build_jobs = try @import("build_limits.zig").jobs(gpa, init.environ_map);
     const args = try init.minimal.args.toSlice(gpa);
     if (args.len != 9) return error.Usage;
     const r = Runner{ .gpa = gpa, .io = init.io, .root = args[5] };
@@ -108,8 +112,8 @@ pub fn main(init: std.process.Init) !void {
     try dir.access(init.io, "output.zig", .{});
     _ = try r.run(&.{ args[6], args[7], args[5], args[7], scratch }, false, "Expected Zig 0.16.0, got 0.15.2");
     try std.testing.expectError(error.FileNotFound, dir.access(init.io, "hardware-tool-executed", .{}));
-    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "firmware" }, false, "Missing -Dkeyboard");
-    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "firmware", "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");
+    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", build_jobs, "firmware" }, false, "Missing -Dkeyboard");
+    _ = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", build_jobs, "firmware", "-Dkeyboard=does_not_exist" }, false, "Unknown keyboard 'does_not_exist'");
     const listing = try r.run(&.{ "mise", "run", "//:ls" }, true, "lk7: companion=lk7 offline");
     var lines = std.mem.splitScalar(u8, listing, '\n');
     var count: usize = 0;
@@ -121,8 +125,8 @@ pub fn main(init: std.process.Init) !void {
         last = name;
         count += 1;
     }
-    try std.testing.expectEqual(@as(usize, 10), count);
-    const alias_listing = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", "-j4", "ls" }, true, "lk7: companion=lk7 offline");
+    try std.testing.expectEqual(@as(usize, @import("board-catalog").len), count);
+    const alias_listing = try r.run(&.{ args[4], "build", "--build-file", "keyboards/build.zig", build_jobs, "ls" }, true, "lk7: companion=lk7 offline");
     try std.testing.expectEqualStrings(listing, alias_listing);
     _ = try r.run(&.{ "mise", "run", "//:flash", "--help" }, true, "--mount");
     _ = try r.run(&.{ "mise", "run", "//:firmware", "does_not_exist" }, false, "does_not_exist");
@@ -135,5 +139,16 @@ pub fn main(init: std.process.Init) !void {
         if (std.mem.indexOf(u8, completion, entry.name) == null) return error.MissingBoardCompletion;
     }
     _ = try r.run(&.{ "mise", "__complete_word__", "--shell", "fish", "--line", "mise //:companion-run --" }, true, "--session-replay");
+    try @import("workspace_check.zig").check(gpa, init.io, r.root);
+    for ([_]struct { args: []const []const u8, verifier: bool }{
+        .{ .args = &.{ "//:flash", "dasbob" }, .verifier = false },
+        .{ .args = &.{ "//:flash", "lk7" }, .verifier = true },
+        .{ .args = &.{ "//:flash-file", "unused.uf2" }, .verifier = false },
+        .{ .args = &.{ "//:flash-file", "unused.uf2", "--verify-lk7" }, .verifier = true },
+    }) |case| {
+        const argv = try std.mem.concat(gpa, []const u8, &.{ &.{ "mise", "run", "--dry-run" }, case.args });
+        const schedule = try r.checked(argv, true, "", true);
+        try std.testing.expectEqual(case.verifier, std.mem.indexOf(u8, schedule, "//zigmkay-companion:build") != null);
+    }
     std.debug.print("Offline executable and build-boundary checks passed\n", .{});
 }

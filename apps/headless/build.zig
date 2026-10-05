@@ -17,13 +17,7 @@ pub fn publish(b: *std.Build, source: std.Build.LazyPath, keymap: *std.Build.Mod
 
 pub fn build(b: *std.Build) void {
     _ = b.standardTargetOptions(.{});
-    const keymap = b.createModule(.{
-        .root_source_file = b.path("../../keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"),
-        .imports = &.{
-            .{ .name = "zigmkay", .module = b.dependency("zigmkay", .{}).module("zigmkay") },
-            .{ .name = "zkeycodes", .module = b.dependency("zkeycodes", .{}).module("zkeycodes") },
-        },
-    });
+    const keymap = b.dependency("keymap_project", .{}).module("default-profile");
     const exe = publish(b, b.path("main.zig"), keymap, b.dependency("device_protocol", .{}).module("device-protocol"), b.dependency("companion_model", .{}).module("companion-model"));
     b.installArtifact(exe);
     const run = b.addRunArtifact(exe);

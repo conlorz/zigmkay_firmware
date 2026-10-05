@@ -1,22 +1,14 @@
 [tasks.ls]
 description = "List firmware boards and capabilities"
-run = "zig build ls -j4"
+run = 'zig build ls -j"$ZIGMKAY_BUILD_JOBS"'
 
 [tasks.firmware]
 description = "Compile a selected board's firmware"
-usage = '''
-arg "<keyboard>" help="Board ID" {
-  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
-}
-flag "--optimize <mode>" default="ReleaseSafe" {
-  choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
-}
-'''
-run = 'zig build firmware -j4 -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Doptimize=$usage_optimize"'
+extends = "firmware"
 
 [tasks.firmware-all]
 description = "Compile every catalog board into root zig-out"
-run = "zig build firmware-all -j4 -p ../zig-out"
+run = 'zig build firmware-all -j"$ZIGMKAY_BUILD_JOBS" -p ../zig-out'
 [tasks.usb-test]
 description = "Real pinned USB driver tests and Cortex-M0+ probe; no hardware"
-run = "zig build usb-test -j4"
+run = 'zig build usb-test -j"$ZIGMKAY_BUILD_JOBS"'

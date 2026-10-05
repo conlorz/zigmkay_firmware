@@ -44,14 +44,14 @@ pub fn main(init: std.process.Init) !void {
         if (!std.mem.eql(u8, root_uf2, leaf_uf2)) return error.FirmwareParityMismatch;
         const replay = try std.process.run(gpa, io, .{ .argv = &.{ try std.fs.path.join(gpa, &.{ root_path, "zig-out/bin/zigmkay-companion-headless-lk7" }), try std.fs.path.join(gpa, &.{ root_path, "tests/fixtures/lk7_trace.bin" }) }, .environ_map = init.environ_map });
         if (!success(replay.term) or std.mem.indexOf(u8, replay.stdout, "reports=8\npressed=[]\nactive_layers=1") == null) return error.InstalledReplayFailed;
-        std.debug.print("All 10 board artifacts exist; mise/standalone LK7 UF2 bytes match\n", .{});
+        std.debug.print("All {d} board artifacts exist; mise/standalone LK7 UF2 bytes match\n", .{entries.len});
     }
     try std.testing.expectError(error.FileNotFound, std.Io.Dir.cwd().access(io, marker, .{}));
     if (!std.mem.eql(u8, &before, &(try inventory.snapshot(gpa, io, root)))) return error.SourceChangedByChecks;
     std.debug.print("Source contents and inventory unchanged; no hardware tool executed\n", .{});
 }
 fn runTasks(init: std.process.Init, cwd: []const u8, tasks: []const []const u8) !void {
-    const argv = try std.mem.concat(init.arena.allocator(), []const u8, &.{ &.{ "mise", "run", "--jobs", "2" }, tasks });
+    const argv = try std.mem.concat(init.arena.allocator(), []const u8, &.{ &.{ "mise", "run" }, tasks });
     const result = try std.process.run(init.arena.allocator(), init.io, .{ .argv = argv, .cwd = .{ .path = cwd }, .environ_map = init.environ_map, .stdout_limit = .limited(16 * 1024 * 1024), .stderr_limit = .limited(16 * 1024 * 1024) });
     if (!success(result.term)) {
         std.debug.print("{s}{s}", .{ result.stdout, result.stderr });
@@ -66,7 +66,7 @@ fn success(term: std.process.Child.Term) bool {
     };
 }
 fn run(init: std.process.Init, zig: []const u8, cwd: []const u8, flags: []const []const u8) !void {
-    const argv = try std.mem.concat(init.arena.allocator(), []const u8, &.{ &.{ zig, "build", "-j4", "--summary", "failures" }, flags });
+    const argv = try std.mem.concat(init.arena.allocator(), []const u8, &.{ &.{ zig, "build", try @import("build_limits.zig").jobs(init.arena.allocator(), init.environ_map), "--summary", "failures" }, flags });
     std.debug.print("Checking {s}: {s}\n", .{ cwd, try std.mem.join(init.arena.allocator(), " ", flags) });
     const result = try std.process.run(init.arena.allocator(), init.io, .{ .argv = argv, .cwd = .{ .path = cwd }, .environ_map = init.environ_map, .stdout_limit = .limited(16 * 1024 * 1024), .stderr_limit = .limited(16 * 1024 * 1024) });
     if (!success(result.term)) {

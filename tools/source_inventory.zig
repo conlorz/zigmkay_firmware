@@ -1,9 +1,10 @@
 const std = @import("std");
+const source_files = @import("source-files");
 const File = struct { path: []const u8, hash: [32]u8 };
 fn less(_: void, a: File, b: File) bool {
     return std.mem.order(u8, a.path, b.path) == .lt;
 }
-fn excluded(path: []const u8, name: []const u8) bool {
+fn excluded(path: []const u8, name: []const u8, _: std.Io.File.Kind) bool {
     for ([_][]const u8{ ".git", ".zig-cache", "zig-out", "zig-pkg" }) |cache| if (std.mem.eql(u8, name, cache)) return true;
     return std.mem.eql(u8, path, "docs/evidence") or std.mem.eql(u8, path, ".slim/deepwork");
 }
@@ -13,24 +14,19 @@ pub fn snapshot(gpa: std.mem.Allocator, io: std.Io, root: std.Io.Dir) ![32]u8 {
         for (files.items) |f| gpa.free(f.path);
         files.deinit(gpa);
     }
-    var walker = try root.walk(gpa);
-    defer walker.deinit();
-    while (try walker.next(io)) |entry| {
-        if (excluded(entry.path, entry.basename)) {
-            if (entry.kind == .directory) walker.leave(io);
-            continue;
-        }
-        if (entry.kind == .directory) continue;
+    const entries = try source_files.collect(gpa, io, root, .{ .excluded = excluded });
+    defer source_files.free(gpa, entries);
+    for (entries) |entry| {
         var hash: [32]u8 = undefined;
         if (entry.kind == .sym_link) {
             var buffer: [4096]u8 = undefined;
-            const len = try entry.dir.readLink(io, entry.basename, &buffer);
+            const len = try root.readLink(io, entry.path, &buffer);
             var h = std.crypto.hash.sha2.Sha256.init(.{});
             h.update("symlink:");
             h.update(buffer[0..len]);
             h.final(&hash);
         } else {
-            const bytes = try entry.dir.readFileAlloc(io, entry.basename, gpa, .unlimited);
+            const bytes = try root.readFileAlloc(io, entry.path, gpa, .unlimited);
             defer gpa.free(bytes);
             std.crypto.hash.sha2.Sha256.hash(bytes, &hash, .{});
         }

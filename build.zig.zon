@@ -4,6 +4,8 @@
     .fingerprint = 0xcb9fa52fb2e20478,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .keymap_project = .{ .path = "keymap-project" },
+        .companion_jobs = .{ .path = "companion-jobs" },
         .zigmkay = .{ .path = "zigmkay" },
         .layout_model = .{ .path = "layout-model" },
         .zkeycodes = .{ .path = "zkeycodes" },

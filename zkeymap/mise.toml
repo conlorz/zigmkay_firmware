@@ -1,7 +1,7 @@
 [tasks.test]
 description = "Run native key mapping and label tests"
-run = "zig build test -j4"
+run = 'zig build test -j"$ZIGMKAY_BUILD_JOBS"'
 
 [tasks.example]
 description = "Compile the native layout example"
-run = "zig build example -j4"
+run = 'zig build example -j"$ZIGMKAY_BUILD_JOBS"'

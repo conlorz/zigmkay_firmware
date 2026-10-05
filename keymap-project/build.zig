@@ -1,10 +1,13 @@
 const std = @import("std");
+pub const profiles = @import("build_profiles.zig");
 pub const selector = @import("src/build_input.zig");
 pub fn build(b: *std.Build) void {
     const firmware = b.dependency("zigmkay", .{}).module("zigmkay");
     const model = b.dependency("layout_model", .{}).module("layout-model");
-    const original = b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = firmware }, .{ .name = "zkeycodes", .module = b.dependency("zkeycodes", .{}).module("zkeycodes") } } });
-    const physical = b.createModule(.{ .root_source_file = b.path("../keyboards/my_keyboards/rollercole/lk7_physical_layout.zig"), .imports = &.{.{ .name = "layout-model", .module = model }} });
+    const original = profiles.defaultProfile(b, b.path("../keyboards"), firmware, b.dependency("zkeycodes", .{}).module("zkeycodes"));
+    const physical = profiles.physicalLayout(b, b.path("../keyboards"), model);
+    b.modules.put(b.allocator, "default-profile", original) catch @panic("Out of memory");
+    b.modules.put(b.allocator, "physical-layout", physical) catch @panic("Out of memory");
     const imports: []const std.Build.Module.Import = &.{
         .{ .name = "layout-model", .module = model },
         .{ .name = "device-protocol", .module = b.dependency("device_protocol", .{}).module("device-protocol") },

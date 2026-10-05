@@ -25,7 +25,7 @@ pub fn publish(b: *std.Build, mb: *MicroBuild, root: std.Build.LazyPath, entry: 
             const selected = @import("keymap_project").selector.load(b, path, processor, shared.keycodes, shared.model) catch |err| @panic(b.fmt("Invalid LK7 export: {s}", .{@errorName(err)}));
             if (!std.mem.eql(u8, &selected.manifest.board_id, &[_]u8{ 'l', 'k', '7', 0, 0, 0, 0, 0 })) @panic("Export board does not match LK7");
             break :blk selected.module;
-        } else b.createModule(.{ .root_source_file = root.path(b, "my_keyboards/rollercole/shared_keymap_3x5_2.zig"), .imports = &.{ .{ .name = "zigmkay", .module = processor }, .{ .name = "zkeycodes", .module = shared.keycodes } } });
+        } else @import("keymap_project").profiles.defaultProfile(b, root, processor, shared.keycodes);
         firmware.add_app_import("selected_profile", profile, .{});
     }
     firmware.add_app_import("zigmkay", processor, .{ .depend_on_microzig = true });

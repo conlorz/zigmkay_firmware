@@ -5,20 +5,13 @@ pub fn build(b: *std.Build) void {
     const model = b.dependency("layout_model", .{}).module("layout-model");
     const protocol = b.dependency("device_protocol", .{}).module("device-protocol");
     const companion = b.dependency("companion_model", .{}).module("companion-model");
+    const source_files = b.dependency("companion_jobs", .{}).module("source-files");
     const firmware = b.dependency("zigmkay", .{}).module("zigmkay");
     const keycodes_dep = b.dependency("zkeycodes", .{});
     const keycodes = keycodes_dep.module("zkeycodes");
-    const keymap = b.createModule(.{
-        .root_source_file = b.path("keyboards/my_keyboards/rollercole/shared_keymap_3x5_2.zig"),
-        .imports = &.{
-            .{ .name = "zigmkay", .module = firmware },
-            .{ .name = "zkeycodes", .module = keycodes },
-        },
-    });
-    const physical = b.createModule(.{
-        .root_source_file = b.path("keyboards/my_keyboards/rollercole/lk7_physical_layout.zig"),
-        .imports = &.{.{ .name = "layout-model", .module = model }},
-    });
+    const profiles = b.dependency("keymap_project", .{});
+    const keymap = profiles.module("default-profile");
+    const physical = profiles.module("physical-layout");
     const adapter = b.createModule(.{
         .root_source_file = b.path("zigmkay-companion/src/live_adapter.zig"),
         .imports = &.{
@@ -62,6 +55,7 @@ pub fn build(b: *std.Build) void {
     tests.dependOn(&portable.step);
     const headless = @import("apps/headless/build.zig").publish(b, b.path("apps/headless/main.zig"), keymap, protocol, companion);
     const checker_module = b.createModule(.{ .root_source_file = b.path("tools/check_local.zig"), .target = b.graph.host });
+    checker_module.addImport("source-files", source_files);
     checker_module.addAnonymousImport("board-catalog", .{ .root_source_file = b.path("keyboards/boards.zon") });
     checker_module.addAnonymousImport("uf2-validator", .{ .root_source_file = b.path("zig-flash/src/uf2.zig") });
     const checker = b.addExecutable(.{ .name = "check-local", .root_module = checker_module });
@@ -75,6 +69,18 @@ pub fn build(b: *std.Build) void {
         },
     }) });
     process_checks.root_module.addAnonymousImport("board-catalog", .{ .root_source_file = b.path("keyboards/boards.zon") });
+    process_checks.root_module.addImport("source-files", source_files);
+    const workspace_module = b.createModule(.{
+        .root_source_file = b.path("tools/workspace_check.zig"),
+        .target = b.graph.host,
+        .imports = &.{.{ .name = "source-files", .module = source_files }},
+    });
+    workspace_module.addAnonymousImport("board-catalog", .{ .root_source_file = b.path("keyboards/boards.zon") });
+    const workspace_run = b.addRunArtifact(b.addExecutable(.{ .name = "workspace-check", .root_module = workspace_module }));
+    workspace_run.has_side_effects = true;
+    workspace_run.addDirectoryArg(b.path("."));
+    b.step("workspace-check", "Check mise discovery, aggregate coverage and catalog choices").dependOn(&workspace_run.step);
+    tests.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = workspace_module })).step);
     const checks = b.addRunArtifact(process_checks);
     // These inspect mise configuration and CLI discovery outside Zig's file DAG.
     checks.has_side_effects = true;
@@ -90,6 +96,7 @@ pub fn build(b: *std.Build) void {
     tests.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("tools/source_inventory.zig"),
         .target = b.graph.host,
+        .imports = &.{.{ .name = "source-files", .module = source_files }},
     }) })).step);
     for ([_][]const u8{ "check", "check-full" }) |name| {
         const run = b.addRunArtifact(checker);

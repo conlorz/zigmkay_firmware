@@ -11,55 +11,27 @@ zig = "0.16.0"
 experimental = true
 jobs = 2
 
-[tasks.test]
-description = "Run every package's own tests and root integration tests; no hardware"
-depends = ["//zigmkay:test", "//keyboards:usb-test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//keymap-project:test", "//companion-jobs:test", "//apps/keymap-test:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
-
-[tasks.integration-test]
-description = "Run cross-package traces, identity, session and build-boundary checks"
-run = "zig build test -j4"
-
-[tasks.check-generated]
-description = "Check keycodes and board registry without modifying committed sources"
-depends = ["//zkeycodes:check-generated", "//tools/registry:check-generated"]
-
-[tasks.check]
-description = "Guarded aggregate tests and generated checks; no source mutation or hardware"
-run = "zig build check -j4"
-
-[tasks.check-full]
-description = "Guarded full matrix, package tests, replay and UF2 parity; no hardware"
-run = "zig build check-full -j4"
-
-[tasks.ls]
-description = "List board IDs and capabilities"
-alias = "list-keyboards"
-depends = ["//keyboards:ls"]
-
-[tasks.firmware]
-description = "Build a selected board's UF2 into root zig-out"
-dir = "{{config_root}}/keyboards"
-usage = '''
+[vars]
+# Checked against keyboards/boards.zon by the offline workspace check.
+board_choices = '"clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"'
+firmware_usage = '''
 arg "<keyboard>" help="Board ID" {
-  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
+  choices {{vars.board_choices}}
 }
 flag "--optimize <mode>" default="ReleaseSafe" {
   choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
 }
 '''
-run = 'zig build firmware -j4 -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Doptimize=$usage_optimize"'
 
-[tasks.firmware-all]
-description = "Build all ten boards into root zig-out; no flashing"
-depends = ["//keyboards:firmware-all"]
+[env]
+# Compiler concurrency; task concurrency is settings.jobs / MISE_JOBS.
+ZIGMKAY_BUILD_JOBS = "{{env.ZIGMKAY_BUILD_JOBS | default(value='4')}}"
 
-[tasks.companion]
-description = "Build the LK7 desktop companion into root zig-out"
-depends = ["//zigmkay-companion:build"]
+[task_templates.firmware]
+usage = '{{vars.firmware_usage}}'
+run = 'zig build firmware -j"$ZIGMKAY_BUILD_JOBS" -p ../zig-out "-Dkeyboard=$usage_keyboard" "-Doptimize=$usage_optimize"'
 
-[tasks.companion-run]
-description = "Run the companion; pass --live explicitly for HID or --smoke for offline"
-dir = "{{config_root}}/zigmkay-companion"
+[task_templates.companion-run]
 usage = '''
 flag "--live" help="Explicitly enable vendor HID"
 flag "--smoke" help="Render three frames offline"
@@ -76,7 +48,55 @@ flag "--click-through" help="Currently an explicit unsupported fallback"
 flag "--position-x <x>" help="Window x position; requires --position-y"
 flag "--position-y <y>" help="Window y position; requires --position-x"
 '''
-run = 'zig build run -j4 -- {% if usage.live %}--live{% endif %} {% if usage.smoke %}--smoke{% endif %} {% if usage.replay %}--replay "$usage_replay"{% endif %} {% if usage.session_replay %}--session-replay "$usage_session_replay"{% endif %} {% if usage.device_path %}--device-path "$usage_device_path"{% endif %} {% if usage.capture %}--capture "$usage_capture"{% endif %} --capture-ms "$usage_capture_ms" --opacity "$usage_opacity" {% if usage.no_top %}--no-top{% endif %} {% if usage.unfocusable %}--unfocusable{% endif %} {% if usage.borderless %}--borderless{% endif %} {% if usage.click_through %}--click-through{% endif %} {% if usage.position_x or usage.position_y %}--position "$usage_position_x" "$usage_position_y"{% endif %}'
+run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- {% if usage.live %}--live{% endif %} {% if usage.smoke %}--smoke{% endif %} {% if usage.replay %}--replay "$usage_replay"{% endif %} {% if usage.session_replay %}--session-replay "$usage_session_replay"{% endif %} {% if usage.device_path %}--device-path "$usage_device_path"{% endif %} {% if usage.capture %}--capture "$usage_capture"{% endif %} --capture-ms "$usage_capture_ms" --opacity "$usage_opacity" {% if usage.no_top %}--no-top{% endif %} {% if usage.unfocusable %}--unfocusable{% endif %} {% if usage.borderless %}--borderless{% endif %} {% if usage.click_through %}--click-through{% endif %} {% if usage.position_x or usage.position_y %}--position "$usage_position_x" "$usage_position_y"{% endif %}'
+
+
+[tasks.workspace-check]
+description = "Check package discovery, aggregate coverage and board completion choices"
+run = 'zig build workspace-check -j"$ZIGMKAY_BUILD_JOBS"'
+
+[tasks.test]
+description = "Run every package's own tests and root integration tests; no hardware"
+depends = ["//zigmkay:test", "//keyboards:usb-test", "//layout-model:test", "//device-protocol:test", "//companion-model:test", "//keymap-project:test", "//companion-jobs:test", "//apps/keymap-test:test", "//zkeycodes:test", "//zkeymap:test", "//zigmkay-companion:test", "//zig-flash:test", "//tools/registry:test", "//:integration-test"]
+
+[tasks.integration-test]
+description = "Run cross-package traces, identity, session and build-boundary checks"
+run = 'zig build test -j"$ZIGMKAY_BUILD_JOBS"'
+
+[tasks.check-generated]
+description = "Check keycodes and board registry without modifying committed sources"
+depends = ["//zkeycodes:check-generated", "//tools/registry:check-generated"]
+
+[tasks.check]
+description = "Guarded aggregate tests and generated checks; no source mutation or hardware"
+run = 'zig build check -j"$ZIGMKAY_BUILD_JOBS"'
+
+[tasks.check-full]
+description = "Guarded full matrix, package tests, replay and UF2 parity; no hardware"
+run = 'zig build check-full -j"$ZIGMKAY_BUILD_JOBS"'
+
+[tasks.ls]
+description = "List board IDs and capabilities"
+alias = "list-keyboards"
+depends = ["//keyboards:ls"]
+
+[tasks.firmware]
+description = "Build a selected board's UF2 into root zig-out"
+extends = "firmware"
+dir = "{{config_root}}/keyboards"
+
+[tasks.firmware-all]
+description = "Build every catalog board into root zig-out; no flashing"
+depends = ["//keyboards:firmware-all"]
+
+[tasks.companion]
+description = "Build the LK7 desktop companion into root zig-out"
+depends = ["//zigmkay-companion:build"]
+
+[tasks.companion-run]
+description = "Run the companion; --live explicitly enables HID, --smoke stays offline"
+extends = "companion-run"
+dir = "{{config_root}}/zigmkay-companion"
 
 [tasks.companion-headless]
 description = "Build the offline LK7 replay executable into root zig-out"
@@ -89,7 +109,7 @@ usage = '''
 arg "<file>" help="Device trace path, relative to monorepo root"
 flag "--session" help="Use v2 deterministic device-report replay"
 '''
-run = 'zig build --build-file apps/headless/build.zig run -j4 -- {% if usage.session %}--session{% endif %} "$usage_file"'
+run = 'zig build --build-file apps/headless/build.zig run -j"$ZIGMKAY_BUILD_JOBS" -- {% if usage.session %}--session{% endif %} "$usage_file"'
 
 [tasks.flash-tool]
 description = "Build zig_flash into root zig-out without device access"
@@ -98,15 +118,10 @@ depends = ["//zig-flash:build"]
 [tasks.flash]
 description = "HARDWARE: build selected firmware and flash through zig_flash"
 usage = '''
-arg "<keyboard>" help="Board ID" {
-  choices "clacky_chan" "dasbob" "encoder_demo" "lk1" "lk2" "lk6" "lk7" "molekula" "tuckytwotimes" "yak"
-}
-flag "--optimize <mode>" default="ReleaseSafe" {
-  choices "ReleaseSafe" "ReleaseFast" "ReleaseSmall" "Debug"
-}
+{{vars.firmware_usage}}
 flag "--mount <path>" default="RPI-RP2" help="BOOTSEL volume label or absolute path"
 '''
-depends = [{task = "//:firmware", args = ["{{usage.keyboard}}", "--optimize", "{{usage.optimize}}"]}, "//zig-flash:build", "//zigmkay-companion:build"]
+depends = [{task = "//:firmware", args = ["{{usage.keyboard}}", "--optimize", "{{usage.optimize}}"]}, "//zig-flash:build", "{% if usage.keyboard == 'lk7' %}//zigmkay-companion:build{% else %}//zig-flash:build{% endif %}"]
 run = 'zig-out/bin/zig_flash "zig-out/firmware/$usage_keyboard/zigmkay.uf2" "$usage_mount" {% if usage.keyboard == "lk7" %}--verify-lk7 zig-out/bin/zigmkay_companion{% endif %}'
 
 [tasks.flash-file]
@@ -116,7 +131,7 @@ arg "<file>" help="UF2 input path"
 flag "--mount <path>" default="RPI-RP2"
 flag "--verify-lk7" help="Verify current LK7 board/profile/layout identity after transfer"
 '''
-depends = ["//zig-flash:build", "//zigmkay-companion:build"]
+depends = ["//zig-flash:build", "{% if usage.verify_lk7 %}//zigmkay-companion:build{% else %}//zig-flash:build{% endif %}"]
 run = 'zig-out/bin/zig_flash "$usage_file" "$usage_mount" {% if usage.verify_lk7 %}--verify-lk7 zig-out/bin/zigmkay_companion{% endif %}'
 
 [tasks.convert]
@@ -143,3 +158,7 @@ depends = ["//keyboards:firmware-all", "//zigmkay-companion:build", "//apps/head
 [tasks._validate-full]
 hide = true
 depends = ["//:test", "//:check-generated", "//:build-all"]
+
+[tasks.gui-acceptance]
+description = "Check all editor scenarios, interactions and approved goldens; opens offline native windows"
+depends = ["//zigmkay-companion:editor-golden-check"]

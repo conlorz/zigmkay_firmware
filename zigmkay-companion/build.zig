@@ -14,7 +14,9 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     } });
     const exe = b.addExecutable(.{ .name = "zigmkay_companion", .root_module = module });
     module.addOptions("editor-toolchain", toolchain);
-    return .{ .exe = exe, .tests = &b.addRunArtifact(b.addTest(.{ .root_module = module })).step };
+    const tests = b.addRunArtifact(b.addTest(.{ .root_module = module }));
+    tests.setCwd(root);
+    return .{ .exe = exe, .tests = &tests.step };
 }
 pub fn build(b: *std.Build) void {
     _ = b.standardTargetOptions(.{});
@@ -26,8 +28,8 @@ pub fn build(b: *std.Build) void {
         const selected = @import("keymap_project").selector.load(b, path, core, keycodes, model) catch |err| @panic(b.fmt("Invalid editor profile: {s}", .{@errorName(err)}));
         if (!std.mem.eql(u8, &selected.manifest.board_id, &[_]u8{ 'l', 'k', '7', 0, 0, 0, 0, 0 })) @panic("Companion profile must be LK7");
         break :blk selected.module;
-    } else b.dependency("keymap_project", .{}).module("keymap-project").import_table.get("rollercole-profile").?;
-    const physical = b.dependency("keymap_project", .{}).module("keymap-project").import_table.get("lk7-physical").?;
+    } else b.dependency("keymap_project", .{}).module("default-profile");
+    const physical = b.dependency("keymap_project", .{}).module("physical-layout");
     const gui = publish(b, b.path("."), b, .{ .keymap = keymap, .core = core, .keycodes = keycodes, .keymap_native = b.dependency("zkeymap", .{}).module("zkeymap"), .protocol = b.dependency("device_protocol", .{}).module("device-protocol"), .companion = b.dependency("companion_model", .{}).module("companion-model"), .model = model, .physical = physical });
     b.installArtifact(gui.exe);
     b.step("test", "Run companion component tests").dependOn(gui.tests);
