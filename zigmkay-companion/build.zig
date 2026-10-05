@@ -7,6 +7,7 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     const icons = deps.dependency("icons", .{});
     const toolchain = b.addOptions();
     toolchain.addOption([]const u8, "zig_exe", b.graph.zig_exe);
+    toolchain.addOption([]const u8, "build_root", b.build_root.path orelse ".");
     toolchain.addOptionPath("flash_exe", deps.dependency("zig_flash", .{}).artifact("zig_flash").getEmittedBin());
     const module = b.createModule(.{ .root_source_file = root.path(b, "src/main.zig"), .target = b.graph.host, .imports = &.{
         .{ .name = "dvui", .module = dvui.module("dvui_sdl3") }, .{ .name = "sdl-backend", .module = dvui.module("sdl3") }, .{ .name = "icons", .module = icons.module("icons") },                                                    .{ .name = "keymap", .module = display },                                                                 .{ .name = "zigmkay", .module = shared.core },                                                           .{ .name = "zkeymap", .module = shared.keymap_native }, .{ .name = "device-protocol", .module = shared.protocol }, .{ .name = "companion-model", .module = shared.companion },

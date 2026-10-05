@@ -10,6 +10,9 @@ pub fn recoveryTarget(override: []const u8) ![]const u8 {
     if (!std.fs.path.isAbsolute(override) or std.mem.indexOfScalar(u8, override, 0) != null) return error.AbsoluteRecoveryVolumeRequired;
     return override;
 }
+pub fn flasherExecutable(gpa: std.mem.Allocator) ![]u8 {
+    return std.fs.path.resolve(gpa, &.{ toolchain.build_root, toolchain.flash_exe });
+}
 pub const Controller = struct {
     gpa: std.mem.Allocator,
     io: std.Io,
@@ -225,7 +228,9 @@ pub const Controller = struct {
         const job = try self.gpa.create(jobs.Job);
         errdefer self.gpa.destroy(job);
         const expected_hash = std.fmt.bytesToHex(self.manifest.?.uf2_hash, .lower);
-        job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ toolchain.flash_exe, self.artifact_path.?, target, "--expected-sha256", &expected_hash }, .cwd = self.root, .snapshot_id = self.snapshot_id, .timeout_ms = 60_000 });
+        const executable = try flasherExecutable(self.gpa);
+        defer self.gpa.free(executable);
+        job.* = try jobs.Job.init(self.gpa, self.io, .{ .argv = &.{ executable, self.artifact_path.?, target, "--expected-sha256", &expected_hash }, .cwd = self.root, .snapshot_id = self.snapshot_id, .timeout_ms = 60_000 });
         errdefer job.deinit();
         try job.start();
         self.job = job;
@@ -280,6 +285,13 @@ test "automatic recovery uses flasher discovery and manual overrides stay litera
     try std.testing.expectEqualStrings("/Volumes/RPI-RP2 1", try recoveryTarget("/Volumes/RPI-RP2 1"));
     try std.testing.expectError(error.AbsoluteRecoveryVolumeRequired, recoveryTarget("../other"));
     try std.testing.expectError(error.AbsoluteRecoveryVolumeRequired, recoveryTarget("/Volumes/RPI-RP2\x00other"));
+}
+test "cached flasher executable is absolute and exists outside build working directory" {
+    const executable = try flasherExecutable(std.testing.allocator);
+    defer std.testing.allocator.free(executable);
+    try std.testing.expect(std.fs.path.isAbsolute(executable));
+    const file = try std.Io.Dir.cwd().openFile(std.testing.io, executable, .{});
+    file.close(std.testing.io);
 }
 
 test "selected frozen LK7 draft builds UF2 and rejects edits without flashing" {
