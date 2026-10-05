@@ -1,5 +1,23 @@
 # Plan 07: local verification
 
+## Personal project at startup
+
+The editor reopens the last successfully opened or saved project. Its absolute
+folder path is atomically stored in the gitignored workspace-local
+`projects/startup-project.zon`; the layout itself stays in that folder's
+`project.zon` and immutable source snapshots. Cache cleanup does not remove this
+preference. Startup does not build or flash, and deterministic fixtures neither
+read nor write the preference.
+
+Before any project is remembered, an existing `projects/eurmac` is opened as a
+personal starting point. Otherwise the built-in EurKEY draft is used. A missing
+or invalid remembered project produces an editor diagnostic instead of silently
+changing the remembered path. Choose **Open / Export**, select/open another
+project folder, or save the current layout there to update the startup project.
+Save changes before quitting to reopen those changes next time; unsaved recovery
+drafts still use the separate recovery workflow. The profile selector displays
+the loaded document's name.
+
 Use the pinned Zig 0.16.0 through mise. Run these commands from the monorepo
 root, `zigmkay_firmware`. All commands below are offline. Plan 12 remains deferred;
 Build/Flash in this editor belong to plan 08.

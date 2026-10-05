@@ -1,5 +1,15 @@
 # Central milestone tracker
 
+## Remember personal editor project (2026-10-05)
+
+The user requested opening their real layout directly after restart. The editor
+now restores the last successfully opened/saved project using an atomic absolute
+path preference in `projects/startup-project.zon`. Before a preference exists,
+the prepared `projects/eurmac` is the starting project when available. The
+existing EurKEY draft remains fallback, with diagnostics for an unavailable
+remembered project. Tests cover preference persistence and restoring edited
+personal project data into a fresh model. Startup does not build or flash.
+
 ## Flash waits for a current build (2026-10-05)
 
 The user requested rebuilding when Flash encounters an old build, unless a build
