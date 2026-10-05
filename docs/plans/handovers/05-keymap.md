@@ -1,6 +1,9 @@
 # 05 handover: accepted QWERTY/EurKEY Next Mac profile
 
-State: **Not produced**. No profile implementation or manual acceptance recorded.
+State: **Offline candidate produced; manual acceptance pending**. The user
+authorized autonomous preparation and continuation on 2026-10-05. See the
+[candidate](../05-candidate.md) for provisional assignments, installed layout
+provenance, checks and remaining acceptance. No personal hardware test recorded.
 Producer: keymap worker; coordinator integrates and leads manual acceptance.
 Plan: [05](../05-eurkey-next-mac-keymap.md). Rules: [handover format](README.md).
 
@@ -31,4 +34,9 @@ only after the accepted reference and its provenance remain preserved.
 
 ## Integrated result
 
-Pending. Complete the [result template](README.md), separating offline/manual evidence.
+`eurmac` is available through the CLI and native editor's existing selector.
+The existing absolute exported-profile selector builds candidate LK7 firmware
+and the real offline processor. No duplicate firmware/companion keymap was added.
+Project checks and full offline checks pass; processor evidence confirms Option
+and shortcut modifier release and all three auxiliary layer enter/release paths.
+Manual acceptance, selected host keyboard type and user comfort remain pending.

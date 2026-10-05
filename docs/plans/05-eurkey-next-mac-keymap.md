@@ -6,6 +6,13 @@ editor. Use its save/export/build/flash workflow; do not implement the personal
 profile as a prerequisite for the editor. Shared selector/identity plumbing
 belongs to 07/08. Older prerequisite wording in this plan is superseded here.
 
+2026-10-05 update: the user requested autonomous progress and direct continuation.
+A separate offline `eurmac` candidate is now implemented using provisional
+assignments; see [the candidate and evidence](05-candidate.md). It is available
+in the finished editor and as `projects/eurmac`. This authorization permits the
+candidate work without a prior interactive assignment review. Hardware acceptance
+and personal comfort remain pending; G05 is not accepted.
+
 Coordination: [tracker](TRACKING.md), [workflow](SUBAGENT-WORKFLOW.md), and
 [05 handover](handovers/05-keymap.md). Diagram/source preparation may be assigned
 early; profile implementation waits for G04 and review of concrete assignments.

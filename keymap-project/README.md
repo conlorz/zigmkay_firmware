@@ -17,9 +17,11 @@ mise exec -- zig build --build-file keymap-project/build.zig run -- validate .zi
 mise exec -- zig build --build-file keymap-project/build.zig run -- export .zig-cache/my-project .zig-cache/my-export
 ```
 
-`create` accepts `danish`, `qwerty`, `eurkey`; refuses an existing project.
+`create` accepts `danish`, `qwerty`, `eurkey`, `eurmac`; refuses an existing project.
 User projects belong under gitignored `projects/`. These are curated typed
-adapters; arbitrary Zig keymap parsing and personal profile 05 are outside 07.
+adapters; arbitrary Zig keymap parsing remains outside 07. `eurmac` is the
+offline [personal-profile candidate](../docs/plans/05-candidate.md), pending
+hardware acceptance; it is also available in the native editor selector.
 An edited export is unflashed and distinct from the running profile.
 
 Build the export with an **absolute** export directory:

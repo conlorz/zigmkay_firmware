@@ -1,5 +1,20 @@
 # Central milestone tracker
 
+## Autonomous personal-profile preparation (2026-10-05)
+
+The user requested autonomous progress and immediate continuation to the next
+offline step. The separate `eurmac` personal-profile candidate is implemented;
+see [assignments, installed layout provenance and evidence](05-candidate.md).
+It is available in the existing editor selector, with four reachable layers,
+mirrored Mac modifiers, Command shortcuts and deliberate recovery. Existing
+profiles remain unchanged. Project checks, full offline matrix, candidate export,
+candidate LK7 firmware build and real offline processor traces pass.
+This advances 05 offline; G05 and full G08 remain open. No hardware operation or
+visual/user acceptance is implied. The successful toolbar transfer/reconnect at
+`1c44788` is established evidence; older statements below that no such 08 run
+exists are historical. Edited-profile typing and latest visual approval remain
+unverified.
+
 ## Latest editor follow-ups (2026-10-05)
 
 The separately requested real LK7 toolbar build/flash test passed after physical
@@ -161,7 +176,7 @@ remains none. Exact active ownership is recorded below.
 | 06 | [Architecture](06-editor-architecture-research.md) / [handover](handovers/06-architecture.md) | Accepted planning | G04; 06A already accepted | Consume final 06B; implementation checks assigned to 07 | Coordinator / final decision linked above |
 | 07 | [Editor](07-compiled-keymap-editor.md) / [handover](handovers/07-editor.md) | Accepted | G04 and G06 | Frozen contracts and approved native editor; future 08 integration | Coordinator / 07A `016cf7d`, 07B `7168c13` |
 | 08 | [Build/flash](08-build-and-flash-workflow.md) / [handover](handovers/08-build-flash.md) | Integrated offline | 08A: G06, G07-export; 08B: G07 | Review new captures; separately authorize small edited-profile hardware acceptance | Coordinator / `77a3dc4` |
-| 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Planned | G07 and G08; reviewed assignments | User creates personal profile through finished editor, then manual tests | Unassigned / none |
+| 05 | [EurKEY Next](05-eurkey-next-mac-keymap.md) / [handover](handovers/05-keymap.md) | Integrated offline candidate | Autonomous candidate authorized; full acceptance still requires G08/manual checks | Candidate is editable at `projects/eurmac`; live host mapping and personal comfort remain pending | Coordinator / candidate, G05 open |
 | 09 | [Expansion](09-platform-and-board-expansion.md) / [handover](handovers/09-expansion.md) | Planned | 09A may start now; target work needs selection and accepted baseline | Capability inventory and separately scoped target plans | Unassigned / none |
 
 ## Partial deliverables for parallel dispatch
