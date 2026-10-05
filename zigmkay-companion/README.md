@@ -47,3 +47,28 @@ The editor opens at 1152 × 768 and resizes down to 900 × 600. Its complete
 layout, dialogs and click targets scale automatically to fit the window, without
 scrolling the whole canvas. Individual long lists/forms retain their own scrolling.
 Use `--window-size <width> <height>` with `--editor` to choose an initial size.
+
+## Typing practice
+
+Run `mise //zigmkay-companion:editor` and click **Practice** in **Try your draft**.
+Choose English (2, 5 or 10 generated sentences) or Zig (three complete, formatted
+and tested Zig 0.16.0 files), then press Start. The typed buffer starts empty.
+Reference and input share scrolling; green characters match, red characters are
+mistakes, and the blue caret/current line follows your progress. Tab inserts four
+spaces, Enter inserts a newline, and Backspace corrects a character. Completion
+requires an exact copy of the entire exercise. Restart repeats it; New exercise
+changes the English seed or selects the next Zig lesson.
+
+OS keyboard text uses committed text from the selected macOS input source.
+Unflashed draft layout compiles an immutable offline runner; wait for preparation,
+then press Resume. Physical QWERTY keys use the existing LK7 position mapping.
+Changing the draft pauses practice and requires Restart to prepare its new layout.
+Focus loss and Escape pause; Resume is deliberate and simulated held keys are
+released. Practice never flashes firmware or changes your keymap.
+
+Results include WPM, accuracy, active duration, corrections, file progress, CPM
+and the most troublesome expected character. Errors remain in accuracy after
+correction. Paste produces an unscored preview. Personal bests are kept for this
+editor session, separately for each mode/length/lesson/input source; they are not
+saved to disk. Corpus version 1 uses original English templates and stable Zig
+lesson IDs. There are no accounts, downloads or hardware requirements.

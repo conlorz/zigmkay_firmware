@@ -1,6 +1,10 @@
 # Typing practice: English sentences and Zig files
 
-Status: researched and planned on 2026-10-05; implementation follows the editor usability fixes. All production code, generation and tests use Zig 0.16.0.
+Status: implemented on 2026-10-05; offline checks and native scenarios pass.
+User hands-on acceptance is pending. All production code, generation and tests
+use Zig 0.16.0. See [implementation evidence](../evidence/typing-practice-2026-10-05.md)
+and [usage](../../zigmkay-companion/README.md#typing-practice). Personal bests are
+session-local; optional persistent history and typed-file saving are deferred.
 
 ## Research and design decision
 

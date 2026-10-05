@@ -14,9 +14,12 @@ Tap/Hold fields. Native key-search and chord-assignment scenarios pass, includin
 modifier preservation and undo/redo; 900×600 combo/callback/file windows were
 captured without duplicate widget errors. Root offline checks pass.
 
-The requested next feature is researched in [13 typing practice](13-typing-practice.md):
-generated English sentences and complete Zig-file copying exercises. This records
-the plan; the practice engine and UI are not implemented in this change.
+The user authorized implementation of [13 typing practice](13-typing-practice.md).
+English sentence generation, complete Zig-file copying, OS/draft input, scoring,
+pause/restart and the native Practice panel are now implemented. Offline and
+native acceptance scenarios pass; user hands-on testing remains pending. See
+[implementation evidence](../evidence/typing-practice-2026-10-05.md). Personal
+bests are session-local; persistent history and typed-file saving are deferred.
 
 ## Recovery, G04, G06 and full G07 accepted; 08 integrated offline
 
