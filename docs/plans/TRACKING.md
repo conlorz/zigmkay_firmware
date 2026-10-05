@@ -1,5 +1,23 @@
 # Central milestone tracker
 
+## Latest editor follow-ups (2026-10-05)
+
+The separately requested real LK7 toolbar build/flash test passed after physical
+BOOTSEL reconnect; see `1c44788` and the firmware workflow evidence. Toolbar
+actions run directly and discover the recovery drive automatically. HID labels,
+home row mod editing, layer labels and named companion signals are implemented.
+Typing tryout duplicate widget IDs are fixed at `d58a508`.
+
+The current follow-up adds taller scrollable editing windows with fixed footers,
+editable key filtering, and OS-keyboard chord drag/drop to split keys and inspector
+Tap/Hold fields. Native key-search and chord-assignment scenarios pass, including
+modifier preservation and undo/redo; 900×600 combo/callback/file windows were
+captured without duplicate widget errors. Root offline checks pass.
+
+The requested next feature is researched in [13 typing practice](13-typing-practice.md):
+generated English sentences and complete Zig-file copying exercises. This records
+the plan; the practice engine and UI are not implemented in this change.
+
 ## Recovery, G04, G06 and full G07 accepted; 08 integrated offline
 
 Step 08 implementation was authorized on 2026-10-05 from clean `3543b42`.
