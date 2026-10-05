@@ -14,6 +14,7 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     } });
     const exe = b.addExecutable(.{ .name = "zigmkay_companion", .root_module = module });
     module.addOptions("editor-toolchain", toolchain);
+    module.addImport("zkeycodes", shared.keycodes);
     const tests = b.addRunArtifact(b.addTest(.{ .root_module = module }));
     tests.setCwd(root);
     return .{ .exe = exe, .tests = &tests.step };

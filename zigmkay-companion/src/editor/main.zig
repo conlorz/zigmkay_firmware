@@ -412,7 +412,7 @@ pub const Editor = struct {
                 opts.color_border = .{ .color = color(0x3296FF) };
                 opts.color_fill = .{ .color = if (self.light) color(0xE2F0FF) else color(0x233B55) };
             }
-            var buffer: [64]u8 = undefined;
+            var buffer: [256]u8 = undefined;
             const direct = self.model.document().layers[self.model.layer].actions[key.key_index];
             var resolved = direct;
             if (resolved == null) {
@@ -422,8 +422,9 @@ pub const Editor = struct {
                     resolved = self.model.document().layers[layer_index].actions[key.key_index];
                 }
             }
-            const caption = labels.action(resolved, &buffer);
-            opts.font = fonts.font(caption, if (caption.len >= 4) 13 else 20);
+            const caption = labels.keycap(resolved, self.model.document(), &buffer);
+            opts.padding = .all(2);
+            opts.font = fonts.font(caption, if (std.mem.indexOfScalar(u8, caption, '\n') != null) 9 else if (caption.len > 9) 9 else if (caption.len >= 4) 13 else 20);
             if (dvui.button(@src(), caption, .{}, opts)) {
                 self.model.select(key.key_index, self.extend);
                 if (self.testing.state == .running) {
@@ -433,7 +434,7 @@ pub const Editor = struct {
                 }
             }
             if (dvui.focusedWidgetId() == data.id) self.canvas_focus = true;
-            if (direct == null) label(t, "inherited", .{ .x = x + 7, .y = y + 47, .w = 55, .h = 14 }, 8);
+            if (direct == null) label(t, "inherited", .{ .x = x + 7, .y = y + 56, .w = 55, .h = 8 }, 6);
         }
     }
     fn inspector(self: *Editor, t: Theme) !void {
@@ -723,6 +724,14 @@ pub const Editor = struct {
             inline for (@typeInfo(@import("layout-model").MediaCode).@"enum".fields, 0..) |field, i| {
                 if (query.len == 0 or std.ascii.indexOfIgnoreCase(field.name, query) != null) if (dvui.button(@src(), field.name, .{}, .{ .id_extra = 256 + i, .expand = .horizontal })) {
                     try self.model.apply(.{ .tap_only = .{ .media_key = @enumFromInt(field.value) } });
+                    self.picker_open = false;
+                };
+            }
+            for (253..256) |id| {
+                var signal_buffer: [64]u8 = undefined;
+                const caption = labels.signal(@intCast(id), &signal_buffer);
+                if (query.len == 0 or std.ascii.indexOfIgnoreCase(caption, query) != null) if (dvui.button(@src(), caption, .{}, .{ .id_extra = 768 + id, .expand = .horizontal })) {
+                    try self.model.apply(.{ .tap_only = .{ .custom = @intCast(id) } });
                     self.picker_open = false;
                 };
             }

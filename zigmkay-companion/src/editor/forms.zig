@@ -34,6 +34,10 @@ pub const Draft = struct {
             else => unreachable,
         };
     }
+    pub fn homeRowMod(self: *Draft, bits: u8) void {
+        self.mode = 4;
+        self.hold.hold_modifiers = @bitCast(bits);
+    }
 };
 fn number(comptime T: type, value: *T, title: []const u8) void {
     const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .horizontal, .id_extra = std.hash.Wyhash.hash(0, title) });
@@ -88,6 +92,11 @@ pub fn tap(value: *p.Tap, doc: p.Document) void {
     var has_key = value.key_press != null;
     if (dvui.checkbox(@src(), &has_key, "Key / modifier chord", .{})) value.key_press = if (has_key) .{ .tap_keycode = 4 } else null;
     if (value.key_press) |*key| {
+        var name_buffers: [256][64]u8 = undefined;
+        var names: [256][]const u8 = undefined;
+        for (&names, 0..) |*name, code| name.* = labels.usage(@intCast(code), &name_buffers[code]);
+        var choice: usize = key.tap_keycode;
+        if (dvui.dropdown(@src(), &names, .{ .choice = &choice }, .{}, .{ .expand = .horizontal })) key.tap_keycode = @intCast(choice);
         number(u8, &key.tap_keycode, "HID usage (252 = recovery)");
         modifiers(&key.tap_modifiers, "Tap modifiers (left/right)");
         _ = dvui.checkbox(@src(), &key.dead, "Dead-key chord", .{});
@@ -97,7 +106,21 @@ pub fn tap(value: *p.Tap, doc: p.Document) void {
     if (value.one_shot) |*one| hold(one, doc, "One-shot fields");
     var has_custom = value.custom != null;
     if (dvui.checkbox(@src(), &has_custom, "Custom tap callback / reserved signal", .{})) value.custom = if (has_custom) 1 else null;
-    if (value.custom) |*id| number(u8, id, "Tap callback ID (253–255 signals)");
+    if (value.custom) |*id| {
+        var selected: usize = switch (id.*) {
+            253 => 1,
+            254 => 2,
+            255 => 3,
+            else => 0,
+        };
+        if (dvui.dropdown(@src(), &.{ "Custom callback", "Toggle companion logging", "Quit companion", "Show / hide companion" }, .{ .choice = &selected }, .{}, .{ .expand = .horizontal })) id.* = switch (selected) {
+            1 => 253,
+            2 => 254,
+            3 => 255,
+            else => 1,
+        };
+        if (selected == 0) number(u8, id, "Tap callback ID");
+    }
     var has_media = value.media_key != null;
     if (dvui.checkbox(@src(), &has_media, "Consumer / media key", .{})) value.media_key = if (has_media) .VolumeUp else null;
     if (value.media_key) |*media| _ = dvui.dropdownEnum(@src(), types.MediaCode, .{ .choice = media }, .{}, .{ .expand = .horizontal });
@@ -106,6 +129,15 @@ pub fn tap(value: *p.Tap, doc: p.Document) void {
     if (value.mouse_action) |*mouse| _ = dvui.dropdownEnum(@src(), types.MouseAction, .{ .choice = mouse }, .{}, .{ .expand = .horizontal });
 }
 pub fn draw(draft: *Draft, doc: p.Document) void {
+    if (draft.tap.key_press != null and (draft.mode == 2 or draft.mode == 4)) {
+        var choice: usize = 0;
+        if (dvui.dropdown(@src(), &.{ "Set home row mod…", "Hold left Control", "Hold left Shift", "Hold left Alt / Option", "Hold left GUI / Command", "Hold right Control", "Hold right Shift", "Hold right Alt / Option", "Hold right GUI / Command" }, .{ .choice = &choice }, .{}, .{ .expand = .horizontal })) {
+            if (choice > 0) draft.homeRowMod(@as(u8, 1) << @intCast(choice - 1));
+        }
+        if (draft.mode == 4) {
+            dvui.label(@src(), "Home row mod: keep the tap key, choose hold modifiers below.", .{}, .{});
+        }
+    }
     _ = dvui.dropdown(@src(), &.{ "Transparent / inherited", "Explicit no action", "Tap only", "Hold only", "Tap / hold", "Tap with autofire" }, .{ .choice = &draft.mode }, .{}, .{ .expand = .horizontal });
     if (draft.mode == 2 or draft.mode == 4 or draft.mode == 5) tap(&draft.tap, doc);
     if (draft.mode == 3 or draft.mode == 4) hold(&draft.hold, doc, "Hold fields");
@@ -121,4 +153,14 @@ pub fn draw(draft: *Draft, doc: p.Document) void {
 test "form representation preserves every simultaneous tap and hold field" {
     const action = p.Action{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 8, .dead = true, .tap_modifiers = .{ .right_gui = true } }, .custom = 1, .one_shot = .{ .layer_id = 3 }, .media_key = .VolumeUp, .mouse_action = .WheelDown }, .hold = .{ .layer_id = 2, .custom = 2, .hold_modifiers = .{ .left_ctrl = true } }, .tapping_term = .{ .ms = 231 }, .retro_tapping = true } };
     try std.testing.expectEqualDeep(@as(?p.Action, action), Draft.from(action).action());
+}
+test "home row mod shortcut preserves tap chord and timing" {
+    var draft = Draft{ .mode = 2, .tap = .{ .key_press = .{ .tap_keycode = 4, .tap_modifiers = .{ .right_alt = true } } }, .term = 231, .retro = true };
+    const original = draft.tap;
+    draft.homeRowMod(2);
+    const action = draft.action().?.tap_hold;
+    try std.testing.expectEqualDeep(original, action.tap);
+    try std.testing.expect(action.hold.hold_modifiers.left_shift);
+    try std.testing.expectEqual(@as(u16, 231), action.tapping_term.ms);
+    try std.testing.expect(action.retro_tapping);
 }
