@@ -1,5 +1,6 @@
 const std = @import("std");
 pub const firmware = @import("firmware.zig");
+pub const source_files = @import("source-files");
 pub const output_limit = 1024 * 1024;
 pub const SnapshotId = [32]u8;
 pub const Spec = struct { argv: []const []const u8, cwd: []const u8, snapshot_id: SnapshotId, timeout_ms: u32 = 60_000 };

@@ -1,5 +1,12 @@
 //! Fingerprint first-party compiler inputs and immutable dependency manifests.
 const std = @import("std");
+const source_files = @import("companion-jobs").source_files;
+fn excluded(_: []const u8, basename: []const u8, kind: std.Io.File.Kind) bool {
+    return kind == .directory and (std.mem.startsWith(u8, basename, ".") or std.mem.eql(u8, basename, "zig-pkg") or std.mem.eql(u8, basename, "zig-out"));
+}
+fn included(path: []const u8, kind: std.Io.File.Kind) bool {
+    return kind == .file and (std.mem.endsWith(u8, path, ".zig") or std.mem.endsWith(u8, path, ".zon"));
+}
 pub fn digest(gpa: std.mem.Allocator, io: std.Io, root: []const u8) ![32]u8 {
     var arena: std.heap.ArenaAllocator = .init(gpa);
     defer arena.deinit();
@@ -9,14 +16,12 @@ pub fn digest(gpa: std.mem.Allocator, io: std.Io, root: []const u8) ![32]u8 {
         const path = try std.fs.path.join(a, &.{ root, package });
         var dir = try std.Io.Dir.cwd().openDir(io, path, .{ .iterate = true });
         defer dir.close(io);
-        var walker = try dir.walk(a);
-        defer walker.deinit();
-        while (try walker.next(io)) |entry| {
-            if (entry.kind == .directory and (std.mem.startsWith(u8, entry.basename, ".") or std.mem.eql(u8, entry.basename, "zig-pkg") or std.mem.eql(u8, entry.basename, "zig-out"))) {
-                walker.leave(io);
-                continue;
-            }
-            if (entry.kind == .file and (std.mem.endsWith(u8, entry.basename, ".zig") or std.mem.endsWith(u8, entry.basename, ".zon"))) try files.append(a, try std.fs.path.join(a, &.{ package, entry.path }));
+        const entries = source_files.collect(a, io, dir, .{ .excluded = excluded, .included = included, .max_files = 2048 }) catch |err| switch (err) {
+            error.SourceFileLimit => return error.BuildInputLimit,
+            else => return err,
+        };
+        for (entries) |entry| {
+            try files.append(a, try std.fs.path.join(a, &.{ package, entry.path }));
             if (files.items.len > 2048) return error.BuildInputLimit;
         }
     }
