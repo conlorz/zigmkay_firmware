@@ -38,7 +38,7 @@ pub fn button(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect) bool {
     opts.background = true;
     if (r.w < 40) opts.padding = .all(2);
     if (std.mem.startsWith(u8, tag, "layer.duplicate") or std.mem.startsWith(u8, tag, "layer.delete")) opts.background = false;
-    if (std.mem.eql(u8, tag, "test.prepare")) {
+    if (std.mem.eql(u8, tag, "test.prepare") or std.mem.eql(u8, tag, "firmware.build") or std.mem.eql(u8, tag, "firmware.inspect")) {
         opts.color_fill = .{ .color = color(0x126AFF) };
         opts.color_text = .{ .color = color(0xFFFFFF) };
     }

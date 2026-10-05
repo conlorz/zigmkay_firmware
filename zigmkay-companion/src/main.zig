@@ -13,7 +13,7 @@ const keys = @import("components/key.zig");
 const layout = @import("components/layout.zig");
 const LogComponent = @import("components/log.zig").LogComponent;
 
-const Native = struct {
+pub const Native = struct {
     device: ?*sdl.SDL_hid_device = null,
     io: std.Io,
     paths: [8][512:0]u8 = undefined,

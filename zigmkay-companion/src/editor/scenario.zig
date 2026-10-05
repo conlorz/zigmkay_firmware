@@ -35,7 +35,6 @@ pub fn setup(editor: anytype, state: State) !void {
             editor.test_details = true;
         },
         .firmware_building, .firmware_failed, .firmware_stale, .bootloader_fallback, .flash_transferred, .flash_reconnect_timeout => {
-            editor.firmware_open = true;
             editor.firmware.state = switch (state) {
                 .firmware_building => .building,
                 .firmware_failed => .failed,

@@ -45,13 +45,9 @@ pub const Editor = struct {
     action_draft: forms.Draft = .{},
     testing: Testing,
     firmware: Firmware,
-    firmware_open: bool = false,
     bootloader_requested: bool = false,
     bootloader_available: bool = false,
     bootloader_status: []const u8 = "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
-    recovery_volume: [1024]u8 = @splat(0),
-    recovery_manual: bool = false,
-    flash_confirmed: bool = false,
     text: Text,
     test_start: i64 = 0,
     last_text_sequence: ?u64 = null,
@@ -256,7 +252,6 @@ pub const Editor = struct {
         if (self.paths_open) try self.paths(t);
         if (self.advanced) try self.actionForm(t);
         if (self.test_details) try self.testDrawer(t);
-        if (self.firmware_open) try self.firmwareDrawer(t);
         if (self.callback_open) try self.callbackDrawer(t);
         if (self.combo_open) try self.comboDrawer(t);
         if (self.picker_open) try self.picker(t);
@@ -309,11 +304,29 @@ pub const Editor = struct {
         }
         if (button(t, "Save", "file.save", .{ .x = 1078, .y = 16, .w = 76, .h = 36 })) self.save() catch |err| self.report(err);
         if (button(t, "Build", "firmware.build", .{ .x = 1166, .y = 16, .w = 110, .h = 36 })) {
-            self.firmware_open = true;
-            self.flash_confirmed = false;
             if (!self.fixture) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
         }
-        if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) self.firmware_open = true;
+        if (button(t, "Flash", "firmware.inspect", .{ .x = 1288, .y = 16, .w = 110, .h = 36 })) {
+            if (!self.fixture) {
+                if (self.firmware.state == .built) {
+                    if (self.bootloader_available) self.bootloader_requested = true;
+                    self.firmware.flash(try self.model.id(), "", true) catch |err| self.report(err);
+                } else self.report(error.BuildFirmwareFirst);
+            }
+        }
+        const firmware_status: []const u8 = switch (self.firmware.state) {
+            .idle => "",
+            .building => "Building…",
+            .built => "Ready to flash",
+            .transferring => "Flashing…",
+            .transferred, .awaiting_reconnect => "Flashed · reconnecting…",
+            .verified => "Flashed · connected",
+            .stale => "Build again",
+            .failed => "Firmware failed",
+            .cancelled => "Build cancelled",
+            .reconnect_timeout => "Flashed · reconnect keyboard",
+        };
+        if (firmware_status.len != 0) label(t, firmware_status, .{ .x = 1166, .y = 52, .w = 230, .h = 14 }, 10);
         if (button(t, if (self.light) "Dark" else "Light", "theme.toggle", .{ .x = 1410, .y = 16, .w = 100, .h = 36 })) self.light = !self.light;
     }
     fn sidebar(self: *Editor, t: Theme) !void {
@@ -585,7 +598,13 @@ pub const Editor = struct {
                 if (self.model.document().callbacks.len == 0) self.callback_open = true else self.openCallback(0) catch |err| self.report(err);
             }
         }
-        if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
+        if (self.firmware.state == .failed) {
+            const logs = self.firmware.diagnostic.items;
+            const start = if (std.mem.indexOf(u8, logs, "error:")) |index| index + 6 else 0;
+            const line = logs[start..];
+            const end = std.mem.indexOfScalar(u8, line, '\n') orelse line.len;
+            label(t, std.mem.trim(u8, line[0..end], " \r"), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
+        } else if (self.diagnostic[0] != 0) label(t, std.mem.sliceTo(&self.diagnostic, 0), .{ .x = 294, .y = 490, .w = 815, .h = 25 }, 12);
     }
     pub fn openCallback(self: *Editor, index: usize) !void {
         const callback = self.model.document().callbacks[index];
@@ -768,9 +787,6 @@ pub const Editor = struct {
         }
         if (dvui.button(@src(), "Cancel", .{}, .{})) self.advanced = false;
     }
-    fn firmwareDrawer(self: *Editor, t: Theme) !void {
-        try @import("firmware_drawer.zig").draw(self, t);
-    }
     fn testDrawer(self: *Editor, t: Theme) !void {
         try @import("test_drawer.zig").draw(self, t);
     }
@@ -784,6 +800,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var golden_path: ?[]const u8 = null;
     var state: scenario.State = .normal;
     var interactions = false;
+    var flash_ui_check = false;
     var density: ?u8 = null;
     var requested_size: ?dvui.Size = null;
     var i: usize = 2;
@@ -811,11 +828,14 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         } else if (std.mem.eql(u8, args[i], "--compare-golden") and i + 1 < args.len) {
             i += 1;
             golden_path = args[i];
+        } else if (std.mem.eql(u8, args[i], "--flash-ui-check")) {
+            flash_ui_check = true;
         } else if (std.mem.eql(u8, args[i], "--interactions")) {
             interactions = true;
             fixture = true;
         } else return error.Usage;
     }
+    if (flash_ui_check and (fixture or screenshot != null or interactions)) return error.IncompatibleModes;
     if (density != null and screenshot == null) return error.DensityRequiresScreenshot;
     if (state != .normal and screenshot == null) return error.ScenarioRequiresScreenshot;
     const window_size = requested_size orelse if (screenshot != null) dvui.Size{ .w = 1536, .h = 1024 } else dvui.Size{ .w = geometry.initial.w, .h = geometry.initial.h };
@@ -826,6 +846,15 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     defer window.deinit();
     var editor = try Editor.init(init, fixture);
     defer editor.deinit();
+    var live_check = @import("flash_ui_check.zig").Check{};
+    defer live_check.deinit();
+    var reconnect: ?@import("../live_adapter.zig").Driver(@import("../main.zig").Native) = null;
+    defer if (reconnect) |*driver| driver.disconnect(driver.transport.now());
+    if (flash_ui_check) {
+        editor.model.deinit();
+        editor.model = try Model.init(init.gpa, .danish);
+        editor.syncRename();
+    }
     editor.light = light;
     editor.window_id = sdl.SDL_GetWindowID(backend.window);
     editor.backend_window = backend.window;
@@ -834,6 +863,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     while (open) : (frames += 1) {
         try window.begin(window.beginWait(false));
         try @import("events.zig").pump(&backend, &window, &editor);
+        if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
         if (interactions) switch (frames) {
             3 => try scenario.click(&window, "key.select.31", window.natural_scale, false),
             4 => try scenario.click(&window, "key.select.31", window.natural_scale, true),
@@ -855,6 +885,35 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             if (err == error.OutOfMemory) return err;
             editor.report(err);
         };
+        if (flash_ui_check and try live_check.afterDraw(&editor)) {
+            _ = try window.end(.{});
+            break;
+        }
+        if (!fixture and !flash_ui_check) {
+            if (editor.firmware.expectedIdentity()) |expected| {
+                if (reconnect == null) {
+                    if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+                    var seed: u32 = undefined;
+                    try init.io.randomSecure(std.mem.asBytes(&seed));
+                    reconnect = try @import("../live_adapter.zig").Driver(@import("../main.zig").Native).init(.{ .io = init.io }, expected, seed, null);
+                }
+                const driver = &reconnect.?;
+                const now = driver.transport.now();
+                if (!std.meta.eql(expected, driver.session.expected)) {
+                    driver.disconnect(now);
+                    driver.session = try @import("companion-model").Session.init(expected);
+                    driver.retry_at = now;
+                }
+                driver.poll(now);
+                const coherent = driver.session.phase == .live and !driver.session.stale;
+                editor.firmware.observeRunning(if (coherent) driver.session.expected else null, coherent, now);
+                editor.bootloader_available = driver.connected and driver.session.bootloaderAvailable();
+                if (editor.bootloader_requested) {
+                    editor.bootloader_requested = false;
+                    driver.enterBootloader(now) catch |err| editor.report(err);
+                }
+            }
+        }
         if (editor.should_close) open = false;
         if (frames == 2 and screenshot != null) try scenario.verifyPanels(window.natural_scale);
         if (interactions and frames == 26) {
