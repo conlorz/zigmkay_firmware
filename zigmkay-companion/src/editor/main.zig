@@ -50,6 +50,16 @@ pub const Editor = struct {
     bootloader_available: bool = false,
     bootloader_status: []const u8 = "Physical recovery: hold positions 0 + 4 to enter BOOTSEL.",
     text: Text,
+    practice: @import("practice.zig").Session = .{},
+    practice_open: bool = false,
+    practice_active: bool = false,
+    practice_mode: usize = 0,
+    practice_level: usize = 1,
+    practice_source: usize = 0,
+    practice_seed: u64 = 1,
+    practice_snapshot: [32]u8 = @splat(0),
+    practice_drawn_len: usize = 0,
+    practice_best: [2][3][2]f64 = @splat(@splat(@splat(0))),
     test_start: i64 = 0,
     last_text_sequence: ?u64 = null,
     test_details: bool = false,
@@ -139,10 +149,15 @@ pub const Editor = struct {
             }
         }
         if (event.type == sdl.SDL_EVENT_WINDOW_FOCUS_LOST and event.window.windowID == self.window_id) {
+            self.pausePractice();
             self.testing.stop();
             self.text.reset();
         }
         if (event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) self.extend = event.key.mod & sdl.SDL_KMOD_SHIFT != 0;
+        if (self.practice_open and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and event.key.scancode == sdl.SDL_SCANCODE_ESCAPE) {
+            self.pausePractice();
+            return true;
+        }
         if (self.testing.state == .running) {
             if (event.type == sdl.SDL_EVENT_TEXT_INPUT and event.text.windowID == self.window_id) return true;
             if ((event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) and event.key.windowID == self.window_id) {
@@ -152,7 +167,7 @@ pub const Editor = struct {
                     return true;
                 };
             }
-        } else if (self.canvas_focus and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and !event.key.repeat and !self.paths_open and !self.advanced and !self.picker_open and !self.combo_open and !self.callback_open) {
+        } else if (!self.practice_open and self.canvas_focus and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and !event.key.repeat and !self.paths_open and !self.advanced and !self.picker_open and !self.combo_open and !self.callback_open) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
                 self.model.select((self.model.primary + (if (event.key.scancode == sdl.SDL_SCANCODE_RIGHT) @as(usize, 1) else 33)) % 34, self.extend);
                 return true;
@@ -177,6 +192,39 @@ pub const Editor = struct {
     }
     pub fn testTime(self: *Editor) u64 {
         return @max(self.testing.time_us, @as(u64, @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds() - self.test_start))));
+    }
+    pub fn practiceTime(self: *Editor) u64 {
+        return @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds()));
+    }
+    pub fn pausePractice(self: *Editor) void {
+        if (!self.practice_active) return;
+        self.practice.pause(self.practiceTime());
+        if (self.practice.source == .draft) self.testing.stop();
+        self.text.reset();
+    }
+    pub fn startPractice(self: *Editor, fresh: bool) !void {
+        self.diagnostic = @splat(0);
+        self.testing.stop();
+        if (fresh) {
+            var buffer: [8192]u8 = undefined;
+            const practice_module = @import("practice.zig");
+            const reference = if (self.practice_mode == 0) try practice_module.english(&buffer, self.practice_seed, ([_]usize{ 2, 5, 10 })[self.practice_level]) else practice_module.lessons[self.practice_level];
+            try self.practice.load(reference, if (self.practice_source == 0) .os else .draft);
+        } else self.practice.restart();
+        self.practice_active = true;
+        self.practice_drawn_len = 0;
+        self.practice_snapshot = try self.model.id();
+        self.text.reset();
+        self.last_text_sequence = null;
+        if (self.practice.source == .draft) {
+            if (self.testing.state != .prepared) {
+                try self.testing.prepare(self.model.current.snapshot);
+                self.practice.pause(self.practiceTime());
+            } else {
+                self.test_start = @intCast(std.Io.Clock.awake.now(self.io).toMicroseconds());
+                try self.testing.start();
+            }
+        }
     }
     pub fn openAction(self: *Editor) void {
         self.action_draft = forms.Draft.from(self.model.action());
@@ -222,13 +270,22 @@ pub const Editor = struct {
         self.firmware.poll(try self.model.id());
         if (self.callback_state == .changed or self.callback_state == .missing) self.firmware.invalidateExternalSources();
         if (self.text.refresh()) {
+            self.pausePractice();
             self.testing.stop();
             self.text.reset();
         }
         if (self.testing.last) |output| if (self.last_text_sequence != output.sequence) {
             self.last_text_sequence = output.sequence;
-            self.text.output(output.commands) catch |err| self.report(err);
+            if (self.practice_active and self.practice.source == .draft) {
+                self.text.practiceOutput(output.commands, &self.practice, self.practiceTime()) catch |err| self.report(err);
+            } else self.text.output(output.commands) catch |err| self.report(err);
         };
+        if (self.practice_active and self.practice.source == .draft and (self.testing.state == .stale or self.testing.state == .failed)) self.pausePractice();
+        if (self.practice_active and self.practice.state == .complete) {
+            const best = &self.practice_best[self.practice_mode][self.practice_level][self.practice_source];
+            if (self.practice.scored) best.* = @max(best.*, self.practice.wpm(self.practiceTime()));
+            if (self.practice.source == .draft) self.testing.stop();
+        }
         if (self.testing.state == .running and self.testing.queue.items.len < 32) {
             var held = false;
             for (self.testing.pressed) |pressed| held = held or pressed;
@@ -257,6 +314,7 @@ pub const Editor = struct {
         if (self.paths_open) try self.paths(t);
         if (self.advanced) try self.actionForm(t);
         if (self.test_details) try self.testDrawer(t);
+        if (self.practice_open) try @import("practice_drawer.zig").draw(self, t);
         if (self.callback_open) try self.callbackDrawer(t);
         if (self.combo_open) try self.comboDrawer(t);
         if (self.picker_open) try self.picker(t);
@@ -613,6 +671,11 @@ pub const Editor = struct {
             text_options.background = true;
             text_options.border = .all(1);
             dvui.labelNoFmt(@src(), if (self.text.len == 0) "Prepare an immutable draft to test offline" else self.text.value(), .{}, text_options);
+            if (button(t, "Practice", "practice.open", .{ .x = 410, .y = 5, .w = 90, .h = 30 })) {
+                self.testing.stop();
+                self.text.reset();
+                self.practice_open = true;
+            }
             if (button(t, "Details", "test.details", .{ .x = 521, .y = 27, .w = 90, .h = 39 })) self.test_details = !self.test_details;
             if (button(t, switch (self.testing.state) {
                 .idle, .stale, .failed => "Prepare Test",
@@ -620,6 +683,8 @@ pub const Editor = struct {
                 .prepared => "Start Test",
                 .running => "Stop Test",
             }, "test.prepare", .{ .x = 621, .y = 27, .w = 145, .h = 39 })) {
+                self.pausePractice();
+                self.practice_active = false;
                 switch (self.testing.state) {
                     .idle, .stale, .failed => self.testing.prepare(self.model.current.snapshot) catch |err| self.report(err),
                     .prepared => {
@@ -918,10 +983,79 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     editor.backend_window = backend.window;
     scenario.setup(&editor, state) catch |err| editor.report(err);
     var frames: usize = 0;
+    var practice_clipboard: ?[]u8 = null;
+    defer if (practice_clipboard) |bytes| init.gpa.free(bytes);
     while (open) : (frames += 1) {
         try window.begin(window.beginWait(false));
         try @import("events.zig").pump(&backend, &window, &editor);
         if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
+        if (state == .practice_scroll) switch (frames) {
+            3 => _ = try window.addEventText(.{ .text = @import("practice.zig").lessons[1][0..300] }),
+            5 => {
+                const current = dvui.tagGet("practice.current") orelse return error.PracticeCurrentLineMissing;
+                if (!current.visible) return error.PracticeCurrentLineClipped;
+            },
+            6 => _ = try window.addEventText(.{ .text = @import("practice.zig").lessons[1][300..] }),
+            8 => {
+                if (editor.practice.state != .complete or editor.practice.len != editor.practice.reference_len) return error.PracticeZigCompletionFailed;
+                std.log.info("Practice complete Zig file and current-line scrolling passed", .{});
+            },
+            else => {},
+        };
+        if (state == .practice_input) switch (frames) {
+            3 => _ = try window.addEventText(.{ .text = "x" }),
+            4 => _ = try window.addEventKey(.{ .code = .backspace, .action = .down, .mod = .none }),
+            5 => _ = try window.addEventText(.{ .text = "a" }),
+            6 => _ = try window.addEventKey(.{ .code = .enter, .action = .down, .mod = .none }),
+            7 => _ = try window.addEventKey(.{ .code = .tab, .action = .down, .mod = .none }),
+            8 => _ = try window.addEventText(.{ .text = "b" }),
+            10 => {
+                if (editor.practice.state != .complete or editor.practice.corrected != 1 or editor.practice.attempts != 8) return error.PracticeInputScenarioFailed;
+                std.log.info("Practice committed text, correction, Tab/newline and completion passed", .{});
+            },
+            11 => try scenario.click(&window, "practice.start", window.natural_scale, false),
+            12 => try scenario.click(&window, "practice.start", window.natural_scale, true),
+            13 => _ = try window.addEventText(.{ .text = "a" }),
+            14 => try scenario.click(&window, "practice.pause", window.natural_scale, false),
+            15 => try scenario.click(&window, "practice.pause", window.natural_scale, true),
+            16 => {
+                if (editor.practice.state != .paused or editor.practice.len != 1) return error.PracticePauseScenarioFailed;
+                _ = try window.addEventText(.{ .text = "ignored" });
+            },
+            17 => try scenario.click(&window, "practice.pause", window.natural_scale, false),
+            18 => try scenario.click(&window, "practice.pause", window.natural_scale, true),
+            19 => _ = try window.addEventKey(.{ .code = .enter, .action = .down, .mod = .none }),
+            20 => _ = try window.addEventKey(.{ .code = .tab, .action = .down, .mod = .none }),
+            21 => _ = try window.addEventText(.{ .text = "b" }),
+            23 => {
+                if (editor.practice.state != .complete or editor.practice.attempts != 7 or editor.practice.corrected != 0) return error.PracticeResumeScenarioFailed;
+                std.log.info("Practice restart, pause, ignored paused input and resume passed", .{});
+            },
+            24 => try scenario.click(&window, "practice.start", window.natural_scale, false),
+            25 => try scenario.click(&window, "practice.start", window.natural_scale, true),
+            26 => {
+                var event = std.mem.zeroes(sdl.SDL_Event);
+                event.type = sdl.SDL_EVENT_WINDOW_FOCUS_LOST;
+                event.window.windowID = editor.window_id;
+                _ = try editor.raw(event);
+            },
+            27 => {
+                if (editor.practice.state != .paused or editor.practice.len != 0) return error.PracticeFocusLossScenarioFailed;
+                try scenario.click(&window, "practice.pause", window.natural_scale, false);
+            },
+            28 => try scenario.click(&window, "practice.pause", window.natural_scale, true),
+            29 => {
+                practice_clipboard = try init.gpa.dupe(u8, dvui.clipboardText());
+                dvui.clipboardTextSet("a\n    b");
+                _ = try window.addEventKey(.{ .code = .v, .action = .down, .mod = if (@import("builtin").os.tag == .macos) .lcommand else .lcontrol });
+            },
+            31 => {
+                dvui.clipboardTextSet(practice_clipboard.?);
+                if (editor.practice.state != .complete or editor.practice.scored) return error.PracticePasteScenarioFailed;
+                std.log.info("Practice focus loss and unscored native paste passed", .{});
+            },
+            else => {},
+        };
         if (state == .key_search) switch (frames) {
             3 => try scenario.click(&window, "action.key.search", window.natural_scale, false),
             4 => try scenario.click(&window, "action.key.search", window.natural_scale, true),
@@ -1025,7 +1159,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 break;
             }
         }
-        const capture_frame: usize = if (interactions) 28 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
+        const capture_frame: usize = if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 28 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
         if (screenshot != null and frames == capture_frame) {
             if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});
@@ -1061,4 +1195,5 @@ test {
     _ = @import("model.zig");
     _ = forms;
     _ = @import("text.zig");
+    _ = @import("practice.zig");
 }

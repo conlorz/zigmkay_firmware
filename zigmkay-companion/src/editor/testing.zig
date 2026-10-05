@@ -230,6 +230,14 @@ test "editor preparation, literal runner output, restart, crash, cancellation an
         controller.poll(frozen);
         if (controller.last) |output| if (output.sequence == 1) {
             try std.testing.expectEqualDeep(@as([]const @import("zigmkay").core.OutputCommand, &.{.{ .KeyCodePress = 4 }}), output.commands);
+            var practice: @import("practice.zig").Session = .{};
+            try practice.load("a", .draft);
+            var text = @import("text.zig").Text.init(true);
+            defer text.deinit();
+            try text.practiceOutput(output.commands, &practice, 1000);
+            try std.testing.expectEqual(@import("practice.zig").State.complete, practice.state);
+            try std.testing.expectEqual(@as(usize, 1), practice.attempts);
+            try std.testing.expectEqual(frozen, try model.id());
             pressed = true;
         };
         if (std.Io.Clock.awake.now(io).toMilliseconds() > deadline) return error.InputTestTimeout;

@@ -7,6 +7,12 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
+        .practice_english, .practice_zig, .practice_scroll, .practice_input => {
+            editor.practice_open = true;
+            editor.practice_mode = if (state == .practice_zig or state == .practice_scroll) 1 else 0;
+            try editor.startPractice(true);
+            if (state == .practice_input) try editor.practice.load("a\n    b", .os);
+        },
         .normal, .key_drag => {},
         .paths => editor.paths_open = true,
         .callback_editor => editor.callback_open = true,

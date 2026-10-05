@@ -4,6 +4,8 @@ pub const State = enum { ready, running, paused, complete };
 pub const Source = enum { os, draft };
 pub const lessons = [_][]const u8{ @embedFile("lessons/functions.zig"), @embedFile("lessons/arrays.zig"), @embedFile("lessons/errors.zig") };
 pub const lesson_names = [_][]const u8{ "Functions and tests", "Arrays and a struct", "Errors and optionals" };
+pub const lesson_ids = [_][]const u8{ "functions-v1", "arrays-v1", "errors-v1" };
+pub const compiler_version = "0.16.0";
 pub const corpus_version = 1;
 pub const Session = struct {
     reference: [8192]u21 = undefined,
@@ -21,6 +23,7 @@ pub const Session = struct {
     segment: u64 = 0,
     active_us: u64 = 0,
     ended: u64 = 0,
+    previous_cr: bool = false,
     pub fn load(self: *Session, bytes: []const u8, source: Source) !void {
         var view = try std.unicode.Utf8View.init(bytes);
         var it = view.iterator();
@@ -45,19 +48,19 @@ pub const Session = struct {
         self.started = null;
         self.active_us = 0;
         self.ended = 0;
+        self.previous_cr = false;
     }
     pub fn insert(self: *Session, bytes: []const u8, now: u64, paste: bool) !void {
         if (self.state == .paused or self.state == .complete) return;
         var view = try std.unicode.Utf8View.init(bytes);
         var it = view.iterator();
         if (paste) self.scored = false;
-        var previous_cr = false;
         while (it.nextCodepoint()) |raw| {
-            if (raw == '\n' and previous_cr) {
-                previous_cr = false;
+            if (raw == '\n' and self.previous_cr) {
+                self.previous_cr = false;
                 continue;
             }
-            previous_cr = raw == '\r';
+            self.previous_cr = raw == '\r';
             const cp: u21 = if (raw == '\r') '\n' else raw;
             if (self.len == self.typed.len) return error.TextLimit;
             if (self.state == .ready) {
@@ -66,7 +69,12 @@ pub const Session = struct {
                 self.segment = now;
             }
             self.attempts += 1;
-            if (self.len < self.reference_len and self.reference[self.len] == cp) self.correct_attempts += 1 else self.errors[@min(self.len, self.reference.len - 1)] += 1;
+            if (self.len < self.reference_len and self.reference[self.len] == cp) {
+                self.correct_attempts += 1;
+            } else if (self.len < self.reference_len) {
+                const first = std.mem.indexOfScalar(u21, self.reference[0..self.reference_len], self.reference[self.len]).?;
+                self.errors[first] += 1;
+            }
             self.typed[self.len] = cp;
             self.len += 1;
             if (self.len == self.reference_len and std.mem.eql(u21, self.typed[0..self.len], self.reference[0..self.reference_len])) {
@@ -80,6 +88,7 @@ pub const Session = struct {
     pub fn backspace(self: *Session) void {
         if (self.len == 0 or self.state == .paused or self.state == .complete) return;
         self.len -= 1;
+        self.previous_cr = false;
         if (self.len >= self.reference_len or self.typed[self.len] != self.reference[self.len]) self.corrected += 1;
     }
     pub fn pause(self: *Session, now: u64) void {
@@ -159,4 +168,32 @@ test "English seed reproducibility and length" {
     try std.testing.expectEqualStrings(first, try english(&b, 42, 5));
     try std.testing.expect(!std.mem.eql(u8, first, try english(&b, 43, 5)));
     try std.testing.expectEqual(@as(usize, 5), std.mem.count(u8, first, "."));
+}
+
+test "ready pauses, UTF-8 validation and split CRLF preserve character attempts" {
+    var s: Session = .{};
+    try s.load("a\nb", .os);
+    try s.insert("", 10, false);
+    try std.testing.expect(s.started == null);
+    s.pause(20);
+    s.resumeRun(30);
+    try std.testing.expectEqual(State.ready, s.state);
+    try std.testing.expectError(error.InvalidUtf8, s.insert("\xff", 40, false));
+    try s.insert("a\r", 50, false);
+    try s.insert("\nb", 60, false);
+    try std.testing.expectEqual(State.complete, s.state);
+    try std.testing.expectEqual(@as(usize, 3), s.attempts);
+}
+
+test "errors aggregate by expected character and full wrong text requires correction" {
+    var s: Session = .{};
+    try s.load("aa", .os);
+    try s.insert("xx", 10, false);
+    try std.testing.expectEqual(State.running, s.state);
+    try std.testing.expectEqual(@as(u32, 2), s.errors[0]);
+    s.backspace();
+    s.backspace();
+    try s.insert("aa", 20, false);
+    try std.testing.expectEqual(State.complete, s.state);
+    try std.testing.expectEqual(@as(f64, 50), s.accuracy());
 }

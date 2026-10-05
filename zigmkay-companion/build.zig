@@ -18,6 +18,14 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     module.addImport("zkeycodes", shared.keycodes);
     const tests = b.addRunArtifact(b.addTest(.{ .root_module = module }));
     tests.setCwd(root);
+    for ([_][]const u8{ "functions", "arrays", "errors" }) |name| {
+        const lesson = root.path(b, b.fmt("src/editor/lessons/{s}.zig", .{name}));
+        const run_lesson = b.addRunArtifact(b.addTest(.{ .root_module = b.createModule(.{ .root_source_file = lesson, .target = b.graph.host }) }));
+        tests.step.dependOn(&run_lesson.step);
+        const fmt = b.addSystemCommand(&.{ b.graph.zig_exe, "fmt", "--check" });
+        fmt.addFileArg(lesson);
+        tests.step.dependOn(&fmt.step);
+    }
     return .{ .exe = exe, .tests = &tests.step };
 }
 pub fn build(b: *std.Build) void {
