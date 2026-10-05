@@ -3,6 +3,14 @@
 The editor's Build action captures the current validated draft and callback
 source inventory, exports into the build cache, and starts the pinned Zig
 compiler through a literal argument vector. It does not access hardware.
+Committed layout changes also schedule this firmware build automatically, after
+750 ms without another change. Key/layer/combo/profile edits, undo/redo and
+refreshed callback snapshots participate through the project digest. Opening the
+editor alone does not build. Unapplied inspector fields do not change the layout.
+Builds wait during transfer, HID bootloader entry and reconnect verification.
+Changed/missing external callback files must be refreshed/reviewed first. A
+failed build is not retried automatically until another change; Build remains
+available for an explicit retry. Automatic builds never initiate flashing.
 Compiler diagnostics retain source paths and line numbers. Cancel ends the
 bounded build job; a failed or cancelled build does not restore an older
 artifact as current. Editing the draft or compiler inputs invalidates its build.

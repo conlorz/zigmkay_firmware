@@ -1,5 +1,14 @@
 # Central milestone tracker
 
+## Automatic firmware builds after layout edits (2026-10-05)
+
+User-requested layout changes now schedule a firmware build after a 750 ms
+debounce. Startup and deterministic UI fixtures remain idle. Transfer, bootloader
+entry and reconnect verification defer builds; external callback changes require
+review/refresh. No unchanged failure is retried automatically and no build flashes.
+The scheduler regression cases and real changed-layout LK7 UF2 build pass in the
+67-test companion suite. See [the workflow guide](08-editor-verification.md).
+
 ## Optional HID bootloader on Flash (2026-10-05)
 
 The user requested completion of HID bootloader entry and an optional attempt
