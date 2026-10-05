@@ -56,6 +56,8 @@ mise //zigmkay:test                  # only processor tests
 mise //zigmkay-companion:test        # only companion tests; no HID
 mise //:check                        # tests/generated checks plus offline guard
 mise //:check-full                   # full build matrix, replay and parity
+mise //:workspace-check              # package/aggregate/catalog consistency
+mise //:gui-acceptance               # native editor captures, interactions and goldens
 mise //:firmware lk7                 # build only, no device access
 mise //:firmware lk7 --optimize Debug
 mise //:firmware-all
@@ -76,6 +78,19 @@ native. GUI/replay currently use the fixed LK7 Danish profile. GUI replay/captur
 paths are relative to the monorepo root. Root `zig build` now runs integration
 checks only; use `mise //:test` for the entire repository.
 
+Root and package firmware/GUI interfaces share mise task templates. Board
+choices are checked against `keyboards/boards.zon`; workspace checks also reject
+undiscovered package configurations and omitted package test/generated-check
+tasks. Add new packages explicitly to `config_roots` and the aggregate tasks.
+
+Mise schedules two tasks by default (`MISE_JOBS` overrides it), while
+`ZIGMKAY_BUILD_JOBS` controls compiler concurrency per command (default four).
+The guard inherits those settings when it launches its nested scheduler; the
+outer check command waits for that scheduler. Package caches remain local and
+Zig's global cache shares compiler work. `check-full` covers the offline build
+matrix; `gui-acceptance` additionally opens native windows for all editor
+scenarios, semantic interactions, resizing and the approved golden comparisons.
+
 ## Explicit hardware tasks
 
 Only use these during an authorized device session:
@@ -95,6 +110,9 @@ automatic restart; that device issue remains under investigation in
 [04](docs/plans/handovers/04-hardware.md). Live HID, flashing and generated source
 updates are excluded from aggregate tests/checks. No default task accesses hardware.
 
+`flash lk7` builds the identity verifier; other boards only build firmware and
+the transfer tool. `flash-file` builds the verifier only with `--verify-lk7`.
+
 ## Packages
 
 | Task namespace | Ownership |
@@ -105,11 +123,13 @@ updates are excluded from aggregate tests/checks. No default task accesses hardw
 | `//device-protocol` | Telemetry codec |
 | `//companion-model` | Portable session/state model |
 | `//keymap-project` | Versioned project, source snapshots, validation and Zig generation (07A accepted) |
+| `//companion-jobs` | Bounded processes, firmware artifact contracts and source traversal |
 | `//zkeycodes` | Keycodes, HJSON conversion and generated checks |
 | `//zkeymap` | Native keyboard translation; existing C bridges |
 | `//zigmkay-companion` | DVUI/SDL3 GUI and component tests |
 | `//zig-flash` | Zig UF2 utility and offline platform checks |
 | `//apps/headless` | Offline trace replay |
+| `//apps/keymap-test` | Native processor draft runner and acceptance fixtures |
 | `//tools/registry` | Registry validation/check/regeneration |
 | `//:integration-test` | Cross-package identity/session/trace checks |
 
@@ -117,7 +137,8 @@ Codec/session behavioral fixtures remain cross-package integration tests;
 their package test steps also compile their own portable module roots.
 First-party implementation, generators and validation remain Zig. External
 dependencies use immutable revisions and hashes in package `build.zig.zon`
-files. All changes stay local: never push branches or create pull requests.
+files. Push only to the fork's `origin` when requested; create pull requests
+only when requested.
 
 Regeneration is explicit:
 

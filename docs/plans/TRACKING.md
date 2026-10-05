@@ -222,6 +222,7 @@ reuse this result as evidence for later source changes.
 
 | Date | Event | Evidence / next action |
 | --- | --- | --- |
+| 2026-10-05 | User authorized all code-review refactors, focused commits and a push to the fork | Integrated through `9c14cba`; [development evidence](../development.md): full offline matrix/parity, workspace/task checks and GUI golden/scenario acceptance passed. No hardware or milestone acceptance changes. |
 | 2026-10-04 | Execute plan 11 offline research and USB recovery | `2972bc6`, `c9ea3a1`, `2e30e9d`; target runtime defect demonstrated/fixed; full checks pass; bounded Mac-only session prepared, explicit hardware authorization pending; R4/R5 gated |
 | 2026-10-04 | User stopped trial-and-error recovery and paused original workflow | Plan 11 and recovery handoff are the direct next task for a new session; research before standard input, custom codes and flashing; latest `637fd71` still fails live configuration |
 | 2026-10-04 | Subagent execution structure prepared; no implementation started | Start from the fresh-session prompt in the workflow |
