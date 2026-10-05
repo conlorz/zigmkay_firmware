@@ -34,6 +34,26 @@ The flasher blocked in macOS `pwritev`, confirmed by a process sample saved in
 `.zig-cache/ui-flash-blocked.sample.txt`. A recovery-volume directory listing also
 blocked. One SIGINT was sent. No second writer was started while it remained alive.
 
-Physical unplug/reconnect in BOOTSEL was requested from the user. Successful
-transfer, automatic restart and running identity verification remain pending that
-reconnect and a fresh explicit acceptance run. No typing acceptance is claimed.
+The user physically unplugged and reconnected the LK7 in BOOTSEL. The old flasher,
+editor test and blocked directory-listing processes had all exited before retry.
+The RP2/v3.0 recovery metadata was readable again and only one recovery volume was
+present.
+
+## Successful end-to-end run
+
+The same explicit command was rerun after reconnect and exited 0. DVUI input
+clicked the actual toolbar Build and Flash buttons. The build produced a
+133120-byte UF2 with the same SHA-256 recorded above. The flasher automatically
+discovered `/Volumes/RPI-RP2`, validated its metadata, opened the destination,
+wrote all firmware bytes and synchronized successfully. The keyboard restarted;
+vendor HID reappeared, and the editor test verified the exact expected Danish
+profile identity and a coherent snapshot.
+
+The command reported: `UI end-to-end passed: Build click, Flash click, automatic
+drive discovery, synchronized transfer, reconnect, exact profile identity and
+coherent snapshot`.
+
+No manual mount path, readiness checkbox or firmware popup was involved. No
+typing acceptance or exact binary readback is claimed. The earlier macOS kernel
+stall required a physical reconnect; this successful run does not establish that
+all filesystem stalls can be recovered in software.
