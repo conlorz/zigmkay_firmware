@@ -106,6 +106,30 @@ pub const Text = struct {
             else => self.logged += 1,
         };
     }
+    /// Reuse native layout/dead-key translation, while scoring each insertion.
+    pub fn practiceOutput(self: *Text, commands: []const core.OutputCommand, session: *@import("practice.zig").Session, now: u64) !void {
+        for (commands) |command| {
+            if (command == .KeyCodePress) {
+                const code = command.KeyCodePress;
+                const shortcut = self.mods.left_ctrl or self.mods.right_ctrl or self.mods.left_gui or self.mods.right_gui;
+                if (!shortcut and code == 42) {
+                    session.backspace();
+                    continue;
+                }
+                if (!shortcut and code == 43) {
+                    try session.insert("    ", now, false);
+                    continue;
+                }
+                if (code == 76 or code == 80 or code == 79 or code == 74 or code == 77) continue;
+            }
+            self.len = 0;
+            self.cursor = 0;
+            try self.output(&.{command});
+            try session.insert(self.value(), now, false);
+        }
+        self.len = 0;
+        self.cursor = 0;
+    }
 };
 test "composition, several scalars, editing and reset have literal text outcomes" {
     var text = Text.init(true);
@@ -123,4 +147,15 @@ test "composition, several scalars, editing and reset have literal text outcomes
     try text.output(&.{ .ActivateBootMode, .{ .ConsumerKeyPressed = .VolumeUp }, .{ .MouseCommandPressed = .WheelDown }, .{ .ModifiersChanged = .{ .left_gui = true } }, .{ .KeyCodePress = 20 } });
     try std.testing.expectEqualStrings("ée", text.value());
     try std.testing.expectEqual(@as(usize, 4), text.logged);
+}
+
+test "draft practice uses composed text and counts corrections without navigation" {
+    var text = Text.init(true);
+    defer text.deinit();
+    var session: @import("practice.zig").Session = .{};
+    try session.load("é    a", .draft);
+    try text.practiceOutput(&.{ .{ .ModifiersChanged = .{ .left_alt = true } }, .{ .KeyCodePress = 52 }, .{ .ModifiersChanged = .{} }, .{ .KeyCodePress = 8 }, .{ .KeyCodePress = 43 }, .{ .KeyCodePress = 5 }, .{ .KeyCodePress = 42 }, .{ .KeyCodePress = 80 }, .{ .KeyCodePress = 4 } }, &session, 100);
+    try std.testing.expectEqual(@import("practice.zig").State.complete, session.state);
+    try std.testing.expectEqual(@as(usize, 7), session.attempts);
+    try std.testing.expectEqual(@as(usize, 1), session.corrected);
 }
