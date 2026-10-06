@@ -32,12 +32,13 @@ artifacts become rollback candidates only after typing confirmation.
 
 Follow [the self-verification guide](../docs/plans/07-editor-verification.md)
 for edit/save/reopen/export/testing and native macOS probes. Run
-`mise //zigmkay-companion:editor-check` for 90 deterministic screenshots plus
+`mise //zigmkay-companion:editor-check` for deterministic screenshots plus
 geometry/interaction checks. Capture artifacts are under root
 `.zig-cache/editor-acceptance`. `editor-golden-check` reads explicitly approved
 baselines without updating them. Both screenshot commands remain offline and
 never execute attached callbacks. The normal editor only compiles/executes draft
-callbacks after explicit Prepare Test; it never sends resulting actions to HID.
+callbacks when entering/focusing Free typing, or starting a draft Typing Test;
+it never sends resulting actions to HID.
 
 The companion overlay's Open editor button opens a separate opaque normal
 window. Its content preserves the running-profile adapter, while the editor
@@ -48,10 +49,27 @@ layout, dialogs and click targets scale automatically to fit the window, without
 scrolling the whole canvas. Individual long lists/forms retain their own scrolling.
 Use `--window-size <width> <height>` with `--editor` to choose an initial size.
 
-## Typing practice
+## Try it out
 
-Run `mise //zigmkay-companion:editor` and click **Practice** in **Try your draft**.
-Use `mise //zigmkay-companion:editor --practice` to open practice directly.
+Run `mise //zigmkay-companion:editor` and choose **Try it out** in the main
+navigation. **Free typing** automatically prepares the current applied draft's
+immutable offline runner when its single-line field is focused. Input waits for
+preparation and requires EurKEY as the macOS input source. Failures show inline
+diagnostics and an explicit Retry. Reset text clears Unicode text, caret,
+composition and simulated held keys while reusing a prepared artifact. Arrow
+keys edit the caret; newline, tab and non-text actions remain diagnostic data.
+The companion always shows that draft, independently of installed firmware.
+
+Choose **Typing Test** for the scored exercise below. The two modes keep separate
+buffers. Switching modes or leaving Try it out pauses a test and releases the
+runner; returning requires deliberate Resume. Free text survives navigation and
+clears with an explanation when the project/snapshot or input source changes.
+Diagnostics expands inline, including compiler errors, source identity and
+selected-key probes during valid runner sessions. Editor retains editing,
+callbacks, history and the build/flash workflow. Pending inspector edits must be
+applied or discarded before switching to Try it out.
+
+Use `mise //zigmkay-companion:editor --practice` to enter Try it out / Typing Test directly.
 Choose English (2, 5 or 10 generated sentences) or Zig (three complete, formatted
 and tested Zig 0.16.0 files), then press Start. The typed buffer starts empty.
 The current word stays large and centered. Its next character is boxed in blue;

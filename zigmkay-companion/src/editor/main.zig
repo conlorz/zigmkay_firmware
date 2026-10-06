@@ -314,7 +314,20 @@ pub const Editor = struct {
         _ = std.fmt.bufPrint(&self.diagnostic, "{s}", .{@errorName(err)}) catch {};
     }
     pub fn raw(self: *Editor, event: sdl.SDL_Event) !bool {
+        const input_window: ?u32 = switch (event.type) {
+            sdl.SDL_EVENT_KEY_DOWN, sdl.SDL_EVENT_KEY_UP => event.key.windowID,
+            sdl.SDL_EVENT_TEXT_INPUT => event.text.windowID,
+            sdl.SDL_EVENT_MOUSE_BUTTON_DOWN, sdl.SDL_EVENT_MOUSE_BUTTON_UP => event.button.windowID,
+            else => null,
+        };
+        if (input_window) |id| if (id != self.window_id) return false;
         if ((event.type == sdl.SDL_EVENT_WINDOW_CLOSE_REQUESTED and event.window.windowID == self.window_id) or event.type == sdl.SDL_EVENT_QUIT) {
+            self.pausePractice();
+            self.testing.stop();
+            self.free_focus = false;
+            self.free_pending = false;
+            self.preview.release();
+            self.free_text.reset();
             if (self.firmware.state == .transferring) {
                 self.report(error.TransferInProgress);
                 return true;
@@ -1402,6 +1415,11 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             },
             27 => {
                 if (editor.practice.state != .paused or editor.practice.len != 0) return error.PracticeFocusLossScenarioFailed;
+                var event = std.mem.zeroes(sdl.SDL_Event);
+                event.type = sdl.SDL_EVENT_WINDOW_FOCUS_GAINED;
+                event.window.windowID = editor.window_id;
+                _ = try editor.raw(event);
+                if (editor.practice.state != .paused) return error.FocusRecoveryResumedPractice;
                 try scenario.click(&window, "practice.pause", window.natural_scale, false);
             },
             28 => try scenario.click(&window, "practice.pause", window.natural_scale, true),

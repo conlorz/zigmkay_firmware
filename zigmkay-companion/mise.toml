@@ -19,7 +19,7 @@ description = "Open the separate offline LK7 draft editor"
 usage = '''
 flag "--light" help="Start in light mode"
 flag "--fixture" help="Use inert deterministic visual fixtures"
-flag "--practice" help="Open typing practice directly"
+flag "--practice" help="Open Try it out / Typing Test directly"
 '''
 run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- --editor {% if usage.light %}--light{% endif %} {% if usage.fixture %}--fixture{% endif %} {% if usage.practice %}--practice{% endif %}'
 

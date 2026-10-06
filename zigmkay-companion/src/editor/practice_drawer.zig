@@ -207,7 +207,6 @@ pub fn draw(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
     // Consume exercise keys before controls; typing Space must not activate the
     // checkbox that happened to retain focus after a mouse click.
     try consumeInput(self, window.data(), now);
-    const footer_y = height - 112;
     const narrow = width < 980;
     const controls_height: f32 = if (narrow) 78 else 38;
     {
@@ -233,12 +232,13 @@ pub fn draw(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
     caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d:.0} WPM     {d:.1}% accuracy     {d:.1}s     {s}", .{ self.practice.wpm(now), self.practice.accuracy(), @as(f64, @floatFromInt(self.practice.duration(now))) / 1_000_000, if (!self.practice_active) "Ready" else @tagName(self.practice.state) }), .{ .x = 0, .y = controls_height + 2, .w = width, .h = 26 }, 18, t.muted, "practice.metrics");
     const focus = view.focus(&self.practice);
     const work_y = controls_height + 34;
-    const work_height = @max(0, footer_y - work_y - 12);
+    const work_height = @max(0, height - 112 - work_y - 24);
     const hero_height = @min(125, work_height * 0.23);
     const context_height = if (self.practice_show_keyboard) work_height * 0.23 else work_height - hero_height - 8;
+    const footer_y = work_y + 16 + hero_height + context_height;
     focusWord(self, t, .{ .x = 0, .y = work_y, .w = width, .h = hero_height }, focus);
     context(self, t, .{ .x = 0, .y = work_y + 8 + hero_height, .w = width, .h = context_height }, focus, now);
-    if (self.practice_show_keyboard) try keyboard(self, t, .{ .x = 0, .y = work_y + 16 + hero_height + context_height, .w = width, .h = @max(0, work_height - hero_height - context_height - 16) }, focus);
+    if (self.practice_show_keyboard) try keyboard(self, t, .{ .x = 0, .y = footer_y + 124, .w = width, .h = @max(0, height - footer_y - 124) }, focus);
     self.practice_drawn_len = self.practice.len;
     if (ui.button(t, if (self.practice_active) "Restart" else "Start", "practice.start", .{ .x = 0, .y = footer_y, .w = 120, .h = 40 })) try self.startPractice(!self.practice_active);
     if (ui.button(t, "New exercise", "practice.new", .{ .x = 130, .y = footer_y, .w = 150, .h = 40 })) {
