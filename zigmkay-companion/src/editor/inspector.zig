@@ -235,6 +235,12 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
         if (found == 0) caption("No matching actions for this target");
     }
     if (!std.meta.eql(before, session.drafts)) self.inspector_error = @splat(0);
+    for (session.selected, session.originals, session.drafts) |selected, original, staged| {
+        if (selected and original != null and original.? == .tap_with_autofire and staged != null and staged.? != .tap_with_autofire) {
+            self.inspector_state.conversion = true;
+            self.inspector_state.removal_summary = "Mode change removes Repeat delay and interval";
+        }
+    }
     var valid = true;
     session.validate(&self.model) catch |err| {
         valid = false;
