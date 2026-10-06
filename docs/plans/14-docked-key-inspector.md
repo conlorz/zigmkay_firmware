@@ -16,6 +16,13 @@ Replace the large key-action modal and separate key picker with a docked
 inspector. Keep the keyboard visible while users configure Tap and Hold,
 remove individual actions, disable a key, or restore inheritance.
 
+User clarification: keep popups to a minimum. Remove both the key-action modal
+and the standalone search popup once their controls are available in the docked
+inspector. Keep Advanced, one-shot configuration, callback ID selection, mode
+conversion summaries, validation, and pending-edit decisions inline in that
+inspector. This follow-up adds no custom modal dialogs. Reuse native file/folder
+dialogs only for explicit file selection in the existing source/project workflows.
+
 Mockup 2 is the interaction and dark-mode appearance target. Preserve its
 stacked Tap/Hold cards, removable chips, compact modifier controls, embedded
 search, and fixed Apply/Cancel footer. Preserve the existing charcoal palette,
@@ -135,9 +142,11 @@ not rewrite their representation.
 
 Changing key/layer/profile, opening another project, Save/Build/Flash/Test,
 document Undo/Redo, or closing the editor while inspector edits are pending must
-resolve the session first. Use compact Apply / Discard / Keep editing choices;
-do not silently apply or lose changes. A changed underlying snapshot invalidates
-the session rather than applying it to different keys. Text-field shortcuts
+resolve the session first. Show a compact inline inspector notice with Apply /
+Discard / Keep editing choices and defer the requested navigation or action;
+do not open a confirmation popup or silently apply or lose changes. A changed
+underlying snapshot invalidates the session rather than applying it to different
+keys. Text-field shortcuts
 retain normal text behavior while focused. Escape exits picker/search focus
 without clearing assignments or discarding edits.
 
@@ -216,6 +225,8 @@ Native semantic scenarios must exercise separate Tap/Hold targets, filtered
 search, symbol/alias lookup, L/R chords, combined modifier/layer Hold, media and
 one-shot edits, per-chip removal, bulk Apply/Cancel, selection changes with
 pending edits, validation, focus, keyboard shortcuts, and footer accessibility.
+Verify that key editing, search, Advanced, one-shot/callback configuration, and
+pending-edit resolution stay inside the inspector without opening a modal.
 Capture ordinary, inherited, unassigned, mixed selection, advanced, Repeat,
 validation, and pending-edit states in dark/light at 1×/2× and resized windows.
 Preserve existing toolbar, combo/callback, draft-runner, practice, and profile

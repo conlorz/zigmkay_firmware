@@ -15,6 +15,9 @@ contract remain the inputs to this follow-up.
 The plan specifies independent Tap/Hold cards, component-preserving bulk edits,
 explicit Unassign versus Inherit, Mac symbols, staged Apply/Cancel, a contextual
 embedded picker, responsive geometry, and offline validation/capture coverage.
+The user explicitly wants minimal popups: remove the key-action and search
+popups; Advanced, validation, and pending-edit choices stay inline in the
+inspector. This follow-up adds no custom modal dialogs.
 Next ready work is the action editing model/session checkpoint under an
 implementation request. No write lease, code implementation, new golden approval,
 hardware operation, or additional milestone acceptance is recorded by this
