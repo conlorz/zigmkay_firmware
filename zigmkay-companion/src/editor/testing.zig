@@ -8,6 +8,9 @@ const wire = @import("runner-protocol");
 fn inspectorTrace(controller: *Controller, id: [32]u8, command: wire.Command, time: u64, expected: []const @import("zigmkay").core.OutputCommand) !void {
     const sequence = controller.sequence + 1;
     try controller.input(command, time);
+    try inspectOutput(controller, id, sequence, expected);
+}
+fn inspectOutput(controller: *Controller, id: [32]u8, sequence: u64, expected: []const @import("zigmkay").core.OutputCommand) !void {
     const deadline = std.Io.Clock.awake.now(controller.io).toMilliseconds() + 10_000;
     while (true) {
         controller.poll(id);
@@ -221,6 +224,11 @@ pub const Controller = struct {
         self.time_us = time_us;
         try self.queue.append(self.gpa, .{ .sequence = self.sequence, .time_us = time_us, .command = command });
     }
+    /// Release physical input on field blur without losing the current preview
+    /// process. Explicit diagnostic Down/Up probes can continue in this session.
+    pub fn releaseHeld(self: *Controller, time_us: u64) !void {
+        for (self.pressed, 0..) |down, index| if (down) try self.input(.{ .key_up = @intCast(index) }, time_us);
+    }
     /// Called on UI thread. Every response must retain frozen project identity.
     pub fn poll(self: *Controller, current: [32]u8) void {
         self.invalidate(current);
@@ -354,6 +362,11 @@ test "editor preparation, literal runner output, restart, crash, cancellation an
     defer free.deinit();
     try free.singleLineOutput(controller.last.?.commands);
     try std.testing.expectEqualStrings("b", free.value());
+    const release_sequence = controller.sequence + 1;
+    try controller.releaseHeld(2000);
+    try inspectOutput(&controller, edited, release_sequence, &.{.{ .KeyCodeRelease = 5 }});
+    try std.testing.expectEqual(State.running, controller.state);
+    try std.testing.expect(!controller.pressed[10]);
     controller.stop();
     free.clear();
     try std.testing.expect(!controller.pressed[10]);

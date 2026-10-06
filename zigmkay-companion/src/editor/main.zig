@@ -88,6 +88,7 @@ pub const Editor = struct {
     window_focused: bool = true,
     free_failed: bool = false,
     free_pending: bool = false,
+    free_input_after: u64 = 0,
     free_snapshot: ?[32]u8 = null,
     preview: @import("try_state.zig").State = .{},
     preview_ticket: ?@import("try_state.zig").Ticket = null,
@@ -370,11 +371,14 @@ pub const Editor = struct {
         }
         if (event.type == sdl.SDL_EVENT_WINDOW_FOCUS_GAINED and event.window.windowID == self.window_id) self.window_focused = true;
         if (self.main_view == .try_it_out and self.try_mode == .free_typing and event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN and event.button.windowID == self.window_id) {
-            // Mouse controls relinquish runner input before this click is processed.
+            // Relinquish physical input while retaining a valid session for the
+            // explicit diagnostic probes. Preparation cannot finish unfocused.
+            const was_focused = self.free_focus;
             self.free_focus = false;
             self.free_pending = false;
             self.preview.release();
-            self.testing.stop();
+            if (self.testing.state == .preparing) self.testing.stop() else if (was_focused and self.testing.state == .running) self.testing.releaseHeld(self.testTime()) catch self.testing.stop();
+            self.free_input_after = self.testing.sequence;
             self.free_text.reset();
         }
         if (event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) self.extend = event.key.mod & sdl.SDL_KMOD_SHIFT != 0;
@@ -660,12 +664,16 @@ pub const Editor = struct {
             self.last_text_sequence = output.sequence;
             if (self.main_view == .try_it_out and self.try_mode == .typing_test and self.practice_active and self.practice.source == .draft and (self.practice.state == .ready or self.practice.state == .running)) {
                 self.text.practiceOutput(output.commands, &self.practice, self.practiceTime()) catch |err| self.report(err);
-            } else if (self.main_view == .try_it_out and self.try_mode == .free_typing and self.free_focus and self.testing.state == .running) self.free_text.singleLineOutput(output.commands) catch |err| {
-                self.testing.stop();
-                self.free_text.reset();
-                self.free_failed = true;
-                self.report(err);
-            };
+            } else if (self.main_view == .try_it_out and self.try_mode == .free_typing and self.testing.state == .running) {
+                if (self.free_focus and output.sequence > self.free_input_after) {
+                    self.free_text.singleLineOutput(output.commands) catch |err| {
+                        self.testing.stop();
+                        self.free_text.reset();
+                        self.free_failed = true;
+                        self.report(err);
+                    };
+                } else self.free_text.mods = @bitCast(output.modifiers);
+            }
         };
         if (self.practice_active and self.practice.source == .draft and (self.testing.state == .stale or self.testing.state == .failed)) self.pausePractice();
         if (self.practice_active and self.practice.state == .complete) {
@@ -765,6 +773,7 @@ pub const Editor = struct {
                 }
                 self.free_pending = false;
                 self.last_text_sequence = null;
+                self.free_input_after = 0;
                 self.test_start = @intCast(std.Io.Clock.awake.now(self.io).toMicroseconds());
                 try self.testing.start();
             },
@@ -808,6 +817,10 @@ pub const Editor = struct {
                 defer field.deinit();
                 for (dvui.events()) |*event| if (!event.handled and event.evt == .mouse and event.evt.mouse.action == .press and field.data().borderRectScale().r.contains(event.evt.mouse.p)) {
                     self.free_focus = true;
+                    self.free_input_after = self.testing.sequence;
+                    if (self.testing.state == .running) if (self.testing.last) |output| {
+                        self.free_text.mods = @bitCast(output.modifiers);
+                    };
                     dvui.focusWidget(null, null, null);
                     event.handle(@src(), field.data());
                 };
