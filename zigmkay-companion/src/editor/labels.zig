@@ -1,5 +1,66 @@
 const p = @import("keymap-project");
 const std = @import("std");
+pub const Host = enum { macos, windows, linux };
+pub const running_host: Host = switch (@import("builtin").os.tag) {
+    .macos => .macos,
+    .windows => .windows,
+    else => .linux,
+};
+pub fn runningHost() Host {
+    return running_host;
+}
+pub fn hostUsage(host: Host, code: u8, buffer: []u8) []const u8 {
+    if (code >= 224 and code <= 231) return hostModifierNames(host, @as(u8, 1) << @intCast(code - 224), buffer);
+    if (host == .macos) return switch (code) {
+        40 => "↩ Return",
+        42 => "⌫ Backspace",
+        43 => "⇥ Tab",
+        57 => "⇪ Caps Lock",
+        79 => "→ Right",
+        80 => "← Left",
+        81 => "↓ Down",
+        82 => "↑ Up",
+        else => usage(code, buffer),
+    };
+    return usage(code, buffer);
+}
+pub fn hostModifierNames(host: Host, bits: u8, buffer: []u8) []const u8 {
+    const names: [8][]const u8 = switch (host) {
+        .macos => .{ "L ⌃ Control", "L ⇧ Shift", "L ⌥ Option", "L ⌘ Command", "R ⌃ Control", "R ⇧ Shift", "R ⌥ Option", "R ⌘ Command" },
+        .windows => .{ "L Ctrl", "L Shift", "L Alt", "L Win", "R Ctrl", "R Shift", "R Alt", "R Win" },
+        .linux => .{ "L Ctrl", "L Shift", "L Alt", "L Super", "R Ctrl", "R Shift", "R Alt", "R Super" },
+    };
+    var used: usize = 0;
+    for (names, 0..) |name, bit| {
+        if (bits & (@as(u8, 1) << @intCast(bit)) == 0) continue;
+        const part = std.fmt.bufPrint(buffer[used..], "{s}{s}", .{ if (used == 0) "" else "+", name }) catch return "Modifiers";
+        used += part.len;
+    }
+    return buffer[0..used];
+}
+pub fn containsIgnoreCase(haystack: []const u8, needle: []const u8) bool {
+    if (needle.len > haystack.len) return false;
+    for (0..haystack.len - needle.len + 1) |start| if (std.ascii.eqlIgnoreCase(haystack[start..][0..needle.len], needle)) return true;
+    return false;
+}
+pub fn matchesUsage(host: Host, code: u8, query: []const u8) bool {
+    if (std.fmt.parseInt(u8, query, 0)) |numeric| {
+        if (numeric == code) return true;
+    } else |_| {}
+    var buffer: [128]u8 = undefined;
+    if (containsIgnoreCase(hostUsage(host, code, &buffer), query) or containsIgnoreCase(usage(code, &buffer), query)) return true;
+    const aliases = switch (code) {
+        224, 228 => "Ctrl Control ⌃",
+        225, 229 => "Shift ⇧",
+        226, 230 => "Alt Option ⌥",
+        227, 231 => "GUI Cmd Command Win Super ⌘",
+        40 => "Return Enter ↩",
+        42 => "Backspace ⌫",
+        43 => "Tab ⇥",
+        else => "",
+    };
+    return aliases.len > 0 and containsIgnoreCase(aliases, query);
+}
 pub fn usage(code: u8, buffer: []u8) []const u8 {
     if (code >= 4 and code <= 29) {
         buffer[0] = 'A' + code - 4;
@@ -69,17 +130,29 @@ fn knownUsage(code: u8, buffer: []u8) []const u8 {
     return std.fmt.bufPrint(buffer, "HID {d}", .{code}) catch "?";
 }
 pub fn tap(value: p.Tap, buffer: []u8) []const u8 {
+    var used: usize = 0;
+    var scratch: [256]u8 = undefined;
     if (value.key_press) |key| {
-        if (key.tap_modifiers.toByte() == 0) return usage(key.tap_keycode, buffer);
         var key_buffer: [64]u8 = undefined;
-        var mod_buffer: [96]u8 = undefined;
-        return std.fmt.bufPrint(buffer, "{s}+{s}", .{ modifierNames(key.tap_modifiers.toByte(), &mod_buffer), usage(key.tap_keycode, &key_buffer) }) catch "Chord";
+        var mod_buffer: [192]u8 = undefined;
+        const name = if (key.tap_modifiers.toByte() == 0) hostUsage(running_host, key.tap_keycode, &key_buffer) else std.fmt.bufPrint(&scratch, "{s}+{s}", .{ hostModifierNames(running_host, key.tap_modifiers.toByte(), &mod_buffer), hostUsage(running_host, key.tap_keycode, &key_buffer) }) catch "Chord";
+        appendSummary(buffer, &used, name);
+        if (key.dead) appendSummary(buffer, &used, "Dead key");
     }
-    if (value.media_key) |media| return @tagName(media);
-    if (value.mouse_action) |mouse| return @tagName(mouse);
-    if (value.custom) |custom| return signal(custom, buffer);
-    if (value.one_shot) |one| return if (one.layer_id) |id| std.fmt.bufPrint(buffer, "One-shot L{d}", .{id}) catch "?" else "One-shot mods";
-    return "No tap";
+    if (value.media_key) |media| appendSummary(buffer, &used, @tagName(media));
+    if (value.mouse_action) |mouse| appendSummary(buffer, &used, @tagName(mouse));
+    if (value.custom) |custom| appendSummary(buffer, &used, signal(custom, &scratch));
+    if (value.one_shot) |one| {
+        appendSummary(buffer, &used, "One-shot");
+        if (one.layer_id) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "L{d}", .{id}) catch "Layer");
+        if (one.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, hostModifierNames(running_host, one.hold_modifiers.toByte(), &scratch));
+        if (one.custom) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "Callback {d}", .{id}) catch "Callback");
+    }
+    return if (used == 0) "No tap" else buffer[0..used];
+}
+fn appendSummary(buffer: []u8, used: *usize, text: []const u8) void {
+    const part = std.fmt.bufPrint(buffer[used.*..], "{s}{s}", .{ if (used.* == 0) "" else " · ", text }) catch return;
+    used.* += part.len;
 }
 pub fn signal(id: u8, buffer: []u8) []const u8 {
     return switch (id) {
@@ -103,26 +176,26 @@ pub fn keycap(value: ?p.Action, doc: p.Document, buffer: []u8) []const u8 {
     var tap_buffer: [128]u8 = undefined;
     var hold_buffer: [128]u8 = undefined;
     return switch (a) {
-        .tap_only => |t| if (t.custom) |id| switch (id) {
-            253 => "Companion\nToggle log",
-            254 => "Companion\nQuit",
-            255 => "Companion\nShow / hide",
-            else => tap(t, buffer),
-        } else tap(t, buffer),
+        .tap_only => |t| tap(t, buffer),
         .tap_hold => |th| std.fmt.bufPrint(buffer, "{s}\nHold {s}", .{ tap(th.tap, &tap_buffer), hold(th.hold, doc, &hold_buffer) }) catch "Tap / hold",
         .hold_only => |h| std.fmt.bufPrint(buffer, "Hold\n{s}", .{hold(h, doc, &hold_buffer)}) catch "Hold",
         else => action(value, buffer),
     };
 }
 pub fn hold(value: p.Hold, doc: p.Document, buffer: []u8) []const u8 {
-    if (value.layer_id) |id| for (doc.layers) |layer| if (layer.id == id) {
-        return std.fmt.bufPrint(buffer, "L{d}\n{s}", .{ id, layer.name }) catch "Layer";
-    };
-    if (value.custom) |id| return std.fmt.bufPrint(buffer, "Custom hold {d}", .{id}) catch "Custom";
-    return switch (value.hold_modifiers.toByte()) {
-        0 => "No hold fields",
-        else => modifierNames(value.hold_modifiers.toByte(), buffer),
-    };
+    var used: usize = 0;
+    var scratch: [256]u8 = undefined;
+    if (value.layer_id) |id| {
+        var name: []const u8 = "Missing layer";
+        for (doc.layers) |layer| if (layer.id == id) {
+            name = layer.name;
+            break;
+        };
+        appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "L{d} {s}", .{ id, name }) catch "Layer");
+    }
+    if (value.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, hostModifierNames(running_host, value.hold_modifiers.toByte(), &scratch));
+    if (value.custom) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "Callback {d}", .{id}) catch "Callback");
+    return if (used == 0) "No hold fields" else buffer[0..used];
 }
 pub fn action(value: ?p.Action, buffer: []u8) []const u8 {
     const a = value orelse return "Inherited";
@@ -147,7 +220,7 @@ test "all basic keycodes have names and companion namespaces remain distinct" {
     try std.testing.expectEqualStrings("Toggle companion logging", tap(.{ .custom = 253 }, &buffer));
     try std.testing.expectEqualStrings("Quit companion", tap(.{ .custom = 254 }, &buffer));
     try std.testing.expectEqualStrings("Show / hide companion", tap(.{ .custom = 255 }, &buffer));
-    try std.testing.expectEqualStrings("L Shift+1", tap(.{ .key_press = .{ .tap_keycode = 30, .tap_modifiers = .{ .left_shift = true } } }, &buffer));
+    try std.testing.expect(containsIgnoreCase(tap(.{ .key_press = .{ .tap_keycode = 30, .tap_modifiers = .{ .left_shift = true } } }, &buffer), "Shift"));
 }
 pub const rows = [_][]const HostKey{
     &.{ .{ .code = 41 }, .{ .code = 58 }, .{ .code = 59 }, .{ .code = 60 }, .{ .code = 61 }, .{ .code = 62 }, .{ .code = 63 }, .{ .code = 64 }, .{ .code = 65 }, .{ .code = 66 }, .{ .code = 67 }, .{ .code = 68 }, .{ .code = 69 }, .{ .code = 76, .name = "Del" } },
@@ -157,3 +230,32 @@ pub const rows = [_][]const HostKey{
     &.{ .{ .code = 225, .name = "Shift", .units = 2.25 }, .{ .code = 29 }, .{ .code = 27 }, .{ .code = 6 }, .{ .code = 25 }, .{ .code = 5 }, .{ .code = 17 }, .{ .code = 16 }, .{ .code = 54 }, .{ .code = 55 }, .{ .code = 56 }, .{ .code = 229, .name = "Shift", .units = 1.75 }, .{ .code = 82 } },
     &.{ .{ .code = 224, .name = "Control", .units = 1.25 }, .{ .code = 226, .name = "Option", .units = 1.25 }, .{ .code = 227, .name = "Command", .units = 1.5 }, .{ .code = 44, .units = 5.5 }, .{ .code = 231, .name = "Command", .units = 1.5 }, .{ .code = 230, .name = "Option" }, .{ .code = 80 }, .{ .code = 81 }, .{ .code = 79 } },
 };
+
+test "host glyphs aliases and fallback preserve HID values" {
+    var buffer: [256]u8 = undefined;
+    try std.testing.expectEqualStrings("L ⌘ Command", hostUsage(.macos, 227, &buffer));
+    try std.testing.expectEqualStrings("L Win", hostUsage(.windows, 227, &buffer));
+    try std.testing.expectEqualStrings("R Super", hostUsage(.linux, 231, &buffer));
+    for ([_][]const u8{ "⌘", "Command", "Cmd", "GUI", "227", "0xe3" }) |query| try std.testing.expect(matchesUsage(.macos, 227, query));
+    try std.testing.expect(!matchesUsage(.macos, 4, "Cmd"));
+}
+test "compound tap and one shot summaries show every populated schema field" {
+    var buffer: [1024]u8 = undefined;
+    const summary = tap(.{ .key_press = .{ .tap_keycode = 4, .dead = true }, .media_key = .VolumeUp, .mouse_action = .WheelDown, .custom = 253, .one_shot = .{ .layer_id = 42, .hold_modifiers = .{ .left_gui = true }, .custom = 7 } }, &buffer);
+    for ([_][]const u8{ "A", "Dead key", "VolumeUp", "WheelDown", "Toggle companion logging", "One-shot", "L42", "Callback 7" }) |part| try std.testing.expect(containsIgnoreCase(summary, part));
+}
+test "target aware catalog excludes unsupported hold fields and bounds output" {
+    const catalog = @import("catalog.zig");
+    const doc: p.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "fixture", .name = "Fixture", .key_ids = &.{}, .layers = &.{.{ .id = 42, .name = "Navigation", .actions = &.{} }} };
+    var entries: [256]catalog.Entry = undefined;
+    const count = catalog.search(doc, .hold, .all, "", &entries);
+    try std.testing.expectEqual(@as(usize, 9), count);
+    for (entries[0..count]) |entry| switch (entry) {
+        .modifier, .layer, .callback => {},
+        else => return error.UnsupportedHoldEntry,
+    };
+    try std.testing.expectEqual(@as(usize, 0), catalog.search(doc, .hold, .media, "", &entries));
+    try std.testing.expectEqual(@as(usize, 2), catalog.search(doc, .tap, .modifier, "Cmd", &entries));
+    try std.testing.expectEqual(@as(usize, 1), catalog.search(doc, .tap, .key, "252", &entries));
+    try std.testing.expectEqual(@as(usize, 1), catalog.search(doc, .tap, .all, "", entries[0..1]));
+}
