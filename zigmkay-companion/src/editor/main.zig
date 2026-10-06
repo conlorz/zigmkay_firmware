@@ -1282,6 +1282,11 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             },
             else => {},
         };
+        if (state == .advanced and frames == 3) {
+            const bounds = geometry.panel(.inspector);
+            _ = try window.addEventMouseMotion(.{ .pt = .{ .x = (bounds.x + 250) * window.natural_scale, .y = (bounds.y + 600) * window.natural_scale } });
+            _ = try window.addEventMouseWheel(-600, .vertical, .mouse);
+        }
         if (state == .key_search) switch (frames) {
             3 => try scenario.click(&window, "inspector.search", window.natural_scale, false),
             4 => try scenario.click(&window, "inspector.search", window.natural_scale, true),
@@ -1326,7 +1331,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             20 => editor.edit_session.?.mutate(.{ .replace = .{ .tap_only = .{ .key_press = .{ .tap_keycode = 4 } } } }),
             22 => try scenario.click(&window, "advanced.apply", window.natural_scale, false),
             23 => try scenario.click(&window, "advanced.apply", window.natural_scale, true),
-            28 => {
+            27 => {
                 try editor.request(.{ .layer = 0 });
                 try editor.request(.{ .select = .{ .index = 10, .extend = false } });
                 try editor.model.assignChord(.{ .tap_keycode = 227 }, true, 10);
@@ -1339,13 +1344,17 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             29 => try scenario.click(&window, "inspector.modifier.hold.3", window.natural_scale, false),
             30 => try scenario.click(&window, "inspector.modifier.hold.3", window.natural_scale, true),
             31 => {
+                if (!editor.edit_session.?.dirty()) return error.ModifierClickDidNotStageEdit;
                 if (!std.mem.eql(u8, &interaction_snapshot, &(try editor.model.id()))) return error.InspectorChangedDocumentBeforeApply;
                 const drafts = editor.edit_session.?.drafts;
                 if (@import("session.zig").tapPart(drafts[10]).key_press.?.tap_keycode != 4 or @import("session.zig").tapPart(drafts[11]).key_press.?.tap_keycode != 22) return error.BulkInspectorLostTap;
             },
             32 => try scenario.click(&window, "key.select.12", window.natural_scale, false),
             33 => try scenario.click(&window, "key.select.12", window.natural_scale, true),
-            34 => if (editor.pending == null or editor.model.primary != 11) return error.PendingSelectionLostDraft,
+            34 => if (editor.pending == null or editor.model.primary != 11) {
+                std.log.err("Pending selection: primary={d}, pending={any}, dirty={any}, modifiers={any}/{any}", .{ editor.model.primary, editor.pending, editor.edit_session.?.dirty(), @import("session.zig").holdPart(editor.edit_session.?.drafts[10]).hold_modifiers, @import("session.zig").holdPart(editor.edit_session.?.drafts[11]).hold_modifiers });
+                return error.PendingSelectionLostDraft;
+            },
             35 => try scenario.click(&window, "pending.keep", window.natural_scale, false),
             36 => try scenario.click(&window, "pending.keep", window.natural_scale, true),
             37 => if (editor.pending != null or !editor.edit_session.?.dirty()) return error.PendingKeepLostDraft,
@@ -1387,8 +1396,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             64 => try scenario.click(&window, "key.select.13", window.natural_scale, true),
             65 => try scenario.click(&window, "pending.discard", window.natural_scale, false),
             66 => try scenario.click(&window, "pending.discard", window.natural_scale, true),
-            67 => if (editor.model.primary != 13 or !std.mem.eql(u8, &interaction_snapshot, &(try editor.model.id()))) return error.PendingDiscardChangedDocument,
-            68 => {
+            67 => {
+                if (editor.model.primary != 13 or !std.mem.eql(u8, &interaction_snapshot, &(try editor.model.id()))) return error.PendingDiscardChangedDocument;
                 try editor.request(.{ .select = .{ .index = 12, .extend = false } });
                 try editor.ensureSession();
                 inspector_ui.add(&editor, .{ .media = .VolumeUp });
@@ -1405,6 +1414,11 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             74 => try scenario.click(&window, "advanced.cancel", window.natural_scale, false),
             75 => try scenario.click(&window, "advanced.cancel", window.natural_scale, true),
             76 => if (editor.edit_session.?.dirty() or editor.model.undo_stack.items.len != interaction_undo_count) return error.InspectorCancelAddedHistory,
+            77 => try scenario.click(&window, "edit.copy", window.natural_scale, false),
+            78 => try scenario.click(&window, "edit.copy", window.natural_scale, true),
+            79 => try scenario.click(&window, "edit.paste", window.natural_scale, false),
+            80 => try scenario.click(&window, "edit.paste", window.natural_scale, true),
+            81 => if (!editor.model.clipboard_set or editor.edit_session.?.dirty() or editor.model.undo_stack.items.len != interaction_undo_count) return error.InspectorClipboardChangedHistory,
             else => {},
         };
         editor.draw() catch |err| {
@@ -1464,14 +1478,14 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             if (editor.model.action().? != .tap_only or editor.model.action().?.tap_only.key_press.?.tap_keycode != 4) return error.FormInteractionFailed;
             std.log.info("Semantic input scenario passed: thumb selection, isolated duplication, undo/redo and advanced form apply", .{});
         }
-        if (interactions and frames == 78) {
+        if (interactions and frames == 82) {
             std.log.info("Docked inspector semantic scenario passed: mixed bulk modifiers, pending Keep/Apply/Discard, atomic undo/redo, media/one-shot chip removal, invalid Apply and Cancel", .{});
             if (screenshot == null) {
                 _ = try window.end(.{});
                 break;
             }
         }
-        const capture_frame: usize = if (state == .practice_guidance) 17 else if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 80 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
+        const capture_frame: usize = if (state == .practice_guidance) 17 else if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 84 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
         if (screenshot != null and frames == capture_frame) {
             if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});

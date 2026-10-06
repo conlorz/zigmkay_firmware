@@ -181,7 +181,7 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
                 var code = previous.tap_keycode;
                 const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .expand = .horizontal });
                 caption("HID usage");
-                if (dvui.textEntryNumber(@src(), u8, .{ .value = &code }, .{ .min_size_content = .{ .w = 90 } }).changed) session.mutate(.{ .tap_usage = code });
+                if (dvui.textEntryNumber(@src(), u8, .{ .value = &code }, .{ .min_size_content = .{ .w = 90, .h = 30 } }).changed) session.mutate(.{ .tap_usage = code });
                 row.deinit();
                 var dead = previous.dead;
                 if (dvui.checkbox(@src(), &dead, "Dead-key chord", .{})) session.mutate(.{ .tap_dead = dead });
