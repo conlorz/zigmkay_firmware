@@ -4,6 +4,22 @@ State: **07A and 07B Accepted; full G07 released**. G07-export frozen at `016cf7
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
+## Selected follow-up: docked key inspector (2026-10-06)
+
+The user selected [mockup 2](../mockups/key-creation/02-inspector-dark-macos.png).
+Implementation plan: [14: Docked key inspector and assignment editing](../14-docked-key-inspector.md).
+The planning baseline is `b9b660f`; design selection is recorded, implementation
+is pending. Existing G07 acceptance and the frozen version-1 schema/export/runner
+contract remain the inputs to this follow-up.
+
+The plan specifies independent Tap/Hold cards, component-preserving bulk edits,
+explicit Unassign versus Inherit, Mac symbols, staged Apply/Cancel, a contextual
+embedded picker, responsive geometry, and offline validation/capture coverage.
+Next ready work is the action editing model/session checkpoint under an
+implementation request. No write lease, code implementation, new golden approval,
+hardware operation, or additional milestone acceptance is recorded by this
+planning update. Future implementation evidence belongs in this handover.
+
 ## 07A: schema/export handover
 
 Input: accepted [04 baseline](04-hardware.md) and

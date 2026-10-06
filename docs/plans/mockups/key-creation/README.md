@@ -1,8 +1,10 @@
 # Key creation concepts
 
-Created 2026-10-06 for discussion. These are generated visual concepts, not
-implemented screens or a replacement for the accepted editor specification.
-No production code, generated keycodes, or device state changed.
+Created 2026-10-06 for discussion. The user selected **concept 2: Inspector**.
+See [implementation plan 14](../../14-docked-key-inspector.md) and the
+[editor handover](../../handovers/07-editor.md). Implementation is pending.
+These are generated visual concepts, not implemented screens. No production
+code, generated keycodes, or device state changed.
 
 All three use the existing dark editor palette, colored layer sidebar, split
 keyboard, and macOS modifier symbols. Generated background key labels and
@@ -63,5 +65,5 @@ selection details are illustrative; the actual keymap remains authoritative.
 - **Apply / Cancel:** stage edits and apply to the named selection in one undo
   operation. After applying, show the actual assignment or inherited result.
 
-The next discussion should select the interaction model before preparing an
-implementation plan. No new UI implementation is authorized by this document.
+The selected inspector design is specified in plan 14. Concepts 1 and 3 remain
+alternatives for reference. No new UI implementation is authorized by this document.

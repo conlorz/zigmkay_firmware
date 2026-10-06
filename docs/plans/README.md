@@ -125,6 +125,12 @@ Editor appearance is specified in the
 [visual specification](06-editor-visual-specification.md), with linked dark/light
 mockups and a native Zig screenshot/interaction comparison plan for 07B/08B.
 
+[14: Docked key inspector and assignment editing](14-docked-key-inspector.md)
+records the user's selected key-creation mockup 2, replacing the large action
+modal with independent Tap/Hold cards and an embedded picker. The design is
+selected; implementation is pending. Follow [the editor handover](handovers/07-editor.md)
+for the next checkpoint and future evidence.
+
 [12: Complete device keymap readback](12-device-keymap-readback.md) is an
 additional deferred milestone. 12A retrieves layers, combos and complete
 declarative configuration; 12B later recovers custom Zig source. It does not
