@@ -121,6 +121,11 @@ bring a concrete result and explain the choice rather than inventing a preferenc
 
 ## Open details and deferred work
 
+[15: Unified Try it out view](15-try-it-out.md) records the user's selected
+variant A: two main views, Editor and Try it out, with free typing and a large
+companion below, plus an inline switch to the unchanged typing-test functions.
+Planning is complete; implementation is pending a subsequent request.
+
 Editor appearance is specified in the
 [visual specification](06-editor-visual-specification.md), with linked dark/light
 mockups and a native Zig screenshot/interaction comparison plan for 07B/08B.

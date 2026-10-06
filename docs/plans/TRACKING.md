@@ -1,5 +1,15 @@
 # Central milestone tracker
 
+## Unified Try it out view planning (2026-10-06)
+
+The user selected variant A, with the companion below the typing area, and
+requested [plan 15](15-try-it-out.md). It combines draft testing and Practice
+under two main views, Editor and Try it out, with free typing as the baseline
+and the existing typing test available by button. The selected
+[mockup](mockups/try-it-out/01-companion-below.png) is retained as design reference.
+Planning is complete; implementation is pending a subsequent user request.
+No application behavior, test-engine behavior or hardware gate has changed.
+
 ## Docked key inspector implementation (2026-10-06)
 
 The user chose [key-creation mockup 2](mockups/key-creation/02-inspector-dark-macos.png)

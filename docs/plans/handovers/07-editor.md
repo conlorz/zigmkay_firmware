@@ -4,6 +4,17 @@ State: **07A and 07B Accepted; full G07 released**. G07-export frozen at `016cf7
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
+## Selected follow-up: unified Try it out view (2026-10-06)
+
+The user selected [variant A, Companion below](../mockups/try-it-out/01-companion-below.png)
+and requested [plan 15](../15-try-it-out.md). The plan replaces the draft-test
+launcher and Practice modal with Editor/Try it out main navigation, a free draft
+typing field with Reset text, and an inline Typing Test mode using the existing
+engine and functions. It specifies input ownership, automatic free-preview
+preparation, snapshot freshness, companion identity and native offline checks.
+Planning is complete; implementation has not started and needs a subsequent
+request. Design selection does not replace approved goldens or accept hardware.
+
 ## Selected follow-up: docked key inspector (2026-10-06)
 
 The user selected [mockup 2](../mockups/key-creation/02-inspector-dark-macos.png).
