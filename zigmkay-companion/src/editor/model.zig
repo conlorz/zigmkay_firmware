@@ -96,6 +96,30 @@ pub const Model = struct {
         snapshot.document.layers = layers;
         try self.commit(snapshot);
     }
+    /// Commit independently patched assignments as one validated history entry.
+    pub fn applyBatch(self: *Model, starting_id: [32]u8, layer_id: p.LayerId, selected: []const bool, values: []const ?p.Action) !void {
+        const actual = try self.id();
+        if (!std.mem.eql(u8, &actual, &starting_id)) return error.StaleSession;
+        const doc = self.document();
+        if (selected.len != doc.key_ids.len or values.len != selected.len) return error.InvalidDimensions;
+        var index: ?usize = null;
+        for (doc.layers, 0..) |layer, i| if (layer.id == layer_id) {
+            index = i;
+            break;
+        };
+        const layer_index = index orelse return error.InvalidLayer;
+        var arena: std.heap.ArenaAllocator = .init(self.gpa);
+        defer arena.deinit();
+        var snapshot = self.current.snapshot;
+        const layers = try arena.allocator().dupe(p.Layer, doc.layers);
+        const actions = try arena.allocator().dupe(?p.Action, layers[layer_index].actions);
+        for (selected, values, actions) |chosen, value, *entry| if (chosen) {
+            entry.* = value;
+        };
+        layers[layer_index].actions = actions;
+        snapshot.document.layers = layers;
+        try self.commit(snapshot);
+    }
     pub fn copy(self: *Model) void {
         self.clipboard = self.action();
         self.clipboard_set = true;
@@ -189,6 +213,10 @@ pub const Model = struct {
         self.saved_id = try self.id();
     }
 };
+
+test {
+    _ = @import("session.zig");
+}
 
 test "bulk edits, metadata, constrained deletion and history survive save/reopen" {
     var model = try Model.init(std.testing.allocator, .eurkey);
