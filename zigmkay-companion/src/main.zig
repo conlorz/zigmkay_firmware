@@ -382,7 +382,7 @@ pub fn main(init: std.process.Init) !void {
         if (show_log) try log.draw(&labels, bounds.w / 2, 140, 0.8);
         if (editor_open) {
             const editor_geometry = @import("editor/geometry.zig");
-            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = editor_geometry.initial.w, .h = editor_geometry.initial.h }, .min_size = .{ .w = editor_geometry.minimum.w, .h = editor_geometry.minimum.h } }, .{ .open_flag = &editor_open });
+            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = editor_geometry.initial.w, .h = editor_geometry.initial.h }, .min_size = .{ .w = editor_geometry.minimum.w, .h = editor_geometry.minimum.h } }, .{ .open_flag = &editor_open, .theme = if (editor.?.light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark });
             defer child.deinit();
             switch (child.inner) {
                 .os => |os| {
