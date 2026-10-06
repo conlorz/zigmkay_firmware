@@ -12,6 +12,27 @@ const cache = @import("components/cache.zig");
 const keys = @import("components/key.zig");
 const layout = @import("components/layout.zig");
 const LogComponent = @import("components/log.zig").LogComponent;
+const desktop = @import("desktop.zig");
+
+const DesktopEvents = struct {
+    life: *desktop.Lifecycle,
+    companion_id: u32,
+    editor: ?*@import("editor/main.zig").Editor,
+    pub fn raw(self: DesktopEvents, event: sdl.SDL_Event) !bool {
+        if (self.life.resident) {
+            if (event.type == sdl.SDL_EVENT_QUIT) {
+                self.life.action(.quit);
+                return true;
+            }
+            if (event.type == sdl.SDL_EVENT_WINDOW_CLOSE_REQUESTED and event.window.windowID == self.companion_id) {
+                self.life.companion_visible = false;
+                return true;
+            }
+        }
+        if (self.editor) |editor| return editor.raw(event);
+        return false;
+    }
+};
 
 pub const Native = struct {
     device: ?*sdl.SDL_hid_device = null,
@@ -109,8 +130,15 @@ pub fn main(init: std.process.Init) !void {
         return;
     }
     if (args.len > 1 and std.mem.eql(u8, args[1], "--editor-spike")) return @import("editor/spike.zig").run(init, args.len > 2 and std.mem.eql(u8, args[2], "--native-dialog"));
-    if (args.len > 1 and std.mem.eql(u8, args[1], "--editor")) return @import("editor/main.zig").run(init, args);
+    const editor_start = args.len > 1 and std.mem.eql(u8, args[1], "--editor");
+    // Preserve the finite acceptance runner and its full command-line contract.
+    if (editor_start) for (args[2..]) |arg| {
+        if (!std.mem.eql(u8, arg, "--light") and !std.mem.eql(u8, arg, "--practice")) return @import("editor/main.zig").run(init, args);
+    };
+    var editor_light = false;
+    var editor_practice = false;
     var smoke = false;
+    var tray_check = false;
     var editor_smoke = false;
     var live = false;
     var verify_running = false;
@@ -128,6 +156,15 @@ pub fn main(init: std.process.Init) !void {
     var i: usize = 1;
     while (i < args.len) : (i += 1) {
         const arg = args[i];
+        if (editor_start) {
+            if (std.mem.eql(u8, arg, "--light")) editor_light = true;
+            if (std.mem.eql(u8, arg, "--practice")) editor_practice = true;
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--tray-check")) {
+            tray_check = true;
+            continue;
+        }
         if (std.mem.eql(u8, arg, "--editor-overlay-smoke")) {
             smoke = true;
             editor_smoke = true;
@@ -145,6 +182,7 @@ pub fn main(init: std.process.Init) !void {
         } else return error.Usage;
     }
     if (live and (smoke or replay != null or timed_replay != null) or (replay != null and timed_replay != null) or (!live and (path != null or capture_path != null))) return error.IncompatibleModes;
+    if (tray_check and (live or smoke or replay != null or timed_replay != null or capture_path != null)) return error.IncompatibleModes;
     if (!std.math.isFinite(opacity) or opacity < 0.1 or opacity > 1 or capture_ms == 0 or capture_ms > 300_000) return error.InvalidConfiguration;
     // SDL 3.4 defaults to game-controller collections and filters our vendor page.
     // Selection below still opens only the exact FAFA/00F0/FF31/0074 collection.
@@ -208,6 +246,7 @@ pub fn main(init: std.process.Init) !void {
     var seed: u32 = 0;
     if (live) try init.io.randomSecure(std.mem.asBytes(&seed));
     var driver = try adapter.Driver(Native).init(.{ .io = init.io }, keymap.identity, seed, path);
+    var monitoring = live;
     defer driver.transport.close();
     var recording: ?capture.Recorder = if (capture_path != null) try capture.Recorder.init(init.gpa) else null;
     defer if (recording) |*recorder| recorder.deinit(init.gpa);
@@ -221,13 +260,61 @@ pub fn main(init: std.process.Init) !void {
     var frames: usize = 0;
     var show_log = false;
     var visible = true;
-    var editor_open = editor_smoke;
-    var editor: ?@import("editor/main.zig").Editor = if (editor_smoke) try @import("editor/main.zig").Editor.init(init, true) else null;
+    var tray = desktop.NativeTray.init(.{ .allocator = init.gpa }, !smoke and capture_path == null);
+    defer tray.deinit();
+    var life = desktop.Lifecycle{ .resident = tray.installed, .companion_visible = !editor_start, .editor_visible = editor_start or editor_smoke };
+    tray.update(.{ .companion_visible = life.companion_visible });
+    if (tray_check and !tray.installed) return error.TrayCheckRequiresNativeTray;
+    life.resident = tray.installed;
+    if (!life.companion_visible) _ = sdl.SDL_HideWindow(backend.window);
+    var editor_open = editor_smoke or editor_start;
+    var editor: ?@import("editor/main.zig").Editor = if (editor_open) try @import("editor/main.zig").Editor.init(init, editor_smoke) else null;
     defer if (editor) |*draft| draft.deinit();
-    while (open or editor_open) {
+    if (editor) |*draft| {
+        draft.light = editor_light;
+        if (editor_practice) {
+            draft.main_view = .try_it_out;
+            draft.try_mode = .typing_test;
+        }
+    }
+    var quit_pending = false;
+    var check = @import("tray_check.zig").Check{};
+    while (life.keepRunning()) {
         try win.begin(win.beginWait(interrupted));
-        if (editor) |*draft| try @import("editor/events.zig").pump(&backend, &win, draft) else try backend.addAllEvents(&win);
+        if (editor) |*draft| draft.tray_managed = life.resident;
+        try @import("editor/events.zig").pump(&backend, &win, DesktopEvents{ .life = &life, .companion_id = sdl.SDL_GetWindowID(backend.window), .editor = if (editor) |*draft| draft else null });
+        if (tray.poll()) |action| {
+            life.action(action);
+            if (action == .open_editor and editor != null) {
+                _ = sdl.SDL_ShowWindow(editor.?.backend_window.?);
+                _ = sdl.SDL_RaiseWindow(editor.?.backend_window.?);
+            }
+        }
+        if (life.quit_requested) {
+            life.cancelQuit();
+            if (editor) |*draft| {
+                life.editor_visible = true;
+                if (draft.backend_window) |native_window| {
+                    _ = sdl.SDL_ShowWindow(native_window);
+                    _ = sdl.SDL_RaiseWindow(native_window);
+                }
+                try draft.requestQuit();
+                quit_pending = draft.should_close or draft.pending != null or draft.close_requested;
+            } else life.finishQuit();
+        }
+        if (life.editor_visible and editor == null) editor = try @import("editor/main.zig").Editor.init(init, tray_check);
+        editor_open = if (life.resident) editor != null else life.editor_visible;
         const now = driver.transport.now();
+        // Preserve the editor's existing post-transfer identity verification.
+        // Only an explicitly completed flash enables this path in offline mode.
+        if (!monitoring) if (editor) |*draft| {
+            if (!draft.fixture and draft.firmware.expectedIdentity() != null) {
+                if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+                try init.io.randomSecure(std.mem.asBytes(&seed));
+                driver = try adapter.Driver(Native).init(.{ .io = init.io }, draft.firmware.expectedIdentity().?, seed, path);
+                monitoring = true;
+            }
+        };
         if (recording) |*recorder| {
             if (now >= capture_end or recorder.full) driver.recording = null;
         }
@@ -240,14 +327,14 @@ pub fn main(init: std.process.Init) !void {
                 replacement = undefined;
             }
         }
-        if (live and !(if (editor) |*draft| draft.bootloaderBusy() else false)) {
+        if (monitoring and !(if (editor) |*draft| draft.bootloaderBusy() else false)) {
             driver.poll(now);
             state = driver.session.state;
             for (driver.key_events[0..driver.key_event_count]) |event| log.record(event, @intCast(now));
             for (driver.signals[0..driver.signal_count]) |signal| switch (signal) {
                 .log_toggle => show_log = !show_log,
                 .overlay_toggle => visible = !visible,
-                .shutdown => open = false,
+                .shutdown => life.action(.quit),
             };
         }
         if (recording) |*recorder| {
@@ -259,16 +346,16 @@ pub fn main(init: std.process.Init) !void {
                 capture_saved = true;
             }
         }
-        const stale = if (live) driver.session.stale else replay_stale;
+        const stale = if (monitoring) driver.session.stale else replay_stale;
         const phase_label = if (driver.session.phase == .synchronizing and !stale) "live" else @tagName(driver.session.phase);
-        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(if (live) &driver.session.expected.profile_id else &keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (live) phase_label else "offline", if (stale) " / STALE" else "" }, .{});
+        dvui.label(@src(), "LK7 / {s} · layer {d} · mods {X:0>2} · {s}{s}", .{ std.mem.sliceTo(if (monitoring) &driver.session.expected.profile_id else &keymap.identity.profile_id, 0), state.highest_layer, state.modifiers.toByte(), if (monitoring) phase_label else "offline", if (stale) " / STALE" else "" }, .{});
         dvui.label(@src(), "Input source: {s} / layout: {s}", .{ source.id(), source.layoutId() }, .{});
-        if (live and driver.status != .connected) {
+        if (monitoring and driver.status != .connected) {
             dvui.label(@src(), "Connection: {s}; select --device-path for multiple devices", .{@tagName(driver.status)}, .{});
             for (0..driver.transport.path_count) |n| dvui.label(@src(), "{s}", .{driver.transport.paths[n][0..driver.transport.path_lengths[n]]}, .{ .id_extra = n });
         }
-        if (live and driver.session.phase == .incompatible) dvui.label(@src(), "Device board/profile/version differs. Build matching firmware; reconnect to retry.", .{}, .{});
-        if (live) {
+        if (monitoring and driver.session.phase == .incompatible) dvui.label(@src(), "Device board/profile/version differs. Build matching firmware; reconnect to retry.", .{}, .{});
+        if (monitoring) {
             if (driver.session.last_error) |err| dvui.label(@src(), "Last protocol diagnostic: {s}", .{@errorName(err)}, .{});
             if (driver.transport_error) |err| dvui.label(@src(), "Transport: {s}; retrying once per second", .{@errorName(err)}, .{});
         }
@@ -276,21 +363,22 @@ pub fn main(init: std.process.Init) !void {
         if (recording != null) dvui.label(@src(), "Capture: {s}", .{if (capture_saved) "stopped" else "recording (bounded test session)"}, .{});
         if (capture_error) |err| dvui.label(@src(), "Capture save failed: {s}", .{@errorName(err)}, .{});
         _ = dvui.checkbox(@src(), &show_log, "Event log", .{});
-        if (live and dvui.button(@src(), "Reconnect", .{}, .{})) driver.disconnect(now);
+        if (monitoring and dvui.button(@src(), "Reconnect", .{}, .{})) driver.disconnect(now);
         {
             const controls = dvui.box(@src(), .{ .dir = .horizontal }, .{});
             defer controls.deinit();
             if (dvui.button(@src(), "Close", .{}, .{})) open = false;
             if (!open and editor_open) _ = sdl.SDL_HideWindow(backend.window);
             if (dvui.button(@src(), "Open editor", .{}, .{})) {
-                if (editor == null) editor = try @import("editor/main.zig").Editor.init(init, false);
+                if (editor == null) editor = try @import("editor/main.zig").Editor.init(init, tray_check);
                 editor_open = true;
+                life.editor_visible = true;
             }
         }
         const bounds = win.data().rect;
-        const extra_rows: usize = (if (live and driver.status != .connected) @as(usize, 1) + driver.transport.path_count else 0) + @intFromBool(live and driver.session.phase == .incompatible) + @intFromBool(live and driver.session.last_error != null) + @intFromBool(live and driver.transport_error != null) + @intFromBool(window_warning) + @intFromBool(recording != null) + @intFromBool(capture_error != null);
+        const extra_rows: usize = (if (monitoring and driver.status != .connected) @as(usize, 1) + driver.transport.path_count else 0) + @intFromBool(monitoring and driver.session.phase == .incompatible) + @intFromBool(monitoring and driver.session.last_error != null) + @intFromBool(monitoring and driver.transport_error != null) + @intFromBool(window_warning) + @intFromBool(recording != null) + @intFromBool(capture_error != null);
         const header_height: f32 = 140 + @as(f32, @floatFromInt(extra_rows)) * 24;
-        if (visible and (!live or (driver.session.phase != .incompatible and driver.session.phase != .negotiating))) try layout.draw(&labels, state.highest_layer, &state.pressed, state.modifiers, stale, .{ .x = 8, .y = header_height, .w = @max(0, bounds.w - 16), .h = @max(0, bounds.h - header_height - 8) });
+        if (visible and (!monitoring or (driver.session.phase != .incompatible and driver.session.phase != .negotiating))) try layout.draw(&labels, state.highest_layer, &state.pressed, state.modifiers, stale, .{ .x = 8, .y = header_height, .w = @max(0, bounds.w - 16), .h = @max(0, bounds.h - header_height - 8) });
         if (show_log) try log.draw(&labels, bounds.w / 2, 140, 0.8);
         if (editor_open) {
             const editor_geometry = @import("editor/geometry.zig");
@@ -304,7 +392,7 @@ pub fn main(init: std.process.Init) !void {
                 },
                 else => return error.NativeEditorWindowUnavailable,
             }
-            if (live) {
+            if (monitoring) {
                 if (editor.?.firmware.expectedIdentity()) |expected| {
                     if (!std.meta.eql(expected, driver.session.expected)) {
                         const profile = try @import("keymap-project").snapshot.clone(init.gpa, editor.?.firmware.frozen.?.snapshot);
@@ -328,26 +416,65 @@ pub fn main(init: std.process.Init) !void {
                     break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
                 };
             }
-            const practice_live = live and driver.session.phase == .live;
+            const practice_live = monitoring and driver.session.phase == .live;
             editor.?.practice_live_labels = if (practice_live) &labels else null;
             editor.?.practice_live_state = if (practice_live) state else null;
             editor.?.practice_live_profile = driver.session.expected.profile_id;
-            editor.?.practice_live_stale = !live or stale or driver.session.phase != .live;
+            editor.?.practice_live_stale = !monitoring or stale or driver.session.phase != .live;
+            if (tray_check) try check.beforeEditorDraw(frames);
             editor.?.draw() catch |err| editor.?.report(err);
             if (editor.?.bootloader_requested) {
-                if (live) driver.disconnect(now);
+                if (monitoring) driver.disconnect(now);
             }
             editor.?.pollBootloader(path);
-            if (editor.?.should_close) editor_open = false;
+            if (editor.?.hide_requested) {
+                life.editor_visible = false;
+                editor.?.hide_requested = false;
+            }
+            if (quit_pending) {
+                if (editor.?.should_close) life.finishQuit() else if (editor.?.pending == null and !editor.?.close_requested) quit_pending = false;
+            } else if (editor.?.should_close) {
+                editor.?.pauseHidden();
+                life.editor_visible = false;
+                if (life.resident) editor.?.should_close = false else editor_open = false;
+            }
+            if (life.resident and !life.editor_visible) _ = sdl.SDL_HideWindow(editor.?.backend_window.?);
+            if (life.editor_visible and sdl.SDL_GetWindowFlags(editor.?.backend_window.?) & sdl.SDL_WINDOW_HIDDEN != 0) {
+                _ = sdl.SDL_ShowWindow(editor.?.backend_window.?);
+                _ = sdl.SDL_RaiseWindow(editor.?.backend_window.?);
+            }
         }
         const end_micros = try win.end(.{});
+        if (!open) {
+            life.companion_visible = false;
+            if (life.resident) open = true;
+        }
+        if (!editor_open) life.editor_visible = false;
+        if (life.companion_visible) {
+            if (sdl.SDL_GetWindowFlags(backend.window) & sdl.SDL_WINDOW_HIDDEN != 0) {
+                _ = sdl.SDL_ShowWindow(backend.window);
+                _ = sdl.SDL_RaiseWindow(backend.window);
+            }
+        } else _ = sdl.SDL_HideWindow(backend.window);
+        tray.update(.{ .live_mode = monitoring, .companion_visible = life.companion_visible, .status = if (!monitoring) .offline else if (driver.session.phase == .incompatible) .incompatible else if (driver.status == .searching) .connecting else if (driver.status != .connected) .disconnected else if (driver.session.stale) .stale else if (driver.session.phase == .live) .live else .connecting });
+        if (life.resident and !tray.installed) {
+            life.resident = false;
+            life.companion_visible = true;
+            _ = sdl.SDL_ShowWindow(backend.window);
+            if (editor) |*draft| {
+                life.editor_visible = true;
+                editor_open = true;
+                if (draft.backend_window) |native_window| _ = sdl.SDL_ShowWindow(native_window);
+            }
+        }
         if (!editor_open and editor != null) {
             editor.?.deinit();
             editor = null;
         }
+        if (tray_check) try check.afterFrame(frames, &life, &tray, &backend, if (editor) |*draft| draft else null);
         frames += 1;
         if (smoke and frames == 3) break;
-        interrupted = try backend.waitEventTimeout(if (live or smoke) 16_000 else @min(500_000, win.waitTime(end_micros)));
+        interrupted = try backend.waitEventTimeout(if (smoke or (monitoring and (life.companion_visible or life.editor_visible))) 16_000 else if (!life.companion_visible and !life.editor_visible) 100_000 else @min(100_000, win.waitTime(end_micros)));
     }
     if (recording) |*recorder| if (!capture_saved) {
         driver.recording = null;

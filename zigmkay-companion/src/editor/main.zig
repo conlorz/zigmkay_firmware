@@ -143,6 +143,8 @@ pub const Editor = struct {
     external_job: ?*jobs.Job = null,
     close_requested: bool = false,
     should_close: bool = false,
+    tray_managed: bool = false,
+    hide_requested: bool = false,
     recovery_id: [32]u8 = @splat(0),
     recovery_at: i64 = 0,
     overlay_open: bool = false,
@@ -327,7 +329,32 @@ pub const Editor = struct {
         }
         _ = std.fmt.bufPrint(&self.diagnostic, "{s}", .{@errorName(err)}) catch {};
     }
+    pub fn pauseHidden(self: *Editor) void {
+        self.pausePractice();
+        self.testing.stop();
+        self.free_focus = false;
+        self.free_pending = false;
+        self.preview.release();
+        self.text.reset();
+        self.free_text.reset();
+    }
+    pub fn requestQuit(self: *Editor) !void {
+        // Close confirmation lives in the editor inspector, including when
+        // Quit was requested from a hidden Try it out window.
+        self.main_view = .editor;
+        const managed = self.tray_managed;
+        self.tray_managed = false;
+        defer self.tray_managed = managed;
+        var event: sdl.SDL_Event = std.mem.zeroes(sdl.SDL_Event);
+        event.type = sdl.SDL_EVENT_QUIT;
+        if (!try self.raw(event)) self.should_close = true;
+    }
     pub fn raw(self: *Editor, event: sdl.SDL_Event) !bool {
+        if (self.tray_managed and event.type == sdl.SDL_EVENT_WINDOW_CLOSE_REQUESTED and event.window.windowID == self.window_id) {
+            self.pauseHidden();
+            self.hide_requested = true;
+            return true;
+        }
         const input_window: ?u32 = switch (event.type) {
             sdl.SDL_EVENT_KEY_DOWN, sdl.SDL_EVENT_KEY_UP => event.key.windowID,
             sdl.SDL_EVENT_TEXT_INPUT => event.text.windowID,

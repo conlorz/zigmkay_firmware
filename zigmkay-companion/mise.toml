@@ -14,6 +14,10 @@ extends = "companion-run"
 description = "Render three offline frames without HID"
 run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- --smoke'
 
+[tasks.tray-check]
+description = "Run the finite offline native macOS tray lifecycle probe"
+run = 'zig build run -j"$ZIGMKAY_BUILD_JOBS" -- --tray-check'
+
 [tasks.editor]
 description = "Open the separate offline LK7 draft editor"
 usage = '''
