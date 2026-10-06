@@ -6,12 +6,33 @@ repository-wide work. Packages own their Zig builds; root Zig owns integration
 tests and the offline guard. No sibling clones or package directory changes are
 needed.
 
-**Current task:** [07B native editor](docs/plans/07-compiled-keymap-editor.md), in progress; G07-export is frozen at `016cf7d`.
-Read the [architecture research](docs/plans/06-architecture-research.md)
-and the [tracker](docs/plans/TRACKING.md). USB/HID recovery and manual LK7
-acceptance are complete for the agreed macOS baseline. The remaining order is
-06 → 07 → 08 → 05 → 09; the personal EurKEY profile will be created through
-the finished editor. Other platforms and boards retain separate acceptance gates.
+The native editor supports named layers, staged Tap/Hold assignment editing,
+component-preserving bulk edits, atomic project save/reopen, firmware builds,
+and offline testing with the real keyboard processor. The version-1 project,
+export and runner contract remains frozen at `016cf7d`. Follow the
+[tracker](docs/plans/TRACKING.md) for current implementation and acceptance
+evidence. Other platforms and boards retain separate acceptance gates.
+
+## Native editor
+
+Launch with `mise //zigmkay-companion:editor`. Select physical keys, edit their
+Tap and Hold components in the docked inspector, and Apply once to commit an
+undoable change. Cancel discards the staged edits. Unassign blocks fallback;
+Inherit lets a lower active layer supply an action. Search, modifiers, timing,
+one-shot settings and validation stay in the inspector.
+
+These are captures of the running macOS DVUI/SDL application with an isolated
+EurKEY project fixture, captured offline; they are not design mockups.
+
+![Dark native editor with docked Tap/Hold inspector](docs/screenshots/editor-dark.png)
+
+The same editing controls are available in light mode.
+
+![Light native editor](docs/screenshots/editor-light.png)
+
+Typing practice combines exercise text, scoring and a keyboard preview.
+
+![Native typing practice with keyboard guidance](docs/screenshots/practice.png)
 
 ## Setup and discovery
 

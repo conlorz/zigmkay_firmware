@@ -8,9 +8,9 @@ Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md)
 
 The user selected [mockup 2](../mockups/key-creation/02-inspector-dark-macos.png).
 Implementation plan: [14: Docked key inspector and assignment editing](../14-docked-key-inspector.md).
-The planning baseline is `b9b660f`; design selection is recorded, implementation
-is pending. Existing G07 acceptance and the frozen version-1 schema/export/runner
-contract remain the inputs to this follow-up.
+Implementation started at `fa8d71a`, with the planning baseline `b9b660f`.
+Existing G07 acceptance and the frozen version-1 schema/export/runner contract
+remain the inputs to this follow-up.
 
 The plan specifies independent Tap/Hold cards, component-preserving bulk edits,
 explicit Unassign versus Inherit, Mac symbols, staged Apply/Cancel, a contextual
@@ -18,10 +18,61 @@ embedded picker, responsive geometry, and offline validation/capture coverage.
 The user explicitly wants minimal popups: remove the key-action and search
 popups; Advanced, validation, and pending-edit choices stay inline in the
 inspector. This follow-up adds no custom modal dialogs.
-Next ready work is the action editing model/session checkpoint under an
-implementation request. No write lease, code implementation, new golden approval,
-hardware operation, or additional milestone acceptance is recorded by this
-planning update. Future implementation evidence belongs in this handover.
+Implementation checkpoints: `1e70caa` (per-key staged session and atomic batch
+commit), `929c54c` (host labels and bounded action catalog), `f176d3b` (docked
+UI, geometry, lifecycle and offline scenarios), `5e790cc` (same-frame session
+lifecycle and native scenario stabilization), and `10a9c2a` (Repeat timing
+conversion summary). All worker leases are released.
+No firmware, schema, native bridge, dependency or generated source changed.
+
+The inspector shows all populated Tap/Hold components, stages individual edits,
+supports independent one-shot fields, and commits one validated snapshot.
+Bulk edits retain each key's untouched components, timing and callback data.
+Unassign stores `.none`; Inherit stores `null`, with lower-layer previews kept
+separate. Clean/invalid Apply and Base Inherit are disabled. Selection, layers,
+profiles, history, Copy/Paste, Save/Build/Flash/Test and other document workflows
+resolve pending drafts using inline Apply/Discard/Keep editing decisions.
+Advanced and dirty-close decisions also stay in the inspector. The old action
+and search modal implementations are removed; reusable combo forms remain.
+
+Verification includes compound actions with every optional field, mixed bulk
+modifiers and field preservation, inherited overrides, validation/staleness,
+Cancel/no-op Apply, one-step undo/redo, and save/reopen/export with callback bytes.
+Four new real offline runner traces confirm explicit no-action blocking lower A,
+transparent fallback to A, Clear Hold retaining B, and Clear Tap retaining Command.
+Native scripted input covers search, drag/drop, mixed bulk Apply, all pending
+choices, rejected Apply, chip removal, Cancel and same-frame Copy/Paste.
+
+Actual native captures remain under `.zig-cache/editor-acceptance/`. Selected
+dark/light normal and practice captures are copied into `docs/screenshots/` and
+embedded in the [root README](../../../README.md); these are running native app
+captures using an inert project fixture, not generated mockups or device evidence.
+The dark captures have descriptive comparisons with the selected step-14 mockup.
+
+Presentation deviations: test and callback controls use two central rows to keep
+their actions visible; mode and category controls use native dropdowns; compact
+modifier controls show all eight left/right bits in one row. The inspector
+middle scrolls for compound/Advanced content while header/footer remain fixed.
+The native Advanced scenario scrolls to its configuration controls. Existing
+approved goldens remain intact pending explicit replacement review. No native
+accessibility, hardware acceptance, push or PR is claimed.
+
+Checks on implementation revision `10a9c2a`:
+
+- `mise //:check`: passed, including all package tests, generated comparisons,
+  and the unchanged-source/hardware guard. An earlier run correctly rejected a
+  concurrent handover edit; the frozen-tree rerun passed.
+- `mise //zigmkay-companion:test`: passed during integration; the final aggregate
+  check also runs this package, including all new session and real-runner cases.
+- `mise //zigmkay-companion:editor-check`: passed all 158 dark/light, 1×/2× and
+  resized captures, panel/key containment, native pixel readback and semantic
+  interactions, including the 1152 × 768 and 900 × 600 windows.
+- Pinned `zig fmt --check` on all changed Zig files and `git diff --check`: passed.
+- `mise //zigmkay-companion:editor-golden-check`: expected failure against the
+  pre-redesign dark 1× normal baseline (`GoldenImageMismatch`, mean RGB delta
+  11.4988/255; 546191 significant pixels). Baselines and tolerances are unchanged.
+  New captures are available for explicit replacement-golden review; the README
+  illustrations do not imply that approval.
 
 ## 07A: schema/export handover
 

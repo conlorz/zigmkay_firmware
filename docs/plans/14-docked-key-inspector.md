@@ -1,8 +1,10 @@
 # 14: Docked key inspector and assignment editing
 
-Status: **design selected; implementation pending**, 2026-10-06. The user chose
+Status: **implemented; final evidence and replacement-golden review tracked in
+the editor handover**, 2026-10-06. The user chose
 [mockup 2](mockups/key-creation/02-inspector-dark-macos.png) and requested this
-implementation plan. This request covers planning and handover updates.
+implementation plan and subsequently requested implementation and real native
+screenshots in the repository README.
 
 Base: `b9b660f`, containing the three concepts and
 [repository findings](mockups/key-creation/README.md). Recheck HEAD and the
@@ -256,5 +258,9 @@ After approval, run the golden check against the approved replacements.
 Completion requires functional checks, readable native captures close to mockup
 2, preserved action data and history, and an updated handover identifying any
 remaining visual review. Native accessibility claims require actual checks.
-The next ready step is checkpoint 1 under an implementation request; no hardware
-session is needed to implement or verify the inspector.
+Implementation revisions: `1e70caa` (session/batch model), `929c54c`
+(host labels/catalog), and `f176d3b` (docked UI, lifecycle and offline scenarios).
+Actual check outcomes and native captures are recorded in the
+[editor handover](handovers/07-editor.md). No hardware session is needed to
+implement or verify the inspector. Existing goldens remain unchanged until
+explicit replacement approval.

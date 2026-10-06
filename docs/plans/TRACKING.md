@@ -1,13 +1,16 @@
 # Central milestone tracker
 
-## Docked key inspector selected (2026-10-06)
+## Docked key inspector implementation (2026-10-06)
 
 The user chose [key-creation mockup 2](mockups/key-creation/02-inspector-dark-macos.png)
 and requested an implementation plan linked from the editor handover. See
 [plan 14](14-docked-key-inspector.md) and [the follow-up handover](handovers/07-editor.md#selected-follow-up-docked-key-inspector-2026-10-06).
-Design is selected; implementation is pending. Next work is the action editing
-session and per-key patch model under an implementation request. This planning
-update introduces no code, write lease, hardware session, or golden replacement.
+The implementation request covers the staged per-key editing session, docked
+native UI, host labels, embedded picker and revised geometry. Session checkpoint
+`1e70caa` and label/catalog checkpoint `929c54c` are committed. Final integration
+checks and native capture evidence are recorded in the editor handover. Existing
+approved goldens remain intact pending review of the intentional redesign.
+No hardware session or golden replacement is authorized by this implementation.
 
 ## Save the selected dropdown project (2026-10-06)
 

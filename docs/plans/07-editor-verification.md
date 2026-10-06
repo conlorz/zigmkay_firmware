@@ -35,12 +35,14 @@ The full check validates packages, real generated processor traces, all ten
 board artifacts, root/standalone LK7 parity and the hardware guard. Editor tests
 cover validation, undo/redo, stable IDs, save/reopen, all action fields, Unicode
 editing and real child-process preparation/cancellation/crash/staleness.
-`editor-check` renders 16 states in both themes at both display densities,
-checks the seven panel bounds and selected key dimensions, and dispatches actual
-DVUI clicks for thumb selection, isolated layer duplication, undo/redo and form
-application. Each child has a 20-second timeout. Outputs remain in root
-`.zig-cache/editor-acceptance`; mockup reports and blended overlays accompany
-the four normal captures. The fixture never executes callback source or uses HID.
+`editor-check` renders all declared editor scenarios in both themes at both
+display densities, checks the seven panel bounds and physical key containment,
+and dispatches actual DVUI input for search, drag/drop, inspector editing,
+layer duplication and history. Inherited, unassigned, mixed, Repeat, validation
+and pending-edit states have dedicated captures. Each child has a 20-second
+timeout. Outputs remain in root `.zig-cache/editor-acceptance`; a descriptive
+report and blended overlay compare the dark normal captures with the selected
+step-14 mockup. The fixture never executes callback source or uses HID.
 
 After explicit screenshot approval, `zig build editor-golden-check -j4` in the
 companion package checks approved normal screenshots too. It reads baselines;
@@ -50,6 +52,12 @@ be at most 0.5/255, with at most 0.5% of pixels differing by more than 12 in any
 RGB channel. This tolerates small text antialiasing variations. Different fonts
 or operating systems require review, not automatic replacement.
 
+The docked inspector deliberately changes the panel geometry. The existing
+approved screenshots predate step 14, so their golden comparison is expected
+to fail until replacement captures receive explicit approval. Keep those
+baselines intact; the screenshots in the root README document the current app
+and do not authorize a regression-baseline replacement.
+
 ## Try the editor yourself
 
 ```sh
@@ -58,8 +66,13 @@ mise exec -- zig build run -j4 -- --editor
 ```
 
 1. Choose the QWERTY or EurKEY draft. Click a key; Shift-click several keys for
-   a bulk selection. Click Tap or Hold to open the complete action form, set a
-   key/modifier/layer/timing and Apply. One application is one undo operation.
+   a bulk selection. Use the docked inspector's Tap and Hold cards to choose an
+   action target, search the embedded catalog, and edit modifiers and timing.
+   Remove an individual chip or Clear a side without replacing the other side.
+   Apply commits the staged changes as one undo operation; Cancel discards them.
+   Bulk component edits preserve each selected key's untouched fields.
+   Unassign explicitly does nothing; Inherit removes the override so a lower
+   active layer can supply the action. Inherit is disabled on Base.
    Canvas arrow keys select positions; Command/Ctrl-C/V copy/paste actions;
    Command/Ctrl-Z and Shift-Z undo/redo. Shortcuts apply while the canvas owns
    focus, allowing normal editing of text fields.
