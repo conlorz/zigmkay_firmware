@@ -9,6 +9,43 @@ pub const running_host: Host = switch (@import("builtin").os.tag) {
 pub fn runningHost() Host {
     return running_host;
 }
+// Keycaps omit names and modifier handedness; inspectors retain both.
+pub fn keycapUsage(host: Host, code: u8, buffer: []u8) []const u8 {
+    if (code >= 224 and code <= 231) return keycapModifiers(host, @as(u8, 1) << @intCast(code - 224), buffer);
+    return switch (code) {
+        40, 88 => "↩",
+        41 => "⎋",
+        42 => "⌫",
+        43 => "⇥",
+        44 => "␣",
+        57 => "⇪",
+        74 => "↖",
+        75 => "⇞",
+        76 => "⌦",
+        77 => "↘",
+        78 => "⇟",
+        79 => "→",
+        80 => "←",
+        81 => "↓",
+        82 => "↑",
+        83 => "⇭",
+        else => usage(code, buffer),
+    };
+}
+pub fn keycapModifiers(host: Host, bits: u8, buffer: []u8) []const u8 {
+    const names: [4][]const u8 = switch (host) {
+        .macos => .{ "⌃", "⇧", "⌥", "⌘" },
+        .windows => .{ "Ctrl", "⇧", "Alt", "Win" },
+        .linux => .{ "Ctrl", "⇧", "Alt", "Super" },
+    };
+    var used: usize = 0;
+    for (names, 0..) |name, bit| {
+        if ((bits | (bits >> 4)) & (@as(u8, 1) << @intCast(bit)) == 0) continue;
+        const part = std.fmt.bufPrint(buffer[used..], "{s}{s}", .{ if (used == 0 or host == .macos) "" else "+", name }) catch return "Modifiers";
+        used += part.len;
+    }
+    return buffer[0..used];
+}
 pub fn hostUsage(host: Host, code: u8, buffer: []u8) []const u8 {
     if (code >= 224 and code <= 231) return hostModifierNames(host, @as(u8, 1) << @intCast(code - 224), buffer);
     if (host == .macos) return switch (code) {
@@ -130,22 +167,32 @@ fn knownUsage(code: u8, buffer: []u8) []const u8 {
     return std.fmt.bufPrint(buffer, "HID {d}", .{code}) catch "?";
 }
 pub fn tap(value: p.Tap, buffer: []u8) []const u8 {
+    return tapLabel(value, buffer, false);
+}
+fn tapLabel(value: p.Tap, buffer: []u8, compact: bool) []const u8 {
     var used: usize = 0;
     var scratch: [256]u8 = undefined;
     if (value.key_press) |key| {
         var key_buffer: [64]u8 = undefined;
         var mod_buffer: [192]u8 = undefined;
-        const name = if (key.tap_modifiers.toByte() == 0) hostUsage(running_host, key.tap_keycode, &key_buffer) else std.fmt.bufPrint(&scratch, "{s}+{s}", .{ hostModifierNames(running_host, key.tap_modifiers.toByte(), &mod_buffer), hostUsage(running_host, key.tap_keycode, &key_buffer) }) catch "Chord";
+        const key_name = if (compact) keycapUsage(running_host, key.tap_keycode, &key_buffer) else hostUsage(running_host, key.tap_keycode, &key_buffer);
+        const name = if (key.tap_modifiers.toByte() == 0) key_name else std.fmt.bufPrint(&scratch, "{s}{s}{s}", .{ if (compact) keycapModifiers(running_host, key.tap_modifiers.toByte(), &mod_buffer) else hostModifierNames(running_host, key.tap_modifiers.toByte(), &mod_buffer), if (compact and running_host == .macos) "" else "+", key_name }) catch "Chord";
         appendSummary(buffer, &used, name);
         if (key.dead) appendSummary(buffer, &used, "Dead key");
     }
-    if (value.media_key) |media| appendSummary(buffer, &used, @tagName(media));
+    if (value.media_key) |media| appendSummary(buffer, &used, if (compact) switch (media) {
+        .VolumeUp => "🔊",
+        .VolumeDown => "🔉",
+        .VolumeMute => "🔇",
+        .NextTrack => "⏭",
+        .PreviousTrack => "⏮",
+    } else @tagName(media));
     if (value.mouse_action) |mouse| appendSummary(buffer, &used, @tagName(mouse));
     if (value.custom) |custom| appendSummary(buffer, &used, signal(custom, &scratch));
     if (value.one_shot) |one| {
         appendSummary(buffer, &used, "One-shot");
         if (one.layer_id) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "L{d}", .{id}) catch "Layer");
-        if (one.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, hostModifierNames(running_host, one.hold_modifiers.toByte(), &scratch));
+        if (one.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, if (compact) keycapModifiers(running_host, one.hold_modifiers.toByte(), &scratch) else hostModifierNames(running_host, one.hold_modifiers.toByte(), &scratch));
         if (one.custom) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "Callback {d}", .{id}) catch "Callback");
     }
     return if (used == 0) "No tap" else buffer[0..used];
@@ -176,13 +223,17 @@ pub fn keycap(value: ?p.Action, doc: p.Document, buffer: []u8) []const u8 {
     var tap_buffer: [128]u8 = undefined;
     var hold_buffer: [128]u8 = undefined;
     return switch (a) {
-        .tap_only => |t| tap(t, buffer),
-        .tap_hold => |th| std.fmt.bufPrint(buffer, "{s}\nHold {s}", .{ tap(th.tap, &tap_buffer), hold(th.hold, doc, &hold_buffer) }) catch "Tap / hold",
-        .hold_only => |h| std.fmt.bufPrint(buffer, "Hold\n{s}", .{hold(h, doc, &hold_buffer)}) catch "Hold",
+        .tap_only => |t| tapLabel(t, buffer, true),
+        .tap_with_autofire => |t| tapLabel(t.tap, buffer, true),
+        .tap_hold => |th| std.fmt.bufPrint(buffer, "{s}\nHold {s}", .{ tapLabel(th.tap, &tap_buffer, true), holdLabel(th.hold, doc, &hold_buffer, true) }) catch "Tap / hold",
+        .hold_only => |h| std.fmt.bufPrint(buffer, "Hold\n{s}", .{holdLabel(h, doc, &hold_buffer, true)}) catch "Hold",
         else => action(value, buffer),
     };
 }
 pub fn hold(value: p.Hold, doc: p.Document, buffer: []u8) []const u8 {
+    return holdLabel(value, doc, buffer, false);
+}
+fn holdLabel(value: p.Hold, doc: p.Document, buffer: []u8, compact: bool) []const u8 {
     var used: usize = 0;
     var scratch: [256]u8 = undefined;
     if (value.layer_id) |id| {
@@ -191,9 +242,9 @@ pub fn hold(value: p.Hold, doc: p.Document, buffer: []u8) []const u8 {
             name = layer.name;
             break;
         };
-        appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "L{d} {s}", .{ id, name }) catch "Layer");
+        appendSummary(buffer, &used, if (compact) std.fmt.bufPrint(&scratch, "L{d}", .{id}) catch "Layer" else std.fmt.bufPrint(&scratch, "L{d} {s}", .{ id, name }) catch "Layer");
     }
-    if (value.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, hostModifierNames(running_host, value.hold_modifiers.toByte(), &scratch));
+    if (value.hold_modifiers.toByte() != 0) appendSummary(buffer, &used, if (compact) keycapModifiers(running_host, value.hold_modifiers.toByte(), &scratch) else hostModifierNames(running_host, value.hold_modifiers.toByte(), &scratch));
     if (value.custom) |id| appendSummary(buffer, &used, std.fmt.bufPrint(&scratch, "Callback {d}", .{id}) catch "Callback");
     return if (used == 0) "No hold fields" else buffer[0..used];
 }
@@ -208,6 +259,39 @@ pub fn action(value: ?p.Action, buffer: []u8) []const u8 {
     };
 }
 pub const HostKey = struct { code: u8, name: []const u8 = "", units: f32 = 1 };
+test "compact keycaps preserve descriptive search labels" {
+    var buffer: [256]u8 = undefined;
+    for ([_]Host{ .macos, .windows, .linux }) |host| {
+        for ([_]struct { code: u8, symbol: []const u8 }{
+            .{ .code = 40, .symbol = "↩" },
+            .{ .code = 41, .symbol = "⎋" },
+            .{ .code = 42, .symbol = "⌫" },
+            .{ .code = 43, .symbol = "⇥" },
+            .{ .code = 44, .symbol = "␣" },
+            .{ .code = 57, .symbol = "⇪" },
+            .{ .code = 74, .symbol = "↖" },
+            .{ .code = 75, .symbol = "⇞" },
+            .{ .code = 76, .symbol = "⌦" },
+            .{ .code = 77, .symbol = "↘" },
+            .{ .code = 78, .symbol = "⇟" },
+            .{ .code = 79, .symbol = "→" },
+            .{ .code = 80, .symbol = "←" },
+            .{ .code = 81, .symbol = "↓" },
+            .{ .code = 82, .symbol = "↑" },
+            .{ .code = 83, .symbol = "⇭" },
+            .{ .code = 88, .symbol = "↩" },
+        }) |entry| try std.testing.expectEqualStrings(entry.symbol, keycapUsage(host, entry.code, &buffer));
+        try std.testing.expect(matchesUsage(host, 42, "Backspace"));
+        try std.testing.expect(matchesUsage(host, 76, "Delete"));
+    }
+    try std.testing.expectEqualStrings("⌘", keycapModifiers(.macos, 0x88, &buffer));
+    try std.testing.expectEqualStrings("⌃⇧⌥⌘", keycapModifiers(.macos, 0xff, &buffer));
+    try std.testing.expectEqualStrings("🔊", tapLabel(.{ .media_key = .VolumeUp }, &buffer, true));
+    try std.testing.expectEqualStrings("VolumeUp", tap(.{ .media_key = .VolumeUp }, &buffer));
+    const chord: p.Tap = .{ .key_press = .{ .tap_keycode = 29, .tap_modifiers = .{ .left_gui = true } } };
+    try std.testing.expectEqualStrings(if (running_host == .macos) "⌘Z" else if (running_host == .windows) "Win+Z" else "Super+Z", tapLabel(chord, &buffer, true));
+    try std.testing.expect(containsIgnoreCase(tap(chord, &buffer), if (running_host == .macos) "Command" else if (running_host == .windows) "Win" else "Super"));
+}
 test "all basic keycodes have names and companion namespaces remain distinct" {
     var buffer: [256]u8 = undefined;
     inline for (@typeInfo(@import("zkeycodes").layouts.keycodes.kc.basic).@"enum".fields) |field| {

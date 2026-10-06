@@ -787,7 +787,8 @@ pub const Editor = struct {
             }
             const caption = labels.keycap(resolved, self.model.document(), &buffer);
             opts.padding = .all(2);
-            opts.font = fonts.font(caption, if (std.mem.indexOfScalar(u8, caption, '\n') != null) 9 else if (caption.len > 9) 9 else if (caption.len >= 4) 13 else 20);
+            const caption_length = std.unicode.utf8CountCodepoints(caption) catch caption.len;
+            opts.font = fonts.font(caption, if (std.mem.indexOfScalar(u8, caption, '\n') != null) 13 else if (caption_length > 9) 9 else if (caption_length >= 4) 13 else 20);
             if (dvui.button(@src(), caption, .{}, opts)) {
                 try self.request(.{ .select = .{ .index = key.key_index, .extend = self.extend } });
                 if (self.testing.state == .running) {
@@ -826,21 +827,7 @@ pub const Editor = struct {
             for (row, 0..) |key, ki| {
                 var buffer: [64]u8 = undefined;
                 var modified_buffer: [64]u8 = undefined;
-                var caption = if (key.name.len != 0) key.name else labels.usage(key.code, &buffer);
-                if (@import("builtin").os.tag == .macos) caption = switch (key.code) {
-                    40 => "↩",
-                    42 => "⌫",
-                    43 => "⇥",
-                    79 => "→",
-                    80 => "←",
-                    81 => "↓",
-                    82 => "↑",
-                    224, 228 => "⌃",
-                    225, 229 => "⇧",
-                    226, 230 => "⌥",
-                    227, 231 => "⌘",
-                    else => caption,
-                };
+                var caption = labels.keycapUsage(labels.running_host, key.code, &buffer);
                 if (self.source == null and key.code >= 4 and key.code <= 29 and !self.shift) {
                     buffer[0] = 'a' + key.code - 4;
                     caption = buffer[0..1];
