@@ -104,3 +104,22 @@ correction. Paste produces an unscored preview. Personal bests are kept for this
 editor session, separately for each mode/length/lesson/input source; they are not
 saved to disk. Corpus version 1 uses original English templates and stable Zig
 lesson IDs. There are no accounts, downloads or hardware requirements.
+
+Normal desktop runs now install a native keyboard tray icon (the macOS top bar).
+Its menu reports companion/device status and provides **Open Editor**,
+**Show/Hide Companion**, and **Quit Zigmkay**. Closing a window hides it while
+monitoring and the process continue. Open Editor restores the same draft and
+history. Quit uses the existing unsaved-edit and transfer safeguards. Tray
+failure falls back to the usual visible-window lifecycle.
+
+`--editor` starts with the editor visible and companion hidden; `--light` and
+`--practice` retain their normal startup behavior. Showing a window does not
+enable HID access. `--live` remains the startup opt-in; deliberate flashing
+retains its existing post-transfer identity verification.
+
+Smoke, fixture, screenshot and acceptance modes keep their finite lifecycle
+without a tray. After `mise //zigmkay-companion:build`, run
+`zig-out/bin/zigmkay_companion --tray-check` from the repository root for the
+explicit finite offline macOS tray probe. It uses an inert editor fixture and
+never accesses a keyboard. Windows/Linux desktop validation is deferred; Linux
+tray visibility requires a StatusNotifier watcher. See [plan 16](../docs/plans/16-ztray-companion-editor.md).

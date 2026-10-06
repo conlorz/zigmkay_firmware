@@ -1,5 +1,41 @@
 # Central milestone tracker
 
+## Native companion/editor tray (2026-10-07)
+
+The user requested implementation of [plan 16](16-ztray-companion-editor.md).
+Dependency checkpoint `973d134`, desktop lifecycle `2c8622a`, and startup-theme
+fix `047fa80` are committed locally. Normal companion/editor runs share one
+native tray and editor document lifetime. Closing windows hides them; Open
+Editor restores/focuses the same window, Show/Hide Companion controls the
+overlay, and Quit retains pending-edit, unsaved-project and transfer safeguards.
+The pinned ztray bridges are unchanged; first-party code and the embedded
+keyboard PNG generator are Zig. Existing finite acceptance modes remain finite.
+
+Verified with Zig 0.16.0: companion tests/build, explicit offline macOS native
+tray probe, overlay and editor/overlay smoke runs, `mise //:check`, and
+`mise //:check-full`. The full check compiled all ten firmware boards and
+confirmed mise/standalone LK7 artifact parity without hardware operations.
+Editor acceptance passed all **207 captures**, panel geometry, Retina/non-Retina
+readback and semantic interactions. Changed Zig formatting and diff whitespace
+checks pass. The final theme-only change was followed by package build, native
+probe and aggregate `check`.
+
+The native tray probe uses an inert fixture and real AppKit callbacks. It
+checks duplicate-open prevention, closing both windows without exiting,
+same-window reopening, retained draft/history/free text, SDL keyboard routing
+after tray actions, semantic cancellation of unsaved Quit, active-transfer
+rejection and final tray shutdown. Cached logs are root
+`.zig-cache/ztray-*.log`; editor captures remain in
+`.zig-cache/editor-acceptance`. Approved goldens and personal projects are
+unchanged.
+
+Direct top-bar visual/physical-mouse approval remains pending: `screencapture`
+reported “could not create image from display” in this session. Windows/Linux
+desktop validation is deferred; Linux visibility requires a StatusNotifier
+watcher. No hardware session, push or PR was performed. Start normally with
+`mise //zigmkay-companion:editor`; the explicit offline native probe is
+`mise //zigmkay-companion:tray-check`.
+
 ## Unified Try it out view implementation (2026-10-06)
 
 The user selected variant A, with the companion below the typing area, and

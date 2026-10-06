@@ -121,6 +121,11 @@ bring a concrete result and explain the choice rather than inventing a preferenc
 
 ## Open details and deferred work
 
+[16: Native companion/editor tray](16-ztray-companion-editor.md) implements the
+keyboard top-bar icon, status menu, editor/companion visibility and background
+lifecycle. Closing windows hides them; Quit retains unsaved-edit and transfer
+safeguards. See the tracker for offline evidence and desktop validation limits.
+
 [15: Unified Try it out view](15-try-it-out.md) records the user's selected
 variant A: two main views, Editor and Try it out, with free typing and a large
 companion below, plus an inline switch to the unchanged typing-test functions.
