@@ -39,9 +39,12 @@ pub fn write(gpa: std.mem.Allocator, io: std.Io, reference_path: []const u8, act
     defer dvui.c.stbi_image_free(loaded);
     if (width != 1536 or height != 1024 or actual.len != 1536 * 1024 * 4) return error.ReferenceImageDimensions;
     const reference = loaded[0..actual.len];
-    var regions: [7]Region = undefined;
+    var regions: std.ArrayList(Region) = .empty;
+    defer regions.deinit(gpa);
     for (geometry.reference, 0..) |bounds, i| {
         const name = @as(geometry.Panel, @enumFromInt(i));
+        // The retired draft launcher has no native panel to compare.
+        if (name == .testing) continue;
         const tag = dvui.tagGet(@tagName(name)) orelse return error.MissingPanelTag;
         const a = tag.rect;
         var sum: u64 = 0;
@@ -55,7 +58,7 @@ pub fn write(gpa: std.mem.Allocator, io: std.Io, reference_path: []const u8, act
                 count += 1;
             }
         };
-        regions[i] = .{ .panel = name, .expected = bounds, .actual = .{ .x = a.x / scale, .y = a.y / scale, .w = a.w / scale, .h = a.h / scale }, .mean_absolute_rgb_difference = @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(count)) };
+        try regions.append(gpa, .{ .panel = name, .expected = bounds, .actual = .{ .x = a.x / scale, .y = a.y / scale, .w = a.w / scale, .h = a.h / scale }, .mean_absolute_rgb_difference = @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(count)) });
     }
     var reference_hash: [32]u8 = undefined;
     std.crypto.hash.sha2.Sha256.hash(bytes, &reference_hash, .{});
@@ -63,7 +66,7 @@ pub fn write(gpa: std.mem.Allocator, io: std.Io, reference_path: []const u8, act
     std.crypto.hash.sha2.Sha256.hash(actual, &pixels_hash, .{});
     var encoded: std.Io.Writer.Allocating = .init(gpa);
     defer encoded.deinit();
-    try std.zon.stringify.serializeMaxDepth(.{ .version = @as(u16, 1), .viewport = [2]u32{ 1536, 1024 }, .native_scale = scale, .theme = if (light) "light" else "dark", .font = "macOS system SFNS + installed Arial Unicode glyph fallback; retained Vera elsewhere", .fixture = "EurKEY Next 2026.03.22; inert callback bytes", .reference_sha256 = reference_hash, .actual_rgba_sha256 = pixels_hash, .regions = regions, .comparison = "Descriptive RGB differences; generated mockup typography and correctness deviations require visual review; no zero-difference acceptance implied" }, .{}, &encoded.writer, 32);
+    try std.zon.stringify.serializeMaxDepth(.{ .version = @as(u16, 1), .viewport = [2]u32{ 1536, 1024 }, .native_scale = scale, .theme = if (light) "light" else "dark", .font = "macOS system SFNS + installed Arial Unicode glyph fallback; retained Vera elsewhere", .fixture = "EurKEY Next 2026.03.22; inert callback bytes", .reference_sha256 = reference_hash, .actual_rgba_sha256 = pixels_hash, .regions = regions.items, .comparison = "Descriptive RGB differences; generated mockup typography and correctness deviations require visual review; no zero-difference acceptance implied" }, .{}, &encoded.writer, 32);
     const report = try std.fmt.allocPrint(gpa, "{s}.report.zon", .{output_path});
     defer gpa.free(report);
     try std.Io.Dir.cwd().writeFile(io, .{ .sub_path = report, .data = encoded.written() });

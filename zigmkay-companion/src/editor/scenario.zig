@@ -7,8 +7,24 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
+        .free_input, .free_typing, .free_long, .free_error, .test_preparing, .test_running, .test_output, .test_stale, .test_failed => {
+            editor.main_view = .try_it_out;
+            editor.try_mode = .free_typing;
+            editor.free_focus = true;
+        },
+        else => {},
+    }
+    switch (state) {
+        .free_input, .free_typing => {},
+        .free_long => try editor.free_text.insert("The current draft types Unicode: é ß λ. This long single line keeps the caret visible while the companion remains below the text field."),
+        .free_error => {
+            editor.free_failed = true;
+            editor.testing.state = .failed;
+            try editor.testing.diagnostic.appendSlice(editor.gpa, "Fixture preparation failed. Retry after correcting the draft.");
+        },
         .practice_guidance, .practice_live, .practice_hidden, .practice_error, .practice_english, .practice_zig, .practice_scroll, .practice_input => {
-            editor.practice_open = true;
+            editor.main_view = .try_it_out;
+            editor.try_mode = .typing_test;
             editor.practice_mode = if (state == .practice_zig or state == .practice_scroll) 1 else 0;
             try editor.startPractice(true);
             if (state == .practice_input) try editor.practice.load("a\n    b", .os);
@@ -81,7 +97,10 @@ pub fn setup(editor: anytype, state: State) !void {
         },
         .callback_missing => editor.callback_state = .missing,
         .callback_changed => editor.callback_state = .changed,
-        .test_preparing => editor.testing.state = .preparing,
+        .test_preparing => {
+            editor.testing.state = .preparing;
+            editor.free_pending = true;
+        },
         .test_running => editor.testing.state = .running,
         .test_output => {
             const wire = @import("runner-protocol");
@@ -104,6 +123,7 @@ pub fn setup(editor: anytype, state: State) !void {
         .test_stale => editor.testing.state = .stale,
         .test_failed => {
             editor.testing.state = .failed;
+            editor.free_failed = true;
             try editor.testing.diagnostic.appendSlice(editor.gpa, "Fixture compiler diagnostic: callback ABI mismatch");
             editor.test_details = true;
         },
@@ -123,13 +143,78 @@ pub fn setup(editor: anytype, state: State) !void {
         },
     }
 }
+/// Exercises the actual navigation and reset widgets with independent buffers.
+pub fn freeInteraction(editor: anytype, window: *dvui.Window, frames: usize, history: usize) !void {
+    switch (frames) {
+        3 => {
+            try editor.free_text.insert("éλ");
+            try editor.free_text.singleLineOutput(&.{ .{ .KeyCodePress = 80 }, .{ .KeyCodePress = 42 }, .{ .KeyCodePress = 40 }, .{ .KeyCodePress = 43 } });
+            try std.testing.expectEqualStrings("λ", editor.free_text.value());
+        },
+        4 => try click(window, "try.test", window.natural_scale, false),
+        5 => try click(window, "try.test", window.natural_scale, true),
+        7 => {
+            if (editor.try_mode != .typing_test or editor.practice_active) return error.ModeSwitchStartedTest;
+            try editor.startPractice(true);
+            try editor.practice.load("a b", .os);
+            try editor.practice.insert("a", editor.practiceTime(), false);
+        },
+        8 => try click(window, "try.free", window.natural_scale, false),
+        9 => try click(window, "try.free", window.natural_scale, true),
+        11 => {
+            if (editor.try_mode != .free_typing or editor.practice.state != .paused or editor.practice.len != 1) return error.FreeModeDidNotPauseTest;
+            try std.testing.expectEqualStrings("λ", editor.free_text.value());
+            try editor.free_text.singleLineOutput(&.{ .{ .ModifiersChanged = .{ .left_alt = true } }, .{ .KeyCodePress = 52 } });
+            editor.testing.pressed[10] = true;
+        },
+        12 => try click(window, "free.reset", window.natural_scale, false),
+        13 => try click(window, "free.reset", window.natural_scale, true),
+        15 => {
+            if (editor.free_text.len != 0 or editor.free_text.cursor != 0 or editor.free_text.fixture_dead or editor.free_text.mods.left_alt or !editor.free_focus) return error.FreeResetIncomplete;
+            for (editor.testing.pressed) |pressed| if (pressed) return error.FreeResetHeldKey;
+            if (editor.practice.len != 1 or editor.model.undo_stack.items.len != history) return error.FreeResetChangedSessionOrHistory;
+            _ = try window.addEventKey(.{ .code = .space, .action = .down, .mod = .none });
+            _ = try window.addEventText(.{ .text = " " });
+        },
+        17 => {
+            if (editor.free_text.len != 0 or editor.try_mode != .free_typing) return error.FreeSpaceActivatedControl;
+            try editor.free_text.insert("é");
+        },
+        18 => try click(window, "nav.editor", window.natural_scale, false),
+        19 => try click(window, "nav.editor", window.natural_scale, true),
+        21 => {
+            if (editor.main_view != .editor) return error.EditorNavigationFailed;
+            try std.testing.expectEqualStrings("é", editor.free_text.value());
+        },
+        22 => try click(window, "nav.try", window.natural_scale, false),
+        23 => try click(window, "nav.try", window.natural_scale, true),
+        25 => {
+            if (editor.main_view != .try_it_out or editor.try_mode != .free_typing) return error.TryNavigationLostMode;
+            try std.testing.expectEqualStrings("é", editor.free_text.value());
+        },
+        26 => try click(window, "try.test", window.natural_scale, false),
+        27 => try click(window, "try.test", window.natural_scale, true),
+        29 => {
+            if (editor.practice.state != .paused or editor.practice.len != 1) return error.ModeNavigationResumedTest;
+        },
+        30 => try click(window, "try.free", window.natural_scale, false),
+        31 => try click(window, "try.free", window.natural_scale, true),
+        33 => {
+            try std.testing.expectEqualStrings("é", editor.free_text.value());
+            if (editor.model.undo_stack.items.len != history) return error.PreviewNavigationChangedHistory;
+            std.log.info("Free preview Unicode editing, independent buffers, paused test, reset, held keys and semantic navigation passed", .{});
+        },
+        else => {},
+    }
+}
 pub fn verifyPanels(scale: f32) !void {
     for (geometry.reference, 0..) |expected, i| {
+        if (@as(geometry.Panel, @enumFromInt(i)) == .testing) continue;
         const actual = dvui.tagGet(@tagName(@as(geometry.Panel, @enumFromInt(i)))) orelse return error.MissingPanelTag;
         if (!actual.visible) return error.ClippedPanel;
         const found = actual.rect;
         const values = [_]f32{ found.x / scale, found.y / scale, found.w / scale, found.h / scale };
-        const targets = [_]f32{ expected.x, expected.y, expected.w, expected.h };
+        const targets = [_]f32{ expected.x, expected.y + 52, expected.w, expected.h };
         for (values, targets) |value, target| if (@abs(value - target) > 4) return error.PanelGeometryMismatch;
     }
     const selected = dvui.tagGet("key.select.10") orelse return error.MissingKeyTag;
@@ -142,6 +227,25 @@ pub fn verifyPanels(scale: f32) !void {
     }
     const footer = dvui.tagGet("advanced.apply") orelse return error.MissingApplyButton;
     if (!footer.visible or footer.rect.y + footer.rect.h > dvui.currentWindow().rect_pixels.h) return error.ClippedApplyButton;
+}
+/// Checks embedded preview controls in physical pixels at every capture size.
+pub fn verifyTryItOut(typing_test: bool) !void {
+    const content = dvui.tagGet("try.content") orelse return error.MissingTryItOutPanel;
+    if (typing_test) {
+        const panel = dvui.tagGet("practice.inline") orelse return error.MissingTryItOutPanel;
+        try contained("practice.word", panel.rect);
+        try contained("practice.text", panel.rect);
+        for ([_][]const u8{ "practice.start", "practice.new", "practice.pause", "practice.stop", "practice.keyboard.toggle" }) |tag| try contained(tag, panel.rect);
+        if (dvui.tagGet("practice.keyboard") != null) try contained("practice.keyboard", panel.rect);
+    } else {
+        try contained("free.input", content.rect);
+        if (dvui.tagGet("free.keyboard") != null) try contained("free.keyboard", content.rect);
+    }
+}
+fn contained(tag: []const u8, bounds: dvui.Rect.Physical) !void {
+    const control = dvui.tagGet(tag) orelse return error.MissingTryItOutControl;
+    const rect = control.rect;
+    if (!control.visible or rect.w <= 0 or rect.h <= 0 or rect.x < bounds.x - 1 or rect.y < bounds.y - 1 or rect.x + rect.w > bounds.x + bounds.w + 1 or rect.y + rect.h > bounds.y + bounds.h + 1) return error.ClippedTryItOutControl;
 }
 /// Dispatches a click through DVUI's actual input path using semantic rectangles.
 /// Call before draw on the next frame. Tags and input both use physical pixels.

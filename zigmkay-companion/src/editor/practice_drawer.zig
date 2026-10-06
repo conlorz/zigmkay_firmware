@@ -6,18 +6,21 @@ const view = @import("practice_view.zig");
 const guide = @import("practice_layout.zig");
 const geometry = @import("../components/layout.zig");
 const Modifiers = @import("layout-model").Modifiers;
-fn input(self: anytype, data: *dvui.WidgetData, now: u64) !void {
-    if (!self.practice_active or (self.practice.state != .ready and self.practice.state != .running) or self.practice.source != .os) return;
+pub fn consumeInput(self: anytype, data: *dvui.WidgetData, now: u64) !void {
+    const accepting = self.window_focused and self.practice_active and (self.practice.state == .ready or self.practice.state == .running) and self.practice.source == .os;
     dvui.wantTextInput(data.borderRectScale().r.toNatural());
     for (dvui.events()) |*event| {
         if (event.handled) continue;
         switch (event.evt) {
             .text => |text| {
-                if (text.action == .value and !text.action.value.selected) try self.practice.insert(text.action.value.txt, now, false);
+                if (accepting and text.action == .value and !text.action.value.selected) try self.practice.insert(text.action.value.txt, now, false);
                 event.handle(@src(), data);
             },
             .key => |key| {
-                if (key.action == .up) continue;
+                if (key.action == .up or !accepting) {
+                    event.handle(@src(), data);
+                    continue;
+                }
                 if (key.matchBind("paste")) try self.practice.insert(dvui.clipboardText(), now, true) else if (!key.mod.control() and !key.mod.command()) switch (key.code) {
                     .backspace => self.practice.backspace(),
                     .tab => try self.practice.insert("    ", now, false),
@@ -171,46 +174,71 @@ fn keyboard(self: anytype, t: ui.Theme, bounds: dvui.Rect, focus: usize) !void {
     } else if (self.practice_active and self.practice.state != .complete) caption("Use your layout's composition or custom action for this character", .{ .x = 8, .y = 28, .w = bounds.w - 16, .h = 23 }, 14, t.muted, null);
     try geometry.drawPractice(labels, layer, &pressed, mods, live and self.practice_live_stale, .{ .x = 18, .y = 52, .w = bounds.w - 36, .h = @max(0, bounds.h - 62) }, &guidance.tap, &guidance.hold, hold_source_layer, active);
 }
-pub fn draw(self: anytype, t: ui.Theme) !void {
-    const screen = dvui.windowRect();
-    // The editor canvas is zoomed; native window dimensions need to be converted
-    // back to canvas coordinates to keep practice nearly full size when resized.
-    const canvas_width = screen.w / self.content_scale;
-    const canvas_height = screen.h / self.content_scale;
-    const w = @min(1488, canvas_width - 48);
-    const h = @min(960, canvas_height - 48);
-    const window = ui.drawer(@src(), t, .{ .x = (canvas_width - w) / 2, .y = (canvas_height - h) / 2, .w = w, .h = h }, true);
+/// Free typing displays only the applied draft and the offline runner's actual
+/// state. It deliberately has no exercise target or inferred modifier holds.
+pub fn drawFreeCompanion(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
+    const panel = dvui.box(@src(), .{}, .{ .rect = bounds, .background = true, .color_fill = .{ .color = t.bg }, .corners = .all(12), .padding = .{}, .tag = "free.keyboard" });
+    defer panel.deinit();
+    const labels = try self.practiceLabels();
+    var layer: usize = 0;
+    var active: u16 = 1;
+    var mods: Modifiers = .{};
+    var pressed: [128]bool = @splat(false);
+    if (self.testing.state == .running) {
+        for (self.testing.pressed, 0..) |down, i| pressed[i] = down;
+        if (self.testing.last) |output| {
+            layer = output.highest_layer;
+            active = output.active_layers;
+            mods = @bitCast(output.modifiers);
+        }
+    }
+    layer = @min(layer, labels.layer_count - 1);
+    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "Draft companion · {s} · layer {d}", .{ self.model.document().name, layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, 18, t.text, "free.keyboard.source");
+    const guidance: guide.Guidance = .{};
+    try geometry.drawPractice(labels, layer, &pressed, mods, false, .{ .x = 18, .y = 34, .w = @max(0, bounds.w - 36), .h = @max(0, bounds.h - 44) }, &guidance.tap, &guidance.hold, layer, active);
+}
+pub fn draw(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
+    const window = dvui.box(@src(), .{}, .{ .rect = bounds, .padding = .{}, .tag = "practice.inline" });
     defer window.deinit();
     const now = self.practiceTime();
     const height = window.data().rect.h;
-    const width = window.data().rect.w - 36;
-    // A floating window acquires its measured bounds after its first frame.
-    if (height < 400 or width < 600) return;
+    const width = bounds.w;
+    if (height < 300 or width < 300) return;
     // Consume exercise keys before controls; typing Space must not activate the
     // checkbox that happened to retain focus after a mouse click.
-    try input(self, window.data(), now);
-    const footer_y = height - 122;
-    dvui.label(@src(), "Practice your layout", .{}, .{ .font = dvui.Font.theme(.body).withSize(27), .color_text = .{ .color = t.text } });
+    try consumeInput(self, window.data(), now);
+    const footer_y = height - 112;
+    const narrow = width < 980;
+    const controls_height: f32 = if (narrow) 78 else 38;
     {
-        const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .rect = .{ .x = 0, .y = 40, .w = width - 210, .h = 38 } });
+        const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .rect = .{ .x = 0, .y = 0, .w = width, .h = 38 } });
         defer row.deinit();
         var changed = dvui.dropdown(@src(), &.{ "English", "Zig" }, .{ .choice = &self.practice_mode }, .{}, .{ .min_size_content = .{ .w = 125 } });
         changed = dvui.dropdown(@src(), if (self.practice_mode == 0) &.{ "Short · 2 sentences", "Normal · 5 sentences", "Long · 10 sentences" } else &practice.lesson_names, .{ .choice = &self.practice_level }, .{}, .{ .min_size_content = .{ .w = 240 } }) or changed;
-        changed = dvui.dropdown(@src(), &.{ "OS keyboard text", "Unflashed draft layout" }, .{ .choice = &self.practice_source }, .{}, .{ .min_size_content = .{ .w = 225 } }) or changed;
+        if (!narrow) changed = dvui.dropdown(@src(), &.{ "OS keyboard text", "Unflashed draft layout" }, .{ .choice = &self.practice_source }, .{}, .{ .min_size_content = .{ .w = 225 } }) or changed;
         if (changed) {
             self.pausePractice();
             self.practice_active = false;
         }
     }
-    _ = dvui.checkbox(@src(), &self.practice_show_keyboard, "Show companion", .{ .rect = .{ .x = width - 202, .y = 40, .w = 202, .h = 38 }, .tag = "practice.keyboard.toggle" });
-    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d:.0} WPM     {d:.1}% accuracy     {d:.1}s     {s}", .{ self.practice.wpm(now), self.practice.accuracy(), @as(f64, @floatFromInt(self.practice.duration(now))) / 1_000_000, if (!self.practice_active) "Ready" else @tagName(self.practice.state) }), .{ .x = 0, .y = 82, .w = width, .h = 26 }, 18, t.muted, "practice.metrics");
+    if (narrow) {
+        const row = dvui.box(@src(), .{ .dir = .horizontal }, .{ .rect = .{ .x = 0, .y = 40, .w = width - 202, .h = 38 } });
+        defer row.deinit();
+        if (dvui.dropdown(@src(), &.{ "OS keyboard text", "Unflashed draft layout" }, .{ .choice = &self.practice_source }, .{}, .{ .min_size_content = .{ .w = 225 } })) {
+            self.pausePractice();
+            self.practice_active = false;
+        }
+    }
+    _ = dvui.checkbox(@src(), &self.practice_show_keyboard, "Show companion", .{ .rect = .{ .x = width - 202, .y = if (narrow) 40 else 0, .w = 202, .h = 38 }, .tag = "practice.keyboard.toggle" });
+    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d:.0} WPM     {d:.1}% accuracy     {d:.1}s     {s}", .{ self.practice.wpm(now), self.practice.accuracy(), @as(f64, @floatFromInt(self.practice.duration(now))) / 1_000_000, if (!self.practice_active) "Ready" else @tagName(self.practice.state) }), .{ .x = 0, .y = controls_height + 2, .w = width, .h = 26 }, 18, t.muted, "practice.metrics");
     const focus = view.focus(&self.practice);
-    const work_height = footer_y - 132;
-    const hero_height = @min(155, work_height * 0.28);
-    const context_height = if (self.practice_show_keyboard) work_height * 0.28 else work_height - hero_height - 12;
-    focusWord(self, t, .{ .x = 0, .y = 122, .w = width, .h = hero_height }, focus);
-    context(self, t, .{ .x = 0, .y = 134 + hero_height, .w = width, .h = context_height }, focus, now);
-    if (self.practice_show_keyboard) try keyboard(self, t, .{ .x = 0, .y = 146 + hero_height + context_height, .w = width, .h = @max(0, footer_y - (146 + hero_height + context_height) - 12) }, focus);
+    const work_y = controls_height + 34;
+    const work_height = @max(0, footer_y - work_y - 12);
+    const hero_height = @min(125, work_height * 0.23);
+    const context_height = if (self.practice_show_keyboard) work_height * 0.23 else work_height - hero_height - 8;
+    focusWord(self, t, .{ .x = 0, .y = work_y, .w = width, .h = hero_height }, focus);
+    context(self, t, .{ .x = 0, .y = work_y + 8 + hero_height, .w = width, .h = context_height }, focus, now);
+    if (self.practice_show_keyboard) try keyboard(self, t, .{ .x = 0, .y = work_y + 16 + hero_height + context_height, .w = width, .h = @max(0, work_height - hero_height - context_height - 16) }, focus);
     self.practice_drawn_len = self.practice.len;
     if (ui.button(t, if (self.practice_active) "Restart" else "Start", "practice.start", .{ .x = 0, .y = footer_y, .w = 120, .h = 40 })) try self.startPractice(!self.practice_active);
     if (ui.button(t, "New exercise", "practice.new", .{ .x = 130, .y = footer_y, .w = 150, .h = 40 })) {
@@ -239,10 +267,6 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
     if (ui.button(t, "Stop", "practice.stop", .{ .x = 420, .y = footer_y, .w = 100, .h = 40 })) {
         self.pausePractice();
         self.practice_active = false;
-    }
-    if (ui.button(t, "Close", "practice.close", .{ .x = 530, .y = footer_y, .w = 100, .h = 40 })) {
-        self.pausePractice();
-        self.practice_open = false;
     }
     const progress = if (self.practice.reference_len == 0) @as(f32, 0) else @as(f32, @floatFromInt(self.practice.matched())) / @as(f32, @floatFromInt(self.practice.reference_len));
     {

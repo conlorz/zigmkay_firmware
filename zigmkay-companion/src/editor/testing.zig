@@ -337,4 +337,30 @@ test "editor preparation, literal runner output, restart, crash, cancellation an
     controller.poll(try model.id());
     try std.testing.expectEqual(State.stale, controller.state);
     try std.testing.expect(controller.job == null and controller.session.child == null);
+    // Free preview must execute the edited snapshot, rather than the installed
+    // profile or an earlier prepared artifact, and Reset reuses that artifact.
+    model.select(10, false);
+    try model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 5 } } });
+    const edited = try model.id();
+    try controller.prepare(model.current.snapshot);
+    while (controller.state == .preparing) {
+        controller.poll(edited);
+        if (std.Io.Clock.awake.now(io).toMilliseconds() > deadline) return error.PreparationTestTimeout;
+        try std.Io.sleep(io, .fromMilliseconds(5), .awake);
+    }
+    try controller.start();
+    try inspectorTrace(&controller, edited, .{ .key_down = 10 }, 1000, &.{.{ .KeyCodePress = 5 }});
+    var free = @import("text.zig").Text.init(true);
+    defer free.deinit();
+    try free.singleLineOutput(controller.last.?.commands);
+    try std.testing.expectEqualStrings("b", free.value());
+    controller.stop();
+    free.clear();
+    try std.testing.expect(!controller.pressed[10]);
+    try std.testing.expectEqual(State.prepared, controller.state);
+    try controller.start();
+    try inspectorTrace(&controller, edited, .{ .key_down = 10 }, 1000, &.{.{ .KeyCodePress = 5 }});
+    try free.singleLineOutput(controller.last.?.commands);
+    try std.testing.expectEqualStrings("b", free.value());
+    try std.testing.expectEqual(edited, try model.id());
 }
