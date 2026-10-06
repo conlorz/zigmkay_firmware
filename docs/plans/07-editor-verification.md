@@ -36,7 +36,8 @@ board artifacts, root/standalone LK7 parity and the hardware guard. Editor tests
 cover validation, undo/redo, stable IDs, save/reopen, all action fields, Unicode
 editing and real child-process preparation/cancellation/crash/staleness.
 `editor-check` renders all declared editor scenarios in both themes at both
-display densities, checks the seven panel bounds and physical key containment,
+display densities, checks the remaining editor panel bounds, embedded preview
+controls and physical key containment,
 and dispatches actual DVUI input for search, drag/drop, inspector editing,
 layer duplication and history. Inherited, unassigned, mixed, Repeat, validation
 and pending-edit states have dedicated captures. Each child has a 20-second
@@ -91,22 +92,28 @@ mise exec -- zig build run -j4 -- --editor
    conflicting existing files are refused. The drawer shows draft/export IDs,
    stale exports and advisory layer/recovery analysis. The shared-profile build
    commands are in [the project contract](../../keymap-project/README.md).
-5. Click Prepare Test. This explicitly compiles the frozen draft and any attached
-   Zig in an isolated native runner. Start then accepts clicks on physical keys
-   or mapped QWERTY positions from the host keyboard. Details offers key Down/Up
-   for held chords and displays actual commands/events/signals/layers and compiler
-   diagnostics. Stop resets the runner. Any draft change makes preparation stale;
-   focus loss/input-source change stops testing and clears held keys/composition.
-   Media/mouse/recovery commands appear as data; they do not perform OS/device
-   operations. Text uses the selected native EurKEY source on macOS.
+5. Choose Try it out in the main navigation. Apply or discard any pending
+   inspector edits first. Free typing automatically compiles the frozen draft
+   and attached Zig in an isolated native runner, then accepts mapped QWERTY
+   positions while the field is focused. Select EurKEY on macOS. During
+   preparation input is ignored; failures require Retry. Reset text clears the
+   buffer, caret, composition and held state without changing history. The draft
+   companion remains below. Diagnostics expands inline with commands, events,
+   signals, layers, compiler errors and low-level key Down/Up probes.
+   Choose Typing Test for the existing English/Zig exercises and OS/draft source
+   choices. Switching modes preserves separate buffers and pauses a test;
+   returning requires Resume. Leaving the view or losing focus releases the
+   runner. A changed snapshot/input source clears free text with an explanation.
+   Media/mouse/recovery commands remain data; they perform no OS/device actions.
 6. Click the callback filename/Attach source to manage callbacks. Supply the
    callback IDs, source root and relative Zig entry. Attachment freezes the
    literal import closure. Save first, then Open externally checks out a mirror
    and invokes the external editor. Checking the mirror detects changed/missing
    bytes; Refresh explicitly imports edits as an undoable snapshot. Registered
    sources remain read-only. Source refresh is never implicit on Save.
-7. Switch dark/light. Resize to the supported minimum 900 × 600; the 1536 × 1024
-   reference canvas scales together with its dialogs and click targets. The default
+7. Switch dark/light in Editor. Resize to the supported minimum 900 × 600;
+   the editor canvas and navigation scale together with dialogs and click
+   targets, while Try it out uses the full available content width. The default
    window is 1152 × 768. Whole-canvas scrolling was replaced by user request on
    2026-10-05. The companion's offline
    overlay has Open editor, preserving independent native windows.

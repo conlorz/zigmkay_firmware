@@ -1,14 +1,21 @@
 # Central milestone tracker
 
-## Unified Try it out view planning (2026-10-06)
+## Unified Try it out view implementation (2026-10-06)
 
 The user selected variant A, with the companion below the typing area, and
 requested [plan 15](15-try-it-out.md). It combines draft testing and Practice
 under two main views, Editor and Try it out, with free typing as the baseline
 and the existing typing test available by button. The selected
 [mockup](mockups/try-it-out/01-companion-below.png) is retained as design reference.
-Planning is complete; implementation is pending a subsequent user request.
-No application behavior, test-engine behavior or hardware gate has changed.
+The subsequent full implementation request is complete locally through
+`0743834`: automatic free draft preview, separate free/test buffers, persistent
+navigation, inline typing test/diagnostics and the current draft companion.
+The typing engine and frozen export/runner contracts remain unchanged.
+Package/aggregate checks, 207 native captures and 16 additional resized semantic
+runs pass. Approved goldens remain intact; their expected visual mismatch and
+pending replacement review are recorded in the
+[handover](handovers/07-editor.md#selected-follow-up-unified-try-it-out-view-2026-10-06).
+All worker leases are released. No hardware gate, push or PR is included.
 
 ## Docked key inspector implementation (2026-10-06)
 

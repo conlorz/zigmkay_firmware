@@ -12,8 +12,66 @@ launcher and Practice modal with Editor/Try it out main navigation, a free draft
 typing field with Reset text, and an inline Typing Test mode using the existing
 engine and functions. It specifies input ownership, automatic free-preview
 preparation, snapshot freshness, companion identity and native offline checks.
-Planning is complete; implementation has not started and needs a subsequent
-request. Design selection does not replace approved goldens or accept hardware.
+The subsequent full implementation request is complete locally. Starting tree:
+clean `394f790` on `local/monorepo`. State/text checkpoint `438ea6c`, unified
+presentation `f33c687`, cleanup/documentation `f65106c`, responsive width
+`2e036ec`, snapshot/failure handling `e081fd3`, translation/source diagnostics
+`183cadc` and valid-session probe handling `0743834` implement the selected view.
+All delegated file leases are released; the coordinator owns future integration.
+
+Editor and Try it out are persistent main views. Pending inspector edits use
+the existing Apply/Discard/Keep editing path. Free typing prepares/starts the
+immutable applied draft automatically while focused, validates EurKEY, ignores
+input during preparation and offers explicit Retry after failure. Its separate
+UTF-8 buffer preserves text across navigation; Reset clears bytes, caret,
+composition and held state without changing history or the scored session.
+Project/snapshot/input-source replacement clears it with an inline explanation.
+Control characters and non-text commands stay diagnostic data. Field blur
+releases physical input while retaining a valid session for explicit diagnostic
+probes; a sequence boundary rejects older output on refocus. Mode/tab/window
+departure stops the runner, releases holds and pauses a test without resuming it.
+
+The existing test engine, corpora, scoring, correction feedback, word focus,
+context scrolling, paste preview, source choices, TAP/HOLD guidance and session
+bests remain intact. The former Practice modal, Close action and Editor draft
+launcher are removed. Test controls sit above the generous embedded companion;
+free guidance always uses the draft, while verified live guidance is labelled
+separately and stale live sources remain visibly stale. Diagnostics expands
+inline. Callback controls remain in Editor. `--practice` enters Try it out /
+Typing Test; normal startup remains Editor. The preview fills available width
+and retains the native canvas scaling at both supported sizes and densities.
+
+Verification on production revision `0743834` (Zig 0.16.0 through mise):
+
+- `mise exec -- zig version`: `0.16.0`.
+- `mise //zigmkay-companion:test`: passed, including lifecycle tickets, Unicode
+  editing/control filtering and the real offline processor trace for edited
+  key 10 emitting B. Held-key release keeps that process running; Reset/restart
+  reuses the prepared artifact and leaves the model identity unchanged.
+- `mise //zigmkay-companion:editor-check`: passed 207 captures, containment,
+  native pixel readback, duplicate-widget checks and semantic interactions.
+  Both modes, themes, 1×/2× densities, 1152 × 768 and 900 × 600 are covered.
+- Sixteen additional `zig build run -j4 -- --editor --fixture` runs passed with
+  `--scenario free_input` / `practice_input`, both supported window sizes,
+  `--density 1` / `2`, dark/light and `--screenshot` outputs prefixed
+  `semantic-` in `.zig-cache/editor-acceptance/`. These exercise navigation,
+  independent buffers, Unicode/composition reset, held state, Space after a
+  control, test corrections, deliberate resume, focus loss and paste preview.
+- `mise //:check`: passed all aggregate package/generated checks and the
+  unchanged-source/hardware guard. No hardware tool executed.
+- Pinned `zig fmt --check` on changed Zig files and `git diff --check`: passed.
+- `mise //zigmkay-companion:editor-golden-check`: expected failure against the
+  old dark 1× normal baseline (`GoldenImageMismatch`, mean RGB delta
+  16.8837/255; 735627 significant pixels). Baselines and tolerances are unchanged.
+
+Native captures remain in `.zig-cache/editor-acceptance/`. Representative free,
+long Unicode, test/context and diagnostics images were inspected against
+variant A, including minimum-size and light/2× evidence. Keys, current character
+and actions remain contained. Captures normalize to 1536 × 1024, so minimum 1×
+images are upscaled for comparison. Replacement-golden visual review remains
+pending; design selection is not approval to overwrite native goldens.
+No firmware, dependency, shared build API, C bridge or committed generated source
+changed. No hardware acceptance, push or PR is claimed.
 
 ## Selected follow-up: docked key inspector (2026-10-06)
 

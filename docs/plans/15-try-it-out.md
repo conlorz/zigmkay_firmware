@@ -1,8 +1,11 @@
 # 15: Unified Try it out view
 
-Status: **design selected; implementation pending**, 2026-10-06.
+Status: **implemented and verified offline**, 2026-10-06.
 The user selected **variant A, Companion below**, and requested this plan.
-This request authorizes planning only. Implementation needs a subsequent request.
+The subsequent request to implement this plan fully authorized the offline work.
+Implementation and verification are recorded in the
+[editor handover](handovers/07-editor.md#selected-follow-up-unified-try-it-out-view-2026-10-06).
+Approved regression goldens remain unchanged pending replacement review.
 
 Baseline: `fed01c97c95f08ed0296c45fbbd9d8a0a421cd14` on `local/monorepo`.
 Recheck HEAD and the working tree before implementation. Use Zig 0.16.0 and
