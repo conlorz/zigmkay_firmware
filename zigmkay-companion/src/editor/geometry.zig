@@ -4,11 +4,11 @@ pub const Panel = enum { toolbar, sidebar, physical, inspector, os, testing, cal
 pub const reference = [7]Rect{
     .{ .x = 0, .y = 0, .w = 1536, .h = 67 },
     .{ .x = 15, .y = 77, .w = 247, .h = 932 },
-    .{ .x = 273, .y = 77, .w = 869, .h = 445 },
-    .{ .x = 1153, .y = 77, .w = 368, .h = 445 },
-    .{ .x = 273, .y = 533, .w = 1248, .h = 380 },
-    .{ .x = 273, .y = 923, .w = 785, .h = 87 },
-    .{ .x = 1068, .y = 923, .w = 453, .h = 87 },
+    .{ .x = 273, .y = 77, .w = 796, .h = 425 },
+    .{ .x = 1081, .y = 77, .w = 440, .h = 932 },
+    .{ .x = 273, .y = 514, .w = 796, .h = 298 },
+    .{ .x = 273, .y = 824, .w = 796, .h = 87 },
+    .{ .x = 273, .y = 923, .w = 796, .h = 87 },
 };
 pub const initial = Rect{ .x = 0, .y = 0, .w = 1152, .h = 768 };
 pub const minimum = Rect{ .x = 0, .y = 0, .w = 900, .h = 600 };

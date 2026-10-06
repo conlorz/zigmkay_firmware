@@ -11,6 +11,8 @@ pub const Operation = union(enum) {
     tap_usage: u8,
     tap_dead: bool,
     tap_one_shot: ?p.Hold,
+    one_shot_layer: ?p.LayerId,
+    one_shot_custom: ?u8,
     tap_custom: ?u8,
     tap_media: ?types.MediaCode,
     tap_mouse: ?types.MouseAction,
@@ -137,6 +139,16 @@ pub const Session = struct {
         self.* = try init(model);
         return true;
     }
+    pub fn validate(self: *const Session, model: *const Model) !void {
+        if (try self.stale(model)) return error.StaleSession;
+        var layers: [p.Limits.layers]p.Layer = undefined;
+        const count = model.document().layers.len;
+        @memcpy(layers[0..count], model.document().layers);
+        layers[self.layer_index].actions = &self.drafts;
+        var snapshot = model.current.snapshot;
+        snapshot.document.layers = layers[0..count];
+        try p.snapshot.validate(snapshot, p.profiles.board);
+    }
     pub fn mutate(self: *Session, op: Operation) void {
         for (self.selected, 0..) |selected, i| {
             if (!selected) continue;
@@ -172,6 +184,16 @@ pub const Session = struct {
                     t.key_press = key;
                 },
                 .tap_one_shot => |v| t.one_shot = v,
+                .one_shot_layer => |v| {
+                    var one = t.one_shot orelse p.Hold{};
+                    one.layer_id = v;
+                    t.one_shot = if (holdEmpty(one)) null else one;
+                },
+                .one_shot_custom => |v| {
+                    var one = t.one_shot orelse p.Hold{};
+                    one.custom = v;
+                    t.one_shot = if (holdEmpty(one)) null else one;
+                },
                 .tap_custom => |v| t.custom = v,
                 .tap_media => |v| t.media_key = v,
                 .tap_mouse => |v| t.mouse_action = v,
@@ -264,13 +286,16 @@ pub const Session = struct {
 test "session preserves compound components and clears each side explicitly" {
     var model = try Model.init(std.testing.allocator, .eurkey);
     defer model.deinit();
-    const compound: p.Action = .{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 4, .dead = true }, .media_key = .VolumeUp, .mouse_action = .LeftButton, .one_shot = .{ .layer_id = 2 } }, .hold = .{ .hold_modifiers = .{ .left_shift = true }, .layer_id = 2 }, .tapping_term = .{ .ms = 231 }, .retro_tapping = true } };
+    try @import("fixture.zig").setup(&model);
+    const compound: p.Action = .{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 4, .dead = true }, .custom = 1, .media_key = .VolumeUp, .mouse_action = .LeftButton, .one_shot = .{ .layer_id = 2, .custom = 1, .hold_modifiers = .{ .right_alt = true } } }, .hold = .{ .hold_modifiers = .{ .left_shift = true }, .layer_id = 2, .custom = 1 }, .tapping_term = .{ .ms = 231 }, .retro_tapping = true } };
     try model.apply(compound);
     var session = try Session.init(&model);
     session.mutate(.{ .tap_media = null });
     try std.testing.expectEqualDeep(compound.tap_hold.hold, session.first().?.tap_hold.hold);
     try std.testing.expectEqualDeep(compound.tap_hold.tap.key_press, session.first().?.tap_hold.tap.key_press);
     try std.testing.expectEqual(@as(u16, 231), session.first().?.tap_hold.tapping_term.ms);
+    try std.testing.expectEqualDeep(compound.tap_hold.tap.one_shot, session.first().?.tap_hold.tap.one_shot);
+    try std.testing.expectEqual(compound.tap_hold.tap.custom, session.first().?.tap_hold.tap.custom);
     session.mutate(.clear_hold);
     try std.testing.expect(session.first().? == .tap_only);
     session.cancel();
@@ -340,6 +365,9 @@ test "inheritance previews stage local overrides while invalid and stale applies
 test "repeat conversions preserve tap fields and save reopen export identity" {
     var model = try Model.init(std.testing.allocator, .eurkey);
     defer model.deinit();
+    try @import("fixture.zig").setup(&model);
+    const callback_bytes = try std.testing.allocator.dupe(u8, model.current.snapshot.sources[0].bytes);
+    defer std.testing.allocator.free(callback_bytes);
     try model.apply(.{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 252 }, .media_key = .VolumeUp }, .hold = .{ .layer_id = 2 }, .tapping_term = .{ .ms = 231 } } });
     var session = try Session.init(&model);
     session.mutate(.{ .mode = .repeat });
@@ -353,9 +381,38 @@ test "repeat conversions preserve tap fields and save reopen export identity" {
     try model.apply(.none);
     try model.open(std.testing.io, temporary.dir);
     try std.testing.expectEqual(identity, try model.id());
+    try std.testing.expectEqualStrings(callback_bytes, model.current.snapshot.sources[0].bytes);
+    try std.testing.expectEqual(@as(u8, 1), model.document().callbacks[0].ids[0]);
     var exported = try temporary.dir.createDirPathOpen(std.testing.io, "export", .{});
     defer exported.close(std.testing.io);
     const manifest = try p.exporter.write(std.testing.allocator, std.testing.io, exported, model.current.snapshot, p.profiles.board);
     defer std.zon.parse.free(std.testing.allocator, manifest);
     try std.testing.expectEqual(identity, manifest.snapshot_id);
+}
+
+test "bulk key and one-shot field edits retain each key's chord and callback" {
+    var model = try Model.init(std.testing.allocator, .eurkey);
+    defer model.deinit();
+    try @import("fixture.zig").setup(&model);
+    try model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 4, .dead = true, .tap_modifiers = .{ .left_alt = true } }, .one_shot = .{ .custom = 1, .hold_modifiers = .{ .left_gui = true } } } });
+    model.select(11, false);
+    try model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 22, .tap_modifiers = .{ .right_shift = true } }, .one_shot = .{ .layer_id = 2, .hold_modifiers = .{ .right_alt = true } } } });
+    model.select(10, true);
+    var session = try Session.init(&model);
+    session.mutate(.{ .tap_usage = 5 });
+    session.mutate(.{ .one_shot_layer = 3 });
+    try session.validate(&model);
+    try std.testing.expect(try session.apply(&model));
+    const first = model.document().layers[model.layer].actions[10].?.tap_only;
+    const second = model.document().layers[model.layer].actions[11].?.tap_only;
+    try std.testing.expect(first.key_press.?.dead);
+    try std.testing.expect(!second.key_press.?.dead);
+    try std.testing.expect(first.key_press.?.tap_modifiers.left_alt);
+    try std.testing.expect(second.key_press.?.tap_modifiers.right_shift);
+    try std.testing.expectEqual(@as(?u8, 1), first.one_shot.?.custom);
+    try std.testing.expectEqual(@as(?u8, null), second.one_shot.?.custom);
+    try std.testing.expect(first.one_shot.?.hold_modifiers.left_gui);
+    try std.testing.expect(second.one_shot.?.hold_modifiers.right_alt);
+    try std.testing.expectEqual(@as(?p.LayerId, 3), first.one_shot.?.layer_id);
+    try std.testing.expectEqual(@as(?p.LayerId, 3), second.one_shot.?.layer_id);
 }

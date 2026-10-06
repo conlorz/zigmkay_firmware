@@ -25,6 +25,26 @@ pub fn setup(editor: anytype, state: State) !void {
             }
         },
         .normal, .key_drag => {},
+        .inspector_inherited => {
+            try editor.model.apply(null);
+            try editor.ensureSession();
+        },
+        .inspector_unassigned => {
+            try editor.model.apply(.none);
+            try editor.ensureSession();
+        },
+        .inspector_repeat => {
+            try editor.ensureSession();
+            editor.edit_session.?.mutate(.{ .mode = .repeat });
+            editor.edit_session.?.mutate(.{ .initial_delay = 250 });
+            editor.edit_session.?.mutate(.{ .repeat_interval = 60 });
+            editor.inspector_state.conversion = true;
+        },
+        .inspector_pending => {
+            try editor.ensureSession();
+            editor.edit_session.?.mutate(.{ .tap_usage = 5 });
+            try editor.request(.{ .select = .{ .index = 11, .extend = false } });
+        },
         .paths => editor.paths_open = true,
         .callback_editor => editor.callback_open = true,
         .no_device => editor.connection_text = "Offline · No device",
@@ -36,13 +56,29 @@ pub fn setup(editor: anytype, state: State) !void {
         },
         .deletion_constraint => editor.model.deleteLayer(1) catch |err| editor.report(err),
         .combo => editor.combo_open = true,
-        .advanced, .key_search => editor.openAction(),
+        .advanced => {
+            try editor.model.apply(.{ .tap_hold = .{
+                .tap = .{ .key_press = .{ .tap_keycode = 4, .tap_modifiers = .{ .left_alt = true }, .dead = true }, .one_shot = .{ .hold_modifiers = .{ .right_shift = true }, .layer_id = 2, .custom = 1 }, .media_key = .VolumeUp, .mouse_action = .WheelDown, .custom = 1 },
+                .hold = .{ .hold_modifiers = .{ .left_gui = true }, .layer_id = 2, .custom = 1 },
+                .tapping_term = .{ .ms = 231 },
+                .retro_tapping = true,
+            } });
+            editor.openAction();
+        },
+        .key_search => try editor.ensureSession(),
         .dirty => try editor.model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 5 } } }),
         .wrong_identity => {
             editor.connection_text = "Fixture · profile mismatch";
             editor.report(error.DeviceProfileMismatchDraftNotLive);
         },
-        .validation => editor.model.apply(.{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 4 } }, .hold = .{ .layer_id = 2 }, .tapping_term = .{ .ms = 0 } } }) catch |err| editor.report(err),
+        .validation => {
+            try editor.ensureSession();
+            editor.edit_session.?.mutate(.{ .tapping_term = 0 });
+            _ = editor.applySession() catch |err| {
+                editor.reportInspector(err);
+                return;
+            };
+        },
         .callback_missing => editor.callback_state = .missing,
         .callback_changed => editor.callback_state = .changed,
         .test_preparing => editor.testing.state = .preparing,
@@ -97,7 +133,15 @@ pub fn verifyPanels(scale: f32) !void {
         for (values, targets) |value, target| if (@abs(value - target) > 4) return error.PanelGeometryMismatch;
     }
     const selected = dvui.tagGet("key.select.10") orelse return error.MissingKeyTag;
-    if (!selected.visible or @abs(selected.rect.w / scale - 65) > 1) return error.KeyGeometryMismatch;
+    if (!selected.visible or @abs(selected.rect.w / scale - 59) > 1) return error.KeyGeometryMismatch;
+    for (0..34) |index| {
+        const tag = try std.fmt.allocPrint(dvui.currentWindow().arena(), "key.select.{d}", .{index});
+        const key = dvui.tagGet(tag) orelse return error.MissingKeyTag;
+        const panel = dvui.tagGet("physical") orelse return error.MissingPanelTag;
+        if (!key.visible or key.rect.x < panel.rect.x or key.rect.y < panel.rect.y or key.rect.x + key.rect.w > panel.rect.x + panel.rect.w or key.rect.y + key.rect.h > panel.rect.y + panel.rect.h) return error.ClippedPhysicalKey;
+    }
+    const footer = dvui.tagGet("advanced.apply") orelse return error.MissingApplyButton;
+    if (!footer.visible or footer.rect.y + footer.rect.h > dvui.currentWindow().rect_pixels.h) return error.ClippedApplyButton;
 }
 /// Dispatches a click through DVUI's actual input path using semantic rectangles.
 /// Call before draw on the next frame. Tags and input both use physical pixels.

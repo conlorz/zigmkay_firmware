@@ -34,6 +34,17 @@ pub fn button(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect) bool {
     var data: dvui.WidgetData = undefined;
     return buttonData(t, text, tag, r, &data);
 }
+pub fn buttonEnabled(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect, enabled: bool) bool {
+    if (enabled) return button(t, text, tag, r);
+    var opts = options(t, r, 15);
+    opts.tag = tag;
+    opts.id_extra = std.hash.Wyhash.hash(0, tag);
+    opts.background = true;
+    opts.color_text = .{ .color = t.muted };
+    opts.font = fonts.font(text, 15);
+    dvui.labelNoFmt(@src(), text, .{ .align_x = 0.5, .align_y = 0.5 }, opts);
+    return false;
+}
 pub fn buttonData(t: Theme, text: []const u8, tag: []const u8, r: dvui.Rect, data: *dvui.WidgetData) bool {
     var opts = options(t, r, 13);
     opts.font = fonts.font(text, 15);

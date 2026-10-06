@@ -15,7 +15,7 @@ pub fn main(init: std.process.Init) !void {
             var argv: std.ArrayList([]const u8) = .empty;
             try argv.appendSlice(a, &.{ args[1], "--editor", "--screenshot", path, "--scenario", field.name, "--density", try std.fmt.allocPrint(a, "{d}", .{density}) });
             if (light) try argv.append(a, "--light");
-            if (std.mem.eql(u8, field.name, "normal")) try argv.appendSlice(a, &.{ "--compare-reference", if (light) "docs/plans/mockups/editor-02-light-layer-sidebar.png" else "docs/plans/mockups/editor-04-dark-layer-sidebar.png" });
+            if (!light and std.mem.eql(u8, field.name, "normal")) try argv.appendSlice(a, &.{ "--compare-reference", "docs/plans/mockups/key-creation/02-inspector-dark-macos.png" });
             if (args.len == 3 and std.mem.eql(u8, field.name, "normal")) try argv.appendSlice(a, &.{ "--compare-golden", try std.fmt.allocPrint(a, "{s}/{s}-{d}x-normal.png", .{ args[2], if (light) "light" else "dark", density }) });
             var owned = try jobs.run(init.gpa, init.io, .{ .argv = argv.items, .cwd = ".", .snapshot_id = @splat(0), .timeout_ms = 20000 });
             defer owned.deinit(init.gpa);

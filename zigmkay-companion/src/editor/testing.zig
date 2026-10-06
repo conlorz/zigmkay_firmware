@@ -4,6 +4,77 @@ const std = @import("std");
 const p = @import("keymap-project");
 const jobs = @import("companion-jobs");
 const wire = @import("runner-protocol");
+
+fn inspectorTrace(controller: *Controller, id: [32]u8, command: wire.Command, time: u64, expected: []const @import("zigmkay").core.OutputCommand) !void {
+    const sequence = controller.sequence + 1;
+    try controller.input(command, time);
+    const deadline = std.Io.Clock.awake.now(controller.io).toMilliseconds() + 10_000;
+    while (true) {
+        controller.poll(id);
+        if (controller.state != .running) return error.InspectorRunnerStopped;
+        if (controller.last) |output| if (output.sequence == sequence) {
+            try std.testing.expectEqualDeep(expected, output.commands);
+            return;
+        };
+        if (std.Io.Clock.awake.now(controller.io).toMilliseconds() > deadline) return error.InspectorTraceTimeout;
+        try std.Io.sleep(controller.io, .fromMilliseconds(1), .awake);
+    }
+}
+
+test "inspector clearing and inheritance produce real processor traces" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    const root = try std.Io.Dir.cwd().realPathFileAlloc(io, "..", gpa);
+    defer gpa.free(root);
+    const editing = @import("session.zig");
+    for (0..4) |case| {
+        var model = try @import("model.zig").Model.init(gpa, .eurkey);
+        defer model.deinit();
+        // An explicit held layer makes fallback independent of the built-in profile.
+        model.select(31, false);
+        try model.apply(.{ .hold_only = .{ .layer_id = model.document().layers[1].id } });
+        model.select(10, false);
+        try model.apply(.{ .tap_only = .{ .key_press = .{ .tap_keycode = 4 } } });
+        model.layer = 1;
+        try model.apply(.{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 5 } }, .hold = .{ .hold_modifiers = .{ .left_gui = true } }, .tapping_term = .{ .ms = 180 } } });
+        var session = try editing.Session.init(&model);
+        session.mutate(switch (case) {
+            0 => .unassign,
+            1 => .inherit,
+            2 => .clear_hold,
+            else => .clear_tap,
+        });
+        try std.testing.expect(try session.apply(&model));
+        const id = try model.id();
+        var controller = try Controller.init(gpa, io, root);
+        defer controller.deinit();
+        try controller.prepare(model.current.snapshot);
+        const deadline = std.Io.Clock.awake.now(io).toMilliseconds() + 60_000;
+        while (controller.state == .preparing) {
+            controller.poll(id);
+            if (std.Io.Clock.awake.now(io).toMilliseconds() > deadline) return error.InspectorPreparationTimeout;
+            try std.Io.sleep(io, .fromMilliseconds(5), .awake);
+        }
+        try std.testing.expectEqual(State.prepared, controller.state);
+        try controller.start();
+        try inspectorTrace(&controller, id, .{ .key_down = 31 }, 1000, &.{});
+        const down: []const @import("zigmkay").core.OutputCommand = switch (case) {
+            0 => &.{},
+            1 => &.{.{ .KeyCodePress = 4 }},
+            2 => &.{.{ .KeyCodePress = 5 }},
+            else => &.{.{ .ModifiersChanged = .{ .left_gui = true } }},
+        };
+        const up: []const @import("zigmkay").core.OutputCommand = switch (case) {
+            0 => &.{},
+            1 => &.{.{ .KeyCodeRelease = 4 }},
+            2 => &.{.{ .KeyCodeRelease = 5 }},
+            else => &.{.{ .ModifiersChanged = .{} }},
+        };
+        try inspectorTrace(&controller, id, .{ .key_down = 10 }, 2000, down);
+        try inspectorTrace(&controller, id, .{ .key_up = 10 }, 3000, up);
+        try inspectorTrace(&controller, id, .{ .key_up = 31 }, 4000, &.{});
+    }
+}
 pub const State = enum { idle, preparing, prepared, running, stale, failed };
 pub const Controller = struct {
     gpa: std.mem.Allocator,
