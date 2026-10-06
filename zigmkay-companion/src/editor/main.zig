@@ -181,6 +181,7 @@ pub const Editor = struct {
         var dir = try std.Io.Dir.cwd().openDir(self.io, path, .{});
         defer dir.close(self.io);
         try self.model.open(self.io, dir);
+        self.clearFreeProject();
         // path can borrow the input buffer; retain bytes before clearing it.
         var buffer: [1024]u8 = @splat(0);
         @memcpy(buffer[0..path.len], path);
@@ -231,8 +232,18 @@ pub const Editor = struct {
             @memcpy(self.project_path[0..directory.len], directory);
             try self.rememberProject();
         }
+        self.clearFreeProject();
         self.model.layer = 0;
         self.syncRename();
+    }
+    fn clearFreeProject(self: *Editor) void {
+        self.testing.stop();
+        self.free_text.clear();
+        self.free_snapshot = null;
+        self.free_failed = false;
+        self.free_pending = false;
+        self.preview.invalidate();
+        self.preview_notice = "Project changed · free text cleared for the new snapshot.";
     }
     pub fn deinit(self: *Editor) void {
         if (self.bootloader) |*attempt| attempt.driver.transport.close();
@@ -378,7 +389,7 @@ pub const Editor = struct {
             dvui.focusWidget(null, null, null);
             return true;
         }
-        const owns_runner = self.main_view == .try_it_out and self.window_focused and (if (self.try_mode == .free_typing) self.free_focus else self.practice_active and self.practice.source == .draft and (self.practice.state == .running or self.practice.state == .ready));
+        const owns_runner = self.main_view == .try_it_out and self.window_focused and (if (self.try_mode == .free_typing) self.free_focus and !self.free_failed else self.practice_active and self.practice.source == .draft and (self.practice.state == .running or self.practice.state == .ready));
         if (owns_runner and self.testing.state == .running) {
             if (event.type == sdl.SDL_EVENT_TEXT_INPUT and event.text.windowID == self.window_id) return true;
             if ((event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) and event.key.windowID == self.window_id) {
@@ -780,6 +791,8 @@ pub const Editor = struct {
             try @import("practice_drawer.zig").draw(self, t, .{ .x = 0, .y = 80, .w = width, .h = work_height });
         } else {
             self.prepareFree() catch |err| {
+                self.testing.stop();
+                self.free_text.reset();
                 self.free_failed = true;
                 self.free_pending = false;
                 self.preview.preparation = .failed;
