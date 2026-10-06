@@ -4,6 +4,7 @@
     .fingerprint = 0xf34c18abb2711003,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
+        .ztray = .{ .url = "git+https://github.com/StaffinityAI/ztray.git#45877349ae4303a99008b86bf28411638889380e", .hash = "ztray-0.1.0-dev.1-HZHL7Ia4BwBeGve2XpCeCR0cQ_5xTdupgMzOyceJ6BeY" },
         .zig_flash = .{ .path = "../zig-flash" },
         .keymap_project = .{ .path = "../keymap-project" },
         .companion_jobs = .{ .path = "../companion-jobs" },

@@ -5,6 +5,10 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     const display = b.createModule(.{ .root_source_file = root.path(b, "src/lk7_keymap.zig"), .imports = &.{ .{ .name = "firmware_keymap", .module = shared.keymap }, .{ .name = "zigmkay", .module = shared.core }, .{ .name = "device-protocol", .module = shared.protocol } } });
     const dvui = deps.dependency("dvui", .{ .target = b.graph.host, .optimize = .Debug, .backend = .sdl3 });
     const icons = deps.dependency("icons", .{});
+    const tray_dep = deps.dependency("ztray", .{});
+    const tray_api = @import("ztray");
+    const menu_module = tray_api.createZmenuModule(tray_dep.builder, b.graph.host, .Debug);
+    const tray_module = tray_api.createZtrayModule(tray_dep.builder, b.graph.host, .Debug, menu_module);
     const toolchain = b.addOptions();
     toolchain.addOption([]const u8, "zig_exe", b.graph.zig_exe);
     toolchain.addOption([]const u8, "build_root", b.build_root.path orelse ".");
@@ -15,6 +19,7 @@ pub fn publish(b: *std.Build, root: std.Build.LazyPath, deps: *std.Build, shared
     } });
     const exe = b.addExecutable(.{ .name = "zigmkay_companion", .root_module = module });
     module.addOptions("editor-toolchain", toolchain);
+    module.addImport("ztray", tray_module);
     module.addImport("zkeycodes", shared.keycodes);
     const tests = b.addRunArtifact(b.addTest(.{ .root_module = module }));
     tests.setCwd(root);
