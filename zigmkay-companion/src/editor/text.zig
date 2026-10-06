@@ -20,6 +20,13 @@ pub const Text = struct {
         self.fixture_dead = false;
         if (self.native_session) |*session| session.reset();
     }
+    /// Clear text and caret as well as pending composition and modifiers.
+    pub fn clear(self: *Text) void {
+        @memset(self.bytes[0..self.len], 0);
+        self.len = 0;
+        self.cursor = 0;
+        self.reset();
+    }
     pub fn refresh(self: *Text) bool {
         if (self.native_session) |*session| return session.refresh();
         return false;
@@ -75,6 +82,24 @@ pub const Text = struct {
         };
     }
     pub fn output(self: *Text, commands: []const core.OutputCommand) !void {
+        try self.outputMode(commands, false);
+    }
+    pub fn singleLineOutput(self: *Text, commands: []const core.OutputCommand) !void {
+        try self.outputMode(commands, true);
+    }
+    /// Filter translated control characters without splitting UTF-8 scalars.
+    pub fn insertSingleLine(self: *Text, bytes: []const u8) !void {
+        if (!std.unicode.utf8ValidateSlice(bytes)) return error.InvalidUnicode;
+        var start: usize = 0;
+        for (bytes, 0..) |byte, index| {
+            if (byte != '\n' and byte != '\r' and byte != '\t') continue;
+            try self.insert(bytes[start..index]);
+            self.logged += 1;
+            start = index + 1;
+        }
+        try self.insert(bytes[start..]);
+    }
+    fn outputMode(self: *Text, commands: []const core.OutputCommand, single_line: bool) !void {
         for (commands) |command| switch (command) {
             .ModifiersChanged => |mods| self.mods = mods,
             .KeyCodeRelease => {},
@@ -88,8 +113,12 @@ pub const Text = struct {
                     continue;
                 }
                 switch (code) {
-                    40 => try self.insert("\n"),
-                    43 => try self.insert("\t"),
+                    40 => if (single_line) {
+                        self.logged += 1;
+                    } else try self.insert("\n"),
+                    43 => if (single_line) {
+                        self.logged += 1;
+                    } else try self.insert("\t"),
                     42 => self.erase(self.previous(), self.cursor),
                     76 => self.erase(self.cursor, self.next()),
                     80 => self.cursor = self.previous(),
@@ -99,7 +128,7 @@ pub const Text = struct {
                     else => {
                         var buffer: [128]u8 = undefined;
                         const bytes = if (self.native_session) |*session| try session.translate(.{ .tap_keycode = code, .tap_modifiers = self.mods }, &buffer) else self.fixture(code, &buffer);
-                        try self.insert(bytes);
+                        if (single_line) try self.insertSingleLine(bytes) else try self.insert(bytes);
                     },
                 }
             },
@@ -158,4 +187,21 @@ test "draft practice uses composed text and counts corrections without navigatio
     try std.testing.expectEqual(@import("practice.zig").State.complete, session.state);
     try std.testing.expectEqual(@as(usize, 7), session.attempts);
     try std.testing.expectEqual(@as(usize, 1), session.corrected);
+}
+
+test "single line text filters translated controls and edits Unicode safely" {
+    var text = Text.init(true);
+    defer text.deinit();
+    try text.insertSingleLine("é\nß\t🙂\r");
+    try std.testing.expectEqualStrings("éß🙂", text.value());
+    try text.singleLineOutput(&.{ .{ .KeyCodePress = 80 }, .{ .KeyCodePress = 42 }, .{ .KeyCodePress = 40 }, .{ .KeyCodePress = 43 } });
+    try std.testing.expectEqualStrings("é🙂", text.value());
+    try std.testing.expectEqual(@as(usize, 2), text.cursor);
+    try std.testing.expectEqual(@as(usize, 5), text.logged);
+    try text.singleLineOutput(&.{ .{ .ModifiersChanged = .{ .left_alt = true } }, .{ .KeyCodePress = 52 } });
+    text.clear();
+    try std.testing.expectEqualStrings("", text.value());
+    try std.testing.expectEqual(@as(usize, 0), text.cursor);
+    try text.singleLineOutput(&.{.{ .KeyCodePress = 8 }});
+    try std.testing.expectEqualStrings("e", text.value());
 }
