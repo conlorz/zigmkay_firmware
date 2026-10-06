@@ -10,7 +10,7 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
         const area = dvui.scrollArea(@src(), .{}, .{ .rect = .{ .x = 0, .y = 0, .w = window.data().rect.w - 36, .h = window.data().rect.h - 112 } });
         defer area.deinit();
         dvui.label(@src(), "Callbacks · immutable source snapshots · external Zig editing", .{}, .{});
-        dvui.label(@src(), "Attaching/refreshing reads bytes only. Prepare Test explicitly executes compilation/callbacks.", .{}, .{});
+        dvui.label(@src(), "Attaching/refreshing reads bytes only. Try it out compiles and runs draft callbacks offline.", .{}, .{});
         {
             const entry = dvui.textEntry(@src(), .{ .text = .{ .buffer = &self.callback_root }, .placeholder = "Source root directory" }, .{ .expand = .horizontal });
             entry.deinit();

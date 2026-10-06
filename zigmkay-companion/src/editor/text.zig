@@ -92,7 +92,7 @@ pub const Text = struct {
         if (!std.unicode.utf8ValidateSlice(bytes)) return error.InvalidUnicode;
         var start: usize = 0;
         for (bytes, 0..) |byte, index| {
-            if (byte != '\n' and byte != '\r' and byte != '\t') continue;
+            if (byte >= 0x20 and byte != 0x7f) continue;
             try self.insert(bytes[start..index]);
             self.logged += 1;
             start = index + 1;
@@ -127,7 +127,13 @@ pub const Text = struct {
                     77 => self.cursor = self.len,
                     else => {
                         var buffer: [128]u8 = undefined;
-                        const bytes = if (self.native_session) |*session| try session.translate(.{ .tap_keycode = code, .tap_modifiers = self.mods }, &buffer) else self.fixture(code, &buffer);
+                        const bytes = if (self.native_session) |*session| session.translate(.{ .tap_keycode = code, .tap_modifiers = self.mods }, &buffer) catch |err| {
+                            if (single_line and err == error.UnsupportedUsage) {
+                                self.logged += 1;
+                                continue;
+                            }
+                            return err;
+                        } else self.fixture(code, &buffer);
                         if (single_line) try self.insertSingleLine(bytes) else try self.insert(bytes);
                     },
                 }
@@ -192,12 +198,12 @@ test "draft practice uses composed text and counts corrections without navigatio
 test "single line text filters translated controls and edits Unicode safely" {
     var text = Text.init(true);
     defer text.deinit();
-    try text.insertSingleLine("é\nß\t🙂\r");
+    try text.insertSingleLine("é\nß\t🙂\r\x1b\x7f");
     try std.testing.expectEqualStrings("éß🙂", text.value());
     try text.singleLineOutput(&.{ .{ .KeyCodePress = 80 }, .{ .KeyCodePress = 42 }, .{ .KeyCodePress = 40 }, .{ .KeyCodePress = 43 } });
     try std.testing.expectEqualStrings("é🙂", text.value());
     try std.testing.expectEqual(@as(usize, 2), text.cursor);
-    try std.testing.expectEqual(@as(usize, 5), text.logged);
+    try std.testing.expectEqual(@as(usize, 7), text.logged);
     try text.singleLineOutput(&.{ .{ .ModifiersChanged = .{ .left_alt = true } }, .{ .KeyCodePress = 52 } });
     text.clear();
     try std.testing.expectEqualStrings("", text.value());

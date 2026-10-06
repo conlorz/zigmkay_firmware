@@ -1,4 +1,4 @@
-//! Fixed visual fixture. Source bytes are inert until explicit Prepare Test.
+//! Fixed visual fixture. Native captures never compile or execute source bytes.
 const std = @import("std");
 const p = @import("keymap-project");
 pub fn setup(model: anytype) !void {

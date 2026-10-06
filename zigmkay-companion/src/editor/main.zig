@@ -660,7 +660,12 @@ pub const Editor = struct {
             self.last_text_sequence = output.sequence;
             if (self.main_view == .try_it_out and self.try_mode == .typing_test and self.practice_active and self.practice.source == .draft and (self.practice.state == .ready or self.practice.state == .running)) {
                 self.text.practiceOutput(output.commands, &self.practice, self.practiceTime()) catch |err| self.report(err);
-            } else if (self.main_view == .try_it_out and self.try_mode == .free_typing and self.free_focus and self.testing.state == .running) self.free_text.singleLineOutput(output.commands) catch |err| self.report(err);
+            } else if (self.main_view == .try_it_out and self.try_mode == .free_typing and self.free_focus and self.testing.state == .running) self.free_text.singleLineOutput(output.commands) catch |err| {
+                self.testing.stop();
+                self.free_text.reset();
+                self.free_failed = true;
+                self.report(err);
+            };
         };
         if (self.practice_active and self.practice.source == .draft and (self.testing.state == .stale or self.testing.state == .failed)) self.pausePractice();
         if (self.practice_active and self.practice.state == .complete) {

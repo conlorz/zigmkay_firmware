@@ -164,7 +164,7 @@ fn keyboard(self: anytype, t: ui.Theme, bounds: dvui.Rect, focus: usize) !void {
             active = 1 | (@as(u16, 1) << @intCast(layer));
         }
     }
-    const title = if (live) (if (self.practice_live_stale) "Companion · reconnecting" else "Live companion") else if (running_draft) "Draft companion · simulated key presses" else "Draft layout guide";
+    const title = if (live) (if (self.practice_live_stale) "Live companion · stale / reconnecting" else "Live companion") else if (running_draft) "Draft companion · simulated key presses" else if (self.practice_source == 0 and self.practice_live_profile[0] != 0 and self.practice_live_stale) "Draft layout guide · live source stale / unavailable" else "Draft layout guide";
     const profile = if (live) std.mem.sliceTo(&self.practice_live_profile, 0) else self.model.document().name;
     caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "{s} · {s} · layer {d}", .{ title, profile, layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, @min(18, bounds.h * 0.09), t.text, "practice.keyboard.source");
     if (next) |hint| {
