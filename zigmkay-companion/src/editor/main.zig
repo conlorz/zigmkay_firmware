@@ -61,6 +61,8 @@ pub const Editor = struct {
     gpa: std.mem.Allocator,
     light: bool = false,
     content_scale: f32 = 1,
+    canvas_width: f32 = 1536,
+    canvas_height: f32 = 1076,
     fixture: bool = false,
     connection_text: []const u8 = "Offline · No device",
     source: ?input.Source = null,
@@ -665,6 +667,8 @@ pub const Editor = struct {
         const available = current_window.backend.windowSize();
         const system_scale = current_window.backend.contentScale();
         self.content_scale = geometry.fitScale(available.w / system_scale, available.h / system_scale);
+        self.canvas_width = available.w / system_scale / self.content_scale;
+        self.canvas_height = available.h / system_scale / self.content_scale;
         current_window.snap_to_pixels = self.content_scale == 1;
         // Window zoom also covers floating dialogs, menus and input transforms.
         // DVUI applies it at the next frame boundary after a native resize.
@@ -672,7 +676,7 @@ pub const Editor = struct {
             current_window.content_scale = self.content_scale;
             dvui.refresh(null, @src(), null);
         }
-        const canvas = dvui.box(@src(), .{}, .{ .min_size_content = .{ .w = 1536, .h = 1076 }, .padding = .{}, .margin = .{}, .background = true, .color_fill = .{ .color = t.bg } });
+        const canvas = dvui.box(@src(), .{}, .{ .min_size_content = .{ .w = self.canvas_width, .h = self.canvas_height }, .padding = .{}, .margin = .{}, .background = true, .color_fill = .{ .color = t.bg } });
         defer canvas.deinit();
         if (self.main_view == .try_it_out) {
             if (self.try_mode == .typing_test) {
@@ -706,7 +710,7 @@ pub const Editor = struct {
         }
     }
     fn navigation(self: *Editor, t: Theme) !void {
-        const bar = dvui.box(@src(), .{}, .{ .rect = .{ .x = 0, .y = 0, .w = 1536, .h = 52 }, .padding = .{}, .background = true, .color_fill = .{ .color = t.panel } });
+        const bar = dvui.box(@src(), .{}, .{ .rect = .{ .x = 0, .y = 0, .w = self.canvas_width, .h = 52 }, .padding = .{}, .background = true, .color_fill = .{ .color = t.panel } });
         defer bar.deinit();
         if (ui.buttonEnabled(t, "Editor", "nav.editor", .{ .x = 18, .y = 7, .w = 125, .h = 38 }, self.main_view != .editor)) try self.request(.{ .main_view = .editor });
         if (ui.buttonEnabled(t, "Try it out", "nav.try", .{ .x = 153, .y = 7, .w = 145, .h = 38 }, self.main_view != .try_it_out)) try self.request(.{ .main_view = .try_it_out });
@@ -762,7 +766,7 @@ pub const Editor = struct {
         dvui.focusWidget(null, null, null);
     }
     fn tryItOut(self: *Editor, t: Theme) !void {
-        const bounds: dvui.Rect = .{ .x = 15, .y = 64, .w = 1506, .h = 997 };
+        const bounds: dvui.Rect = .{ .x = 15, .y = 64, .w = self.canvas_width - 30, .h = self.canvas_height - 79 };
         const content = dvui.box(@src(), .{}, .{ .rect = bounds, .padding = .all(18), .background = true, .color_fill = .{ .color = t.panel }, .corners = .all(12), .tag = "try.content" });
         defer content.deinit();
         const width = bounds.w - 36;
