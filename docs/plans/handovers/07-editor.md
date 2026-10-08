@@ -4,6 +4,54 @@ State: **07A and 07B Accepted; full G07 released**. G07-export frozen at `016cf7
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
+## Follow-up: companion captions and Mac thumb input (2026-10-09)
+
+The user confirmed the reported incorrect thumb display and layer changes occur
+in Try it out with the Mac keyboard. Starting tree was clean `afebb85` on
+`local/monorepo`. Caption checkpoint `752d52e`, input checkpoint `6297f46` and
+guidance correction `3d1d210` are committed locally. The delegated caption worker
+released its files; the coordinator owns all future integration.
+
+Both companion caches now retain an Editor `labels.keycap` caption separately
+from native translated output. The renderer shows the same complete Tap/Hold
+action, layer IDs, custom callbacks and host modifier symbols as Editor, including
+macOS ⌥ Option and ⌘ Command. It fits the full caption against actual pixel-snapped
+font metrics and reserves space for TAP/HOLD guidance. The standalone companion
+loads the same local macOS font fallbacks. Translated labels still drive practice
+character matching; hold-only symbols cannot be mistaken for output characters.
+
+Draft host input retains QWERTY finger positions and derives thumb substitutes
+from base-layer tap usages. In the Mac candidate, Space→30, Tab→31, Return→32 and
+Backspace→33 trigger the actions shown in Editor. Previously the fixed order
+mapped Return→31, Backspace→32 and Tab→33. Explicit thumb taps reserve their host
+keys first; duplicates or non-key taps receive unused Space/Return/Backspace/Tab
+substitutes in that order. Mapping stays anchored to the base layer through
+layer changes, so key-up releases the same physical position. The offline
+processor determines tapping terms and layer/modifier transitions.
+
+Verification on the complete source tree of `3d1d210`, using Zig 0.16.0:
+
+- `mise //zigmkay-companion:test`, `:build`, `:smoke` and `mise //:check` pass.
+  Aggregate checks report unchanged source contents/inventory and no hardware
+  tool execution. Real processor tests cover all four Mac host thumb mappings,
+  a tap before 180 ms, hold activation after the configured term, modifier holds
+  and release to base state. Cache/guidance tests cover caption parity, custom
+  Hold callbacks, Option and separate translated output.
+- `mise //zigmkay-companion:editor-check` passes all **211 captures**, panel
+  geometry, Retina/non-Retina readback and semantic interactions. New
+  `free_mac_thumbs` captures participate in all four theme/density combinations.
+- Four additional `free_mac_thumbs` captures pass at 900×600 (dark 1×, light 2×)
+  and 1152×768 (dark 2×, light 1×). The two minimum-size images were inspected;
+  complete thumb and modifier captions remain visible. Outputs are under
+  `.zig-cache/editor-acceptance/thumb-mac-*.png`.
+- Changed Zig formatting and diff whitespace checks pass. Cached check logs are
+  `.zig-cache/thumb-{companion-test,aggregate-check,editor-check,companion-build,companion-smoke}.log`.
+
+No hardware access, firmware change, push, PR, new dependency/language or
+committed golden replacement is included. Existing replacement-golden review
+for the earlier editor redesign remains pending. A running desktop process must
+be quit through the tray and restarted to load the corrected executable.
+
 ## Selected follow-up: unified Try it out view (2026-10-06)
 
 The user selected [variant A, Companion below](../mockups/try-it-out/01-companion-below.png)

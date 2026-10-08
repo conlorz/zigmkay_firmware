@@ -1,5 +1,23 @@
 # Central milestone tracker
 
+## Companion captions and Mac thumb input correction (2026-10-09)
+
+The user reported incorrect thumb labels and layer switching in Try it out when
+using the Mac keyboard. Starting from clean `afebb85`, `752d52e` shares Editor
+keycap captions with both companion cache paths, `6297f46` derives thumb host
+substitutes from the applied draft's base-layer taps, and `3d1d210` keeps hold
+symbols out of direct character guidance. Mac Option now uses the same ⌥ caption
+as Editor; complete thumb Tap/Hold captions fit without ellipses.
+
+Zig 0.16.0 package tests, build/smoke, aggregate `check`, and the complete native
+editor suite pass: **211 captures**, geometry, both pixel densities and semantic
+interactions. Four additional Mac-profile captures at 900×600 and 1152×768 pass;
+the minimum-size dark/light images were reviewed. Real offline processor tests
+verify all four Mac thumb substitutes, short taps, configured hold timing and
+release back to the base layer. See the [editor handover](handovers/07-editor.md).
+All delegated leases are released. No hardware operation, push, PR or committed
+golden regeneration was performed.
+
 ## Native companion/editor tray (2026-10-07)
 
 The user requested implementation of [plan 16](16-ztray-companion-editor.md).
