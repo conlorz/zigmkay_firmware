@@ -147,6 +147,25 @@ test "dead keys and shortcut chords never receive direct character hints" {
     try std.testing.expect(hint(&labels, 0, .{}, ' ') == null);
 }
 
+test "modifier-only captions never become literal character hints" {
+    const p = @import("keymap-project");
+    const actions: []const ?p.Action = &.{
+        .{ .hold_only = .{ .hold_modifiers = .{ .left_alt = true } } },
+        .{ .hold_only = .{ .hold_modifiers = .{ .left_shift = true } } },
+        .{ .hold_only = .{ .hold_modifiers = .{ .left_ctrl = true } } },
+        .{ .hold_only = .{ .hold_modifiers = .{ .left_gui = true } } },
+    };
+    const document: p.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "fixture", .name = "Hold fixture", .key_ids = &.{}, .layers = &.{.{ .id = 1, .name = "Base", .actions = actions }} };
+    var source: Fixture = .{};
+    var labels = try cache.buildProjectCache(std.testing.allocator, &source, document);
+    defer labels.deinit();
+    for ([_]u21{ '⌥', '⇧', '⌃', '⌘' }, 0..) |symbol, index| {
+        try std.testing.expect(labels.lookup(0, index, .{}).caption != null);
+        try std.testing.expect(labels.lookup(0, index, .{}).label == null);
+        try std.testing.expect(hint(&labels, 0, .{}, symbol) == null);
+    }
+}
+
 test "practice separates layer holds from taps and prefers opposite hand home row shift" {
     var labels = try cache.LabelCache.init(std.testing.allocator, 4, 34);
     defer labels.deinit();

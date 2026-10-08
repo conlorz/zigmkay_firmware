@@ -177,13 +177,8 @@ pub fn computeKeyContent(km: anytype, maybe_def: ?core.KeyDef, physical_mods: Mo
         .hold_only => |h| {
             content.hold_layer = h.hold_layer;
             content.hold_mods = if (h.hold_modifiers.has_any()) h.hold_modifiers else null;
-            if (h.hold_modifiers.has_any()) {
-                content.label = editor_labels.keycapModifiers(editor_labels.runningHost(), h.hold_modifiers.toByte(), label_buf);
-            } else if (h.hold_layer) |l| {
-                content.icon = dvui.entypo.layers;
-                const printed = std.fmt.bufPrint(label_buf, "L{any}", .{l}) catch "L?";
-                content.label = printed;
-            }
+            // Holds change processor state without producing text. Their visual
+            // symbols belong to caption, never to the translated output label.
         },
         else => {},
     }
