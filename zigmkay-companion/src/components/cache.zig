@@ -4,6 +4,8 @@ const dvui = @import("dvui");
 const keymap = @import("keymap");
 const zkeymap = @import("zkeymap");
 const icons = @import("icons");
+const project = @import("keymap-project");
+const editor_labels = @import("../editor/labels.zig");
 
 const log = std.log.scoped(.companion);
 
@@ -23,6 +25,9 @@ const Modifiers = core.Modifiers;
 /// Labels are allocated from a LabelCache arena and remain valid
 /// for the lifetime of the cache.
 pub const CachedKeyContent = struct {
+    /// Host-aware action caption shared with Editor. `label` remains native
+    /// translated output for practice matching, independently of this caption.
+    caption: ?[]const u8 = null,
     label: ?[]const u8 = null,
     icon: ?[]const u8 = null,
     icon_name: []const u8 = "",
@@ -173,11 +178,7 @@ pub fn computeKeyContent(km: anytype, maybe_def: ?core.KeyDef, physical_mods: Mo
             content.hold_layer = h.hold_layer;
             content.hold_mods = if (h.hold_modifiers.has_any()) h.hold_modifiers else null;
             if (h.hold_modifiers.has_any()) {
-                const m = h.hold_modifiers;
-                if (m.left_shift or m.right_shift) content.label = "shft";
-                if (m.left_ctrl or m.right_ctrl) content.label = "ctrl";
-                if (m.left_alt or m.right_alt) content.label = "alt";
-                if (m.left_gui or m.right_gui) content.icon = icons.tvg.lucide.command;
+                content.label = editor_labels.keycapModifiers(editor_labels.runningHost(), h.hold_modifiers.toByte(), label_buf);
             } else if (h.hold_layer) |l| {
                 content.icon = dvui.entypo.layers;
                 const printed = std.fmt.bufPrint(label_buf, "L{any}", .{l}) catch "L?";
@@ -271,10 +272,16 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
     const key_count = keymap.key_count;
     var cache = try LabelCache.init(allocator, layer_count, key_count);
     errdefer cache.deinit();
+    var layers: [keymap.keymap.len]project.Layer = undefined;
+    for (&layers, 0..) |*layer, i| layer.* = .{ .id = @intCast(i + 1), .name = "", .actions = &.{} };
+    const document: project.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "", .name = "", .key_ids = &.{}, .layers = &layers };
 
     for (0..layer_count) |layer| {
         for (0..key_count) |key_idx| {
             const def = keymap.keymap[layer][key_idx];
+            const action = if (def) |value| try project.adapter.liftAction(&layers, value) else null;
+            var caption_buffer: [256]u8 = undefined;
+            const caption = try cache.arena.allocator().dupe(u8, editor_labels.keycap(action, document, &caption_buffer));
             for (0..256) |mods_byte| {
                 const mods_u8 = @as(u8, @intCast(mods_byte));
                 const mods: Modifiers = @bitCast(mods_u8);
@@ -282,6 +289,7 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
                 var label_buf: [64]u8 = undefined;
                 @memset(&label_buf, 0);
                 var entry = computeKeyContent(km, def, mods, &label_buf);
+                entry.caption = caption;
                 if (entry.label) |label| {
                     entry.label = try cache.arena.allocator().dupe(u8, label);
                 }
@@ -295,15 +303,17 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
 
 /// Display exactly the frozen profile used for the explicit firmware transfer.
 pub fn buildProjectCache(allocator: std.mem.Allocator, km: anytype, document: @import("keymap-project").Document) !LabelCache {
-    const project = @import("keymap-project");
     var result = try LabelCache.init(allocator, document.layers.len, document.layers[0].actions.len);
     errdefer result.deinit();
     for (document.layers, 0..) |layer, layer_index| {
         for (layer.actions, 0..) |action, key_index| {
             const def = if (action) |value| try project.lowerAction(document, value) else null;
+            var caption_buffer: [256]u8 = undefined;
+            const caption = try result.arena.allocator().dupe(u8, editor_labels.keycap(action, document, &caption_buffer));
             for (0..256) |mods| {
                 var buffer: [64]u8 = @splat(0);
                 var entry = computeKeyContent(km, def, @bitCast(@as(u8, @intCast(mods))), &buffer);
+                entry.caption = caption;
                 if (entry.label) |text| entry.label = try result.arena.allocator().dupe(u8, text);
                 result.entries[(layer_index * result.key_count + key_index) * 256 + mods] = entry;
             }
@@ -522,4 +532,29 @@ test "practice labels resolve transparent keys only through enabled layers" {
     try testing.expectEqualStrings("navigation", labels.lookupActive(2, 0, .{}, 0b111).label.?);
     labels.entries[512] = .{ .label = "" };
     try testing.expectEqualStrings("", labels.lookupActive(2, 0, .{}, 0b111).label.?);
+}
+
+test "companion captions share Editor thumb holds and preserve translated output" {
+    var source = FixtureLabels{};
+    const actions: []const ?project.Action = &.{
+        .{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 44 } }, .hold = .{ .custom = 7 }, .tapping_term = .{ .ms = 200 } } },
+        .{ .hold_only = .{ .hold_modifiers = .{ .left_alt = true } } },
+        .{ .tap_only = .{ .key_press = .{ .tap_keycode = 4 } } },
+        .{ .tap_hold = .{ .tap = .{ .key_press = .{ .tap_keycode = 40 } }, .hold = .{ .layer_id = 1 }, .tapping_term = .{ .ms = 200 } } },
+    };
+    const document: project.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "fixture", .name = "Fixture", .key_ids = &.{}, .layers = &.{.{ .id = 1, .name = "Base", .actions = actions }}, .callbacks = &.{.{ .kind = .registered, .binding = "fixture", .ids = &.{7}, .sources = &.{} }} };
+    var cache = try buildProjectCache(testing.allocator, &source, document);
+    defer cache.deinit();
+    var buffer: [256]u8 = undefined;
+    for (actions, 0..) |action, i| {
+        try testing.expectEqualStrings(editor_labels.keycap(action, document, &buffer), cache.lookup(0, i, .{}).caption.?);
+        try testing.expectEqualStrings(cache.lookup(0, i, .{}).caption.?, cache.lookup(0, i, .{ .left_shift = true }).caption.?);
+    }
+    try testing.expectEqualStrings("␣\nHold Callback 7", cache.lookup(0, 0, .{}).caption.?);
+    try testing.expectEqualStrings("↩\nHold L1", cache.lookup(0, 3, .{}).caption.?);
+    try testing.expectEqualStrings(if (editor_labels.runningHost() == .macos) "Hold\n⌥" else "Hold\nAlt", cache.lookup(0, 1, .{}).caption.?);
+    try testing.expectEqualStrings("A", cache.lookup(0, 2, .{}).caption.?);
+    try testing.expectEqualStrings("a", cache.lookup(0, 2, .{}).label.?);
+    try testing.expectEqualStrings("@", cache.lookup(0, 2, .{ .left_alt = true }).label.?);
+    try testing.expectEqualStrings("⌥", editor_labels.keycapModifiers(.macos, 4, &buffer));
 }

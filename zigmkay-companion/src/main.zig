@@ -281,6 +281,7 @@ pub fn main(init: std.process.Init) !void {
     var check = @import("tray_check.zig").Check{};
     while (life.keepRunning()) {
         try win.begin(win.beginWait(interrupted));
+        if (frames == 0) try @import("editor/fonts.zig").install(init.gpa, init.io);
         if (editor) |*draft| draft.tray_managed = life.resident;
         try @import("editor/events.zig").pump(&backend, &win, DesktopEvents{ .life = &life, .companion_id = sdl.SDL_GetWindowID(backend.window), .editor = if (editor) |*draft| draft else null });
         if (tray.poll()) |action| {

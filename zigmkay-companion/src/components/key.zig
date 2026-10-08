@@ -4,6 +4,8 @@ const dvui = @import("dvui");
 const keymap = @import("keymap");
 const zkeymap = @import("zkeymap");
 const icons = @import("icons");
+const labels = @import("../editor/labels.zig");
+const fonts = @import("../editor/fonts.zig");
 
 const log = std.log.scoped(.companion);
 
@@ -136,6 +138,7 @@ pub fn drawPracticeKey(current_layer: usize, index: usize, rect: dvui.Rect, rota
         .color_border = .{ .color = border_color },
         .border = dvui.Rect.all((if (target or hold) @as(f32, 3) else 1.5) * scale),
         .corners = .all(8 * scale),
+        .padding = .{},
     });
     defer b.deinit();
     if (target or hold) dvui.label(@src(), "{s}", .{if (hold) "HOLD" else "TAP"}, .{
@@ -146,6 +149,32 @@ pub fn drawPracticeKey(current_layer: usize, index: usize, rect: dvui.Rect, rota
     });
 
     // 1. Main Content (Center)
+    if (content.caption) |caption| {
+        const count = std.unicode.utf8CountCodepoints(caption) catch caption.len;
+        const font_size: f32 = if (std.mem.indexOfScalar(u8, caption, '\n') != null) 13 else if (count > 9) 9 else if (count >= 4) 13 else 20;
+        var caption_font = fonts.font(caption, font_size * scale);
+        const measured = caption_font.textSize(caption);
+        const available_width = @max(1, rect.w - 8 * scale);
+        const available_height = @max(1, rect.h - (if (target or hold) @as(f32, 18) else 8) * scale);
+        const fit = @min(1, @min(available_width / @max(1, measured.w), available_height / @max(1, measured.h)));
+        caption_font = caption_font.withSize(caption_font.size * fit);
+        // Pixel-snapped font metrics are not proportional to point size. Check
+        // the fitted font again so the hold line cannot become an ellipsis.
+        for (0..8) |_| {
+            const actual = caption_font.textSize(caption);
+            if (actual.w <= available_width and actual.h <= available_height) break;
+            caption_font = caption_font.withSize(caption_font.size * 0.95);
+        }
+        dvui.labelNoFmt(@src(), caption, .{ .align_x = 0.5, .align_y = 0.5 }, .{
+            .id_extra = index,
+            .color_text = .{ .color = text_color },
+            .font = caption_font,
+            .rect = .{ .x = 3 * scale, .y = 3 * scale, .w = available_width, .h = available_height },
+            .padding = .{},
+            .margin = .{},
+        });
+        return;
+    }
     if (content.icon) |icon_bytes| {
         dvui.icon(@src(), content.icon_name, icon_bytes, .{}, .{
             .id_extra = index,
@@ -219,7 +248,8 @@ pub fn drawPracticeKey(current_layer: usize, index: usize, rect: dvui.Rect, rota
         }
 
         if (m.left_alt or m.right_alt) {
-            dvui.label(@src(), "alt", .{}, .{
+            var modifier_buffer: [32]u8 = undefined;
+            dvui.label(@src(), "{s}", .{labels.keycapModifiers(labels.runningHost(), 4, &modifier_buffer)}, .{
                 .id_extra = index + 4000,
                 .color_text = .{ .color = mod_color },
                 .font = font,
