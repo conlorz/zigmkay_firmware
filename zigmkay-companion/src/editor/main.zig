@@ -435,11 +435,10 @@ pub const Editor = struct {
                     },
                     else => {},
                 };
-                const mapped = [_]u8{ 20, 26, 8, 21, 23, 28, 24, 12, 18, 19, 4, 22, 7, 9, 10, 11, 13, 14, 15, 51, 29, 27, 6, 25, 5, 17, 16, 54, 55, 56, 44, 40, 42, 43 };
-                for (mapped, 0..) |scancode, index| if (event.key.scancode == scancode) {
-                    if (!event.key.repeat) self.testing.input(if (event.type == sdl.SDL_EVENT_KEY_DOWN) .{ .key_down = @intCast(index) } else .{ .key_up = @intCast(index) }, self.testTime()) catch |err| self.report(err);
+                if (@import("host_input.zig").keyIndex(self.model.document(), @intCast(event.key.scancode))) |index| {
+                    if (!event.key.repeat) self.testing.input(if (event.type == sdl.SDL_EVENT_KEY_DOWN) .{ .key_down = index } else .{ .key_up = index }, self.testTime()) catch |err| self.report(err);
                     return true;
-                };
+                }
             }
         } else if (self.main_view == .editor and self.canvas_focus and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and !event.key.repeat and !self.paths_open and !self.combo_open and !self.callback_open) {
             if (event.key.scancode == sdl.SDL_SCANCODE_LEFT or event.key.scancode == sdl.SDL_SCANCODE_RIGHT) {
@@ -1739,6 +1738,7 @@ test {
     _ = @import("model.zig");
     _ = forms;
     _ = @import("text.zig");
+    _ = @import("host_input.zig");
     _ = @import("try_state.zig");
     _ = @import("practice.zig");
     _ = @import("practice_view.zig");

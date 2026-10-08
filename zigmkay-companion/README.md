@@ -60,6 +60,15 @@ composition and simulated held keys while reusing a prepared artifact. Arrow
 keys edit the caret; newline, tab and non-text actions remain diagnostic data.
 The companion always shows that draft, independently of installed firmware.
 
+Editor and companion keycaps share host-aware action captions, including every
+thumb's Tap/Hold action and macOS ⌥ Option / ⌘ Command symbols. Draft input uses
+QWERTY finger positions. Space, Tab, Return and Backspace follow the corresponding
+thumb's base-layer tap rather than a fixed profile order; the Mac candidate maps
+them to indices 30, 31, 32 and 33 respectively. Duplicate or non-key thumb taps
+receive unused substitutes from Space, Return, Backspace and Tab in that order.
+Upper-layer output never remaps a held key's release. Hold decisions use the
+draft's processor and configured tapping term, including modifier holds.
+
 Choose **Typing Test** for the scored exercise below. The two modes keep separate
 buffers. Switching modes or leaving Try it out pauses a test and releases the
 runner; returning requires deliberate Resume. Free text survives navigation and

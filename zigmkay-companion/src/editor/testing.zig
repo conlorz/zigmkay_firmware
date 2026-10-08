@@ -11,16 +11,77 @@ fn inspectorTrace(controller: *Controller, id: [32]u8, command: wire.Command, ti
     try inspectOutput(controller, id, sequence, expected);
 }
 fn inspectOutput(controller: *Controller, id: [32]u8, sequence: u64, expected: []const @import("zigmkay").core.OutputCommand) !void {
+    try waitOutput(controller, id, sequence);
+    try std.testing.expectEqualDeep(expected, controller.last.?.commands);
+}
+fn waitOutput(controller: *Controller, id: [32]u8, sequence: u64) !void {
     const deadline = std.Io.Clock.awake.now(controller.io).toMilliseconds() + 10_000;
     while (true) {
         controller.poll(id);
         if (controller.state != .running) return error.InspectorRunnerStopped;
         if (controller.last) |output| if (output.sequence == sequence) {
-            try std.testing.expectEqualDeep(expected, output.commands);
             return;
         };
         if (std.Io.Clock.awake.now(controller.io).toMilliseconds() > deadline) return error.InspectorTraceTimeout;
         try std.Io.sleep(controller.io, .fromMilliseconds(1), .awake);
+    }
+}
+
+test "Mac host thumb mapping preserves processor hold timing and release" {
+    const gpa = std.testing.allocator;
+    const io = std.testing.io;
+    const root = try std.Io.Dir.cwd().realPathFileAlloc(io, "..", gpa);
+    defer gpa.free(root);
+    var model = try @import("model.zig").Model.init(gpa, .eurmac);
+    defer model.deinit();
+    const id = try model.id();
+    var controller = try Controller.init(gpa, io, root);
+    defer controller.deinit();
+    try controller.prepare(model.current.snapshot);
+    const deadline = std.Io.Clock.awake.now(io).toMilliseconds() + 60_000;
+    while (controller.state == .preparing) {
+        controller.poll(id);
+        if (std.Io.Clock.awake.now(io).toMilliseconds() > deadline) return error.PreparationTestTimeout;
+        try std.Io.sleep(io, .fromMilliseconds(5), .awake);
+    }
+    try std.testing.expectEqual(State.prepared, controller.state);
+    try controller.start();
+    const cases = [_]struct { host: u8, index: @import("layout-model").KeyIndex, layer: u8, mods: u8 }{
+        .{ .host = 44, .index = 30, .layer = 1, .mods = 0 },
+        .{ .host = 43, .index = 31, .layer = 3, .mods = 0 },
+        .{ .host = 40, .index = 32, .layer = 2, .mods = 0 },
+        .{ .host = 42, .index = 33, .layer = 0, .mods = 0x20 },
+    };
+    for (cases, 0..) |case, i| {
+        const index = @import("host_input.zig").keyIndex(model.document(), case.host).?;
+        try std.testing.expectEqual(case.index, index);
+        const start: u64 = 1000 + @as(u64, @intCast(i)) * 1_000_000;
+        try inspectorTrace(&controller, id, .{ .key_down = index }, start, &.{});
+        try inspectorTrace(&controller, id, .advance, start + 179_000, &.{});
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.highest_layer);
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.modifiers);
+        // A short tap fires its own usage and never enters a layer or modifier.
+        try controller.input(.{ .key_up = index }, start + 179_500);
+        try waitOutput(&controller, id, controller.sequence);
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.highest_layer);
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.modifiers);
+        var found_tap = false;
+        for (controller.last.?.commands) |command| if (command == .KeyCodePress and command.KeyCodePress == case.host) {
+            found_tap = true;
+        };
+        try std.testing.expect(found_tap);
+        try controller.input(.{ .key_down = index }, start + 300_000);
+        try waitOutput(&controller, id, controller.sequence);
+        try controller.input(.advance, start + 481_000);
+        try waitOutput(&controller, id, controller.sequence);
+        try std.testing.expectEqual(case.layer, controller.last.?.highest_layer);
+        try std.testing.expectEqual(case.mods, controller.last.?.modifiers);
+        try controller.input(.{ .key_up = index }, start + 482_000);
+        try waitOutput(&controller, id, controller.sequence);
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.highest_layer);
+        try std.testing.expectEqual(@as(u16, 1), controller.last.?.active_layers);
+        try std.testing.expectEqual(@as(u8, 0), controller.last.?.modifiers);
+        try std.testing.expect(!controller.pressed[index]);
     }
 }
 

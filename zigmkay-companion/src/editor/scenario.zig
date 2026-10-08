@@ -7,7 +7,7 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
-        .free_input, .free_typing, .free_long, .free_error, .test_preparing, .test_running, .test_output, .test_stale, .test_failed => {
+        .free_input, .free_typing, .free_mac_thumbs, .free_long, .free_error, .test_preparing, .test_running, .test_output, .test_stale, .test_failed => {
             editor.main_view = .try_it_out;
             editor.try_mode = .free_typing;
             editor.free_focus = true;
@@ -16,6 +16,15 @@ pub fn setup(editor: anytype, state: State) !void {
     }
     switch (state) {
         .free_input, .free_typing => {},
+        .free_mac_thumbs => {
+            var loaded = try @import("keymap-project").profiles.create(editor.gpa, .eurmac);
+            defer loaded.deinit();
+            try editor.model.commit(loaded.snapshot);
+            editor.model.layer = 0;
+            editor.profile_choice = 3;
+            editor.testing.snapshot_id = try editor.model.id();
+            editor.firmware.snapshot_id = editor.testing.snapshot_id;
+        },
         .free_long => try editor.free_text.insert("The current draft types Unicode: é ß λ. This long single line keeps the caret visible while the companion remains below the text field."),
         .free_error => {
             editor.free_failed = true;
