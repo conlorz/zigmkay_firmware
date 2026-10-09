@@ -336,8 +336,20 @@ pub fn main(init: std.process.Init) !void {
         if (!monitoring) if (editor) |*draft| {
             if (!draft.fixture and draft.firmware.expectedIdentity() != null) {
                 if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+                const profile = try @import("keymap-project").snapshot.clone(init.gpa, draft.firmware.frozen.?.snapshot);
+                errdefer {
+                    var owned = profile;
+                    owned.deinit();
+                }
+                var replacement = try cache.buildProjectCache(init.gpa, &source, profile.snapshot.document);
+                errdefer replacement.deinit();
                 try init.io.randomSecure(std.mem.asBytes(&seed));
-                driver = try adapter.Driver(Native).init(.{ .io = init.io }, draft.firmware.expectedIdentity().?, seed, path);
+                const new_driver = try adapter.Driver(Native).init(.{ .io = init.io }, draft.firmware.expectedIdentity().?, seed, path);
+                if (transferred_profile) |*old| old.deinit();
+                transferred_profile = profile;
+                labels.deinit();
+                labels = replacement;
+                driver = new_driver;
                 monitoring = true;
             }
         };
