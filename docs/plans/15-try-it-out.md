@@ -1,5 +1,14 @@
 # 15: Unified Try it out view
 
+> User correction, 2026-10-09: Free typing must behave like a normal text field
+> with the physical LK7 on macOS. The original automatic draft-runner requirements
+> for this field are superseded: committed OS input must not be simulated again.
+> Its companion must use verified device telemetry and a matching frozen layout,
+> including layer-only thumbs and timed tap/hold state. Draft simulation remains
+> explicit in Typing Test and diagnostics. Native integration must compare normal
+> text-entry behavior and exercise processor-to-telemetry-to-view traces.
+
+
 Status: **implemented and verified offline**, 2026-10-06.
 The user selected **variant A, Companion below**, and requested this plan.
 The subsequent request to implement this plan fully authorized the offline work.

@@ -37,7 +37,7 @@ geometry/interaction checks. Capture artifacts are under root
 `.zig-cache/editor-acceptance`. `editor-golden-check` reads explicitly approved
 baselines without updating them. Both screenshot commands remain offline and
 never execute attached callbacks. The normal editor only compiles/executes draft
-callbacks when entering/focusing Free typing, or starting a draft Typing Test;
+callbacks when starting an explicit draft Typing Test;
 it never sends resulting actions to HID.
 
 The companion overlay's Open editor button opens a separate opaque normal
@@ -52,27 +52,33 @@ Use `--window-size <width> <height>` with `--editor` to choose an initial size.
 ## Try it out
 
 Run `mise //zigmkay-companion:editor` and choose **Try it out** in the main
-navigation. **Free typing** automatically prepares the current applied draft's
-immutable offline runner when its single-line field is focused. Input waits for
-preparation and requires EurKEY as the macOS input source. Failures show inline
-diagnostics and an explicit Retry. Reset text clears Unicode text, caret,
-composition and simulated held keys while reusing a prepared artifact. Arrow
-keys edit the caret; newline, tab and non-text actions remain diagnostic data.
-The companion always shows that draft, independently of installed firmware.
+navigation. **Free typing** is an ordinary single-line DVUI text entry. It uses
+committed OS text and standard editing commands, including Unicode, selection,
+clipboard paste, Delete and Backspace. The physical LK7 has already processed
+its layout and tap/hold actions; this field does not run those inputs through a
+second keymap simulation or wait for draft compilation. Reset text clears the
+field. No particular macOS input source is required.
 
-Editor and companion keycaps share host-aware action captions, including every
-thumb's Tap/Hold action and macOS ⌥ Option / ⌘ Command symbols. Draft input uses
-QWERTY finger positions. Space, Tab, Return and Backspace follow the corresponding
-thumb's base-layer tap rather than a fixed profile order; the Mac candidate maps
-them to indices 30, 31, 32 and 33 respectively. Duplicate or non-key thumb taps
-receive unused substitutes from Space, Return, Backspace and Tab in that order.
-Upper-layer output never remaps a held key's release. Hold decisions use the
-draft's processor and configured tapping term, including modifier holds.
+Choose **Connect companion** (or start the editor with `--live`) to explicitly
+connect vendor HID telemetry. Open the project matching the installed firmware
+first. The connection freezes its layout and requires the complete firmware
+identity to match before displaying physical key positions and layers. An
+unverified or mismatched device shows no guessed draft layout. Stale telemetry
+clears held-key and momentary-layer highlights. A layer-only thumb is visible
+through telemetry even though it produces no OS text. Native typing remains
+available while the companion is disconnected or stale.
+
+Editor and companion keycaps share action captions, including complete thumb
+Tap/Hold actions and macOS ⌥ Option / ⌘ Command symbols. Physical pressed keys
+and layer changes come from the device, rather than host scancodes. QWERTY host
+position and thumb substitutes are used only by the explicit draft Typing Test
+simulation; they do not represent physical LK7 input.
 
 Choose **Typing Test** for the scored exercise below. The two modes keep separate
 buffers. Switching modes or leaving Try it out pauses a test and releases the
-runner; returning requires deliberate Resume. Free text survives navigation and
-clears with an explanation when the project/snapshot or input source changes.
+runner; returning requires deliberate Resume. Free text survives navigation,
+draft edits and input-source changes. Opening a different project clears it with
+an explanation.
 Diagnostics expands inline, including compiler errors, source identity and
 selected-key probes during valid runner sessions. Editor retains editing,
 callbacks, history and the build/flash workflow. Pending inspector edits must be
@@ -132,3 +138,10 @@ without a tray. After `mise //zigmkay-companion:build`, run
 explicit finite offline macOS tray probe. It uses an inert editor fixture and
 never accesses a keyboard. Windows/Linux desktop validation is deferred; Linux
 tray visibility requires a StatusNotifier watcher. See [plan 16](../docs/plans/16-ztray-companion-editor.md).
+
+Native acceptance includes a step-by-step comparison against an ordinary DVUI
+text entry, plus real processor → encoded telemetry → companion → native view
+traces. These cover a layer-only left thumb, a pinky Backspace tap, its timed
+Orange-layer hold, stale-state recovery and text input independent of telemetry.
+Both run in dark/light themes, at both pixel densities and supported sizes.
+These are offline integration checks; they do not claim attached-device testing.

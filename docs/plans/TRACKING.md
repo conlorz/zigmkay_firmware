@@ -1,5 +1,32 @@
 # Central milestone tracker
 
+## Physical LK7 native input correction (2026-10-09)
+
+The user clarified the affected input is the physical LK7 on macOS, whose
+firmware already behaves correctly in ordinary text fields. This supersedes the
+host-scancode simulation diagnosis below: those prior passing tests exercised
+simulated Mac substitutes, not physical LK7 input.
+
+Starting from clean `31b8dfc`, implementation checkpoints `9949ca4`, `c61e8f7`
+and `5e52f03` make Free
+typing an ordinary DVUI text entry, without draft compilation, output translation
+or host-to-matrix routing. The companion independently requires verified live
+telemetry and matching frozen project captions. Layer-only thumbs and pinky
+Backspace/Orange hold state are derived from the physical firmware processor,
+not guessed from OS output. Connection is explicit; typing stays available
+while disconnected, mismatched, preparing or stale.
+
+Integration compares each native edit against a separate ordinary text entry
+and exercises actual processor → encoded protocol → state → native display
+traces. These cover Unicode, caret/selection, paste, Backspace/repeat/Delete,
+foreign-window isolation, left thumb without OS output, timed pinky hold,
+transparent layers and stale recovery. Package tests/build and aggregate `check`
+pass. The full native suite passes **235 captures**; the final SDL event-route
+comparison also runs across all 12 theme/density/size combinations. Evidence is recorded in
+[the editor handover](handovers/07-editor.md). No attached-device operation was
+performed. Native acceptance and live hardware validation remain distinct.
+
+
 ## Companion captions and Mac thumb input correction (2026-10-09)
 
 The user reported incorrect thumb labels and layer switching in Try it out when

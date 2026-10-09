@@ -4,6 +4,50 @@ State: **07A and 07B Accepted; full G07 released**. G07-export frozen at `016cf7
 Producer/reviewer: coordinator, with exclusive model/integration/document ownership.
 Plan: [07](../07-compiled-keymap-editor.md). Rules: [handover format](README.md).
 
+## Follow-up: physical LK7 uses native text and verified telemetry (2026-10-09)
+
+The user confirmed the physical LK7 on macOS works correctly in normal text
+fields. The prior host-substitute fixes and their simulated test oracle did not
+represent that case. The starting tree was clean `31b8dfc`; implementation
+checkpoint `9949ca4` removes the second keymap pass from Free typing.
+`c61e8f7` freezes matching captions at post-flash monitor startup; `5e52f03`
+compares actual SDL event conversion with the ordinary text-entry oracle.
+
+Free typing uses an ordinary DVUI TextEntry with committed OS text and standard
+editing events. It neither starts an offline runner nor consumes SDL text/key
+input for simulation. Native edits happen in their input frame even when draft
+preparation has failed or is pending. Text survives draft edits and input-source
+changes. Explicit draft Typing Test simulation remains available independently.
+
+The free companion consumes actual telemetry, with captions from a frozen
+matching layout after complete identity verification. Connect companion and
+`--editor --live` explicitly enable that path; finite editor entry points also
+support the connection. Missing/mismatched telemetry shows no fabricated draft
+keyboard. Stale data clears held keys and momentary layers. Captions retain
+Editor parity, including Mac Option and complete Tap/Hold actions.
+
+New offline integration has two independent paths:
+
+- A separate ordinary DVUI TextEntry and the free field receive the same native
+  edits. Every step checks immediate text, including Unicode, caret edits,
+  selection replacement, clipboard paste, one Backspace, repeat, Delete and
+  foreign-window isolation. No runner job, sequence advance or simulated pressed
+  key is allowed.
+- The real firmware Processor receives physical key indices and timestamps;
+  observer events are encoded/decoded through the device protocol before the
+  native view reads them. A layer-only left thumb must appear and change layers
+  despite emitting no OS key. Pinky index 19 taps Backspace once and holds Orange
+  only after its tapping term. Active transparent layers, exact Editor captions,
+  release, stale recovery and native text during stale telemetry are asserted.
+
+Both are in the capture matrix across dark/light themes, 1×/2× density and
+1536×1024, 1152×768 and 900×600 windows. Package tests/build and aggregate `check`
+pass. The full native suite passes **235 captures**, panel geometry and semantic
+interactions. The strengthened SDL route additionally passes all 12
+theme/density/size combinations; offline smoke and tray checks pass. Hardware behavior is
+not claimed as tested: no vendor HID connection, firmware flash or device
+operation was performed by these checks. All worker leases are released.
+
 ## Follow-up: companion captions and Mac thumb input (2026-10-09)
 
 The user confirmed the reported incorrect thumb display and layer changes occur
