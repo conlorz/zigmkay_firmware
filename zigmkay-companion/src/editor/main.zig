@@ -1316,7 +1316,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         try @import("events.zig").pump(&backend, &window, &editor);
         if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
         if (state == .free_input) try scenario.freeInteraction(&editor, &window, frames, scenario_history);
-        if (state == .native_free_input) try native_input_check.beforeDraw(&editor, &window, frames);
+        if (state == .native_free_input) try native_input_check.beforeDraw(&editor, &window, &backend, frames);
         if (state == .native_live_input) try native_live_check.beforeDraw(&editor, &window, frames);
         if (state == .practice_guidance) switch (frames) {
             3 => _ = try window.addEventText(.{ .text = "a" }),

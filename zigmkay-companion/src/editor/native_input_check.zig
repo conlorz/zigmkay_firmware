@@ -44,7 +44,7 @@ pub const Driver = struct {
         }
     }
 
-    pub fn beforeDraw(self: *Driver, editor: anytype, window: *dvui.Window, frame: usize) !void {
+    pub fn beforeDraw(self: *Driver, editor: anytype, window: *dvui.Window, backend: *@import("sdl-backend"), frame: usize) !void {
         if (!self.initialized) {
             self.initialized = true;
             self.sequence = editor.testing.sequence;
@@ -67,16 +67,18 @@ pub const Driver = struct {
             if (start == 28) {
                 // A failed or preparing preview cannot delay ordinary text edits.
                 editor.testing.state = if ((frame - start) % 2 == 0) .preparing else .failed;
-                try assertRawPassThrough(editor, step.input);
+                if (step.input == .paste) dvui.clipboardTextSet(step.input.paste);
+                const event = try assertRawPassThrough(editor, step.input);
+                _ = try backend.addEvent(window, event);
             }
-            switch (step.input) {
+            if (start == 4) switch (step.input) {
                 .text => |text| _ = try window.addEventText(.{ .text = text }),
                 .key => |key| _ = try window.addEventKey(key),
                 .paste => |text| {
                     dvui.clipboardTextSet(text);
                     _ = try window.addEventKey(.{ .code = .v, .action = .down, .mod = command });
                 },
-            }
+            };
         }
         if (frame == 44) {
             var foreign = std.mem.zeroes(sdl.SDL_Event);
@@ -118,7 +120,7 @@ pub const Driver = struct {
     }
 };
 
-fn assertRawPassThrough(editor: anytype, input: @FieldType(Step, "input")) !void {
+fn assertRawPassThrough(editor: anytype, input: @FieldType(Step, "input")) !sdl.SDL_Event {
     var event = std.mem.zeroes(sdl.SDL_Event);
     switch (input) {
         .text => |text| {
@@ -130,6 +132,14 @@ fn assertRawPassThrough(editor: anytype, input: @FieldType(Step, "input")) !void
             event.type = if (key.action == .up) sdl.SDL_EVENT_KEY_UP else sdl.SDL_EVENT_KEY_DOWN;
             event.key.windowID = editor.window_id;
             event.key.repeat = key.action == .repeat;
+            event.key.key = switch (key.code) {
+                .backspace => sdl.SDLK_BACKSPACE,
+                .delete => sdl.SDLK_DELETE,
+                .left => sdl.SDLK_LEFT,
+                .a => sdl.SDLK_A,
+                else => unreachable,
+            };
+            event.key.mod = if (key.mod == .lshift) sdl.SDL_KMOD_LSHIFT else if (key.mod == command) (if (builtin.os.tag == .macos) sdl.SDL_KMOD_LGUI else sdl.SDL_KMOD_LCTRL) else 0;
             event.key.scancode = switch (key.code) {
                 .backspace => sdl.SDL_SCANCODE_BACKSPACE,
                 .delete => sdl.SDL_SCANCODE_DELETE,
@@ -142,7 +152,10 @@ fn assertRawPassThrough(editor: anytype, input: @FieldType(Step, "input")) !void
             event.type = sdl.SDL_EVENT_KEY_DOWN;
             event.key.windowID = editor.window_id;
             event.key.scancode = sdl.SDL_SCANCODE_V;
+            event.key.key = sdl.SDLK_V;
+            event.key.mod = if (builtin.os.tag == .macos) sdl.SDL_KMOD_LGUI else sdl.SDL_KMOD_LCTRL;
         },
     }
     if (try editor.raw(event)) return error.NativeTextInterceptedForSimulation;
+    return event;
 }
