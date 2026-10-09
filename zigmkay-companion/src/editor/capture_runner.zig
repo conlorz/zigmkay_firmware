@@ -51,7 +51,7 @@ pub fn main(init: std.process.Init) !void {
             return error.ResizeCheckFailed;
         }
     }
-    for ([_]bool{ false, true }) |light| for ([_]u8{ 1, 2 }) |density| for ([_][2]u16{ .{ 1152, 768 }, .{ 900, 600 } }) |size| for ([_][]const u8{ "free_typing", "free_long", "practice_english", "practice_zig" }) |mode| {
+    for ([_]bool{ false, true }) |light| for ([_]u8{ 1, 2 }) |density| for ([_][2]u16{ .{ 1152, 768 }, .{ 900, 600 } }) |size| for ([_][]const u8{ "free_typing", "free_long", "practice_english", "practice_zig", "native_free_input", "native_live_input" }) |mode| {
         const path = try std.fmt.allocPrint(a, "{s}/{s}-{d}x-{d}x{d}-{s}.png", .{ directory, if (light) "light" else "dark", density, size[0], size[1], mode });
         var argv: std.ArrayList([]const u8) = .empty;
         try argv.appendSlice(a, &.{ args[1], "--editor", "--window-size", try std.fmt.allocPrint(a, "{d}", .{size[0]}), try std.fmt.allocPrint(a, "{d}", .{size[1]}), "--density", try std.fmt.allocPrint(a, "{d}", .{density}), "--scenario", mode, "--screenshot", path });
@@ -64,5 +64,5 @@ pub fn main(init: std.process.Init) !void {
         }
         std.log.info("Captured {s}", .{path});
     };
-    std.log.info("{d} captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{@typeInfo(State).@"enum".fields.len * 4 + 35});
+    std.log.info("{d} captures, panel geometry, Retina/non-Retina readback and semantic interactions passed", .{@typeInfo(State).@"enum".fields.len * 4 + 51});
 }

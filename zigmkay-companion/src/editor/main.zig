@@ -89,6 +89,7 @@ pub const Editor = struct {
     free_failed: bool = false,
     free_pending: bool = false,
     free_input_after: u64 = 0,
+    free_focus_requested: bool = true,
     free_snapshot: ?[32]u8 = null,
     preview: @import("try_state.zig").State = .{},
     preview_ticket: ?@import("try_state.zig").Ticket = null,
@@ -110,6 +111,7 @@ pub const Editor = struct {
     practice_live_state: ?@import("companion-model").State = null,
     practice_live_stale: bool = true,
     practice_live_profile: [8]u8 = @splat(0),
+    live_requested: bool = false,
     practice_best: [2][3][2]f64 = @splat(@splat(@splat(0))),
     test_start: i64 = 0,
     last_text_sequence: ?u64 = null,
@@ -151,7 +153,7 @@ pub const Editor = struct {
     pub fn init(process: std.process.Init, fixture: bool) !Editor {
         const root = try std.Io.Dir.cwd().realPathFileAlloc(process.io, ".", process.gpa);
         defer process.gpa.free(root);
-        var self = Editor{ .model = try Model.init(process.gpa, .eurkey), .io = process.io, .gpa = process.gpa, .fixture = fixture, .testing = try Testing.init(process.gpa, process.io, root), .firmware = try Firmware.init(process.gpa, process.io, root), .text = Text.init(fixture), .free_text = Text.init(fixture) };
+        var self = Editor{ .model = try Model.init(process.gpa, .eurkey), .io = process.io, .gpa = process.gpa, .fixture = fixture, .testing = try Testing.init(process.gpa, process.io, root), .firmware = try Firmware.init(process.gpa, process.io, root), .text = Text.init(fixture), .free_text = .{} };
         if (!fixture) self.source = input.Source.init();
         if (fixture) {
             try @import("fixture.zig").setup(&self.model);
@@ -397,19 +399,8 @@ pub const Editor = struct {
             self.free_text.reset();
         }
         if (event.type == sdl.SDL_EVENT_WINDOW_FOCUS_GAINED and event.window.windowID == self.window_id) self.window_focused = true;
-        if (self.main_view == .try_it_out and self.try_mode == .free_typing and event.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN and event.button.windowID == self.window_id) {
-            // Relinquish physical input while retaining a valid session for the
-            // explicit diagnostic probes. Preparation cannot finish unfocused.
-            const was_focused = self.free_focus;
-            self.free_focus = false;
-            self.free_pending = false;
-            self.preview.release();
-            if (self.testing.state == .preparing) self.testing.stop() else if (was_focused and self.testing.state == .running) self.testing.releaseHeld(self.testTime()) catch self.testing.stop();
-            self.free_input_after = self.testing.sequence;
-            self.free_text.reset();
-        }
         if (event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) self.extend = event.key.mod & sdl.SDL_KMOD_SHIFT != 0;
-        if (self.main_view == .try_it_out and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and event.key.scancode == sdl.SDL_SCANCODE_ESCAPE) {
+        if (self.main_view == .try_it_out and self.try_mode == .typing_test and event.type == sdl.SDL_EVENT_KEY_DOWN and event.key.windowID == self.window_id and event.key.scancode == sdl.SDL_SCANCODE_ESCAPE) {
             self.pausePractice();
             self.free_focus = false;
             self.free_pending = false;
@@ -420,21 +411,10 @@ pub const Editor = struct {
             dvui.focusWidget(null, null, null);
             return true;
         }
-        const owns_runner = self.main_view == .try_it_out and self.window_focused and (if (self.try_mode == .free_typing) self.free_focus and !self.free_failed else self.practice_active and self.practice.source == .draft and (self.practice.state == .running or self.practice.state == .ready));
+        const owns_runner = self.main_view == .try_it_out and self.try_mode == .typing_test and self.window_focused and self.practice_active and self.practice.source == .draft and (self.practice.state == .running or self.practice.state == .ready);
         if (owns_runner and self.testing.state == .running) {
             if (event.type == sdl.SDL_EVENT_TEXT_INPUT and event.text.windowID == self.window_id) return true;
             if ((event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP) and event.key.windowID == self.window_id) {
-                if (self.try_mode == .free_typing and event.type == sdl.SDL_EVENT_KEY_DOWN) switch (event.key.scancode) {
-                    sdl.SDL_SCANCODE_LEFT => {
-                        try self.free_text.singleLineOutput(&.{.{ .KeyCodePress = 80 }});
-                        return true;
-                    },
-                    sdl.SDL_SCANCODE_RIGHT => {
-                        try self.free_text.singleLineOutput(&.{.{ .KeyCodePress = 79 }});
-                        return true;
-                    },
-                    else => {},
-                };
                 if (@import("host_input.zig").keyIndex(self.model.document(), @intCast(event.key.scancode))) |index| {
                     if (!event.key.repeat) self.testing.input(if (event.type == sdl.SDL_EVENT_KEY_DOWN) .{ .key_down = index } else .{ .key_up = index }, self.testTime()) catch |err| self.report(err);
                     return true;
@@ -461,7 +441,6 @@ pub const Editor = struct {
                 else => {},
             };
         }
-        if (self.main_view == .try_it_out and self.try_mode == .free_typing and (event.type == sdl.SDL_EVENT_KEY_DOWN or event.type == sdl.SDL_EVENT_KEY_UP or event.type == sdl.SDL_EVENT_TEXT_INPUT)) return true;
         return false;
     }
     pub fn testTime(self: *Editor) u64 {
@@ -596,6 +575,7 @@ pub const Editor = struct {
                 _ = self.preview.navigate(selected, false);
                 self.main_view = selected;
                 self.free_focus = selected == .try_it_out and self.try_mode == .free_typing;
+                self.free_focus_requested = self.free_focus;
                 dvui.focusWidget(null, null, null);
             },
             .flash => try self.requestFlash(),
@@ -656,11 +636,10 @@ pub const Editor = struct {
         const current_id = try self.model.id();
         if (self.free_snapshot) |previous| if (!std.mem.eql(u8, &previous, &current_id)) {
             self.testing.stop();
-            self.free_text.clear();
             self.free_failed = false;
             self.free_pending = false;
             self.preview.invalidate();
-            self.preview_notice = "Draft changed · free text cleared for the new snapshot.";
+            self.preview_notice = "Draft changed · native typing continues.";
         };
         self.free_snapshot = current_id;
         self.testing.poll(current_id);
@@ -675,30 +654,19 @@ pub const Editor = struct {
             };
             if (self.auto_build.take(@intCast(now), blocked)) self.firmware.build(self.model.current.snapshot) catch |err| self.report(err);
         }
-        const source_changed = self.free_text.refresh();
-        if (self.text.refresh() or source_changed) {
+        if (self.text.refresh()) {
             self.pausePractice();
             self.testing.stop();
             self.text.reset();
-            self.free_text.clear();
             self.free_failed = false;
             self.free_pending = false;
             self.preview.invalidate();
-            self.preview_notice = "Input source changed · preview reset. Focus the field to prepare again.";
+            self.preview_notice = "Input source changed · typing test reset.";
         }
         if (self.testing.last) |output| if (self.last_text_sequence != output.sequence) {
             self.last_text_sequence = output.sequence;
             if (self.main_view == .try_it_out and self.try_mode == .typing_test and self.practice_active and self.practice.source == .draft and (self.practice.state == .ready or self.practice.state == .running)) {
                 self.text.practiceOutput(output.commands, &self.practice, self.practiceTime()) catch |err| self.report(err);
-            } else if (self.main_view == .try_it_out and self.try_mode == .free_typing and self.testing.state == .running) {
-                if (self.free_focus and output.sequence > self.free_input_after) {
-                    self.free_text.singleLineOutput(output.commands) catch |err| {
-                        self.testing.stop();
-                        self.free_text.reset();
-                        self.free_failed = true;
-                        self.report(err);
-                    };
-                } else self.free_text.mods = @bitCast(output.modifiers);
             }
         };
         if (self.practice_active and self.practice.source == .draft and (self.testing.state == .stale or self.testing.state == .failed)) self.pausePractice();
@@ -731,10 +699,6 @@ pub const Editor = struct {
         if (self.main_view == .try_it_out) {
             if (self.try_mode == .typing_test) {
                 try @import("practice_drawer.zig").consumeInput(self, canvas.data(), self.practiceTime());
-            } else {
-                for (dvui.events()) |*event| {
-                    if (!event.handled and (event.evt == .key or event.evt == .text)) event.handle(@src(), canvas.data());
-                }
             }
         }
         try self.navigation(t);
@@ -777,35 +741,8 @@ pub const Editor = struct {
         self.preview.chooseMode(mode);
         self.try_mode = mode;
         self.free_focus = mode == .free_typing;
+        self.free_focus_requested = self.free_focus;
         dvui.focusWidget(null, null, null);
-    }
-    fn prepareFree(self: *Editor) !void {
-        if (self.fixture or !self.free_focus or !self.window_focused or self.free_failed) return;
-        _ = self.preview.navigate(self.main_view, false);
-        self.preview.chooseMode(self.try_mode);
-        self.preview.focus(true);
-        if (self.free_text.native_session) |*session| if (!session.eurkey()) return error.SelectEurKeyInputSource;
-        if (self.callback_state == .changed or self.callback_state == .missing or self.callback_state == .failed) return error.RefreshCallbackSourceBeforePreview;
-        switch (self.testing.state) {
-            .idle, .stale => {
-                self.preview.preparation = .idle;
-                self.preview_ticket = self.preview.prepare();
-                try self.testing.prepare(self.model.current.snapshot);
-                self.free_pending = true;
-            },
-            .prepared => {
-                if (self.free_pending) {
-                    if (self.preview_ticket) |ticket| if (!self.preview.complete(ticket, true)) return;
-                }
-                self.free_pending = false;
-                self.last_text_sequence = null;
-                self.free_input_after = 0;
-                self.test_start = @intCast(std.Io.Clock.awake.now(self.io).toMicroseconds());
-                try self.testing.start();
-            },
-            .failed => return error.DraftPreparationFailed,
-            .preparing, .running => {},
-        }
     }
     pub fn resetFree(self: *Editor) void {
         self.testing.stop();
@@ -814,6 +751,7 @@ pub const Editor = struct {
         self.free_pending = false;
         self.preview.release();
         self.free_focus = true;
+        self.free_focus_requested = true;
         dvui.focusWidget(null, null, null);
     }
     fn tryItOut(self: *Editor, t: Theme) !void {
@@ -824,55 +762,33 @@ pub const Editor = struct {
         label(t, self.model.document().name, .{ .x = 0, .y = 0, .w = width - 430, .h = 36 }, 25);
         if (button(t, "Free typing", "try.free", .{ .x = width - 330, .y = 0, .w = 150, .h = 38 })) self.chooseTryMode(.free_typing);
         if (button(t, "Typing Test", "try.test", .{ .x = width - 170, .y = 0, .w = 170, .h = 38 })) self.chooseTryMode(.typing_test);
-        label(t, if (self.try_mode == .free_typing) "Unflashed current draft · offline preview" else "Typing Test", .{ .x = 0, .y = 43, .w = width, .h = 24 }, 16);
+        label(t, if (self.try_mode == .free_typing) "Normal keyboard input · companion follows verified device telemetry" else "Typing Test", .{ .x = 0, .y = 43, .w = width, .h = 24 }, 16);
         const details_height: f32 = if (self.test_details) 215 else 0;
         const work_height = bounds.h - 36 - 125 - details_height;
         if (self.try_mode == .typing_test) {
             try @import("practice_drawer.zig").draw(self, t, .{ .x = 0, .y = 80, .w = width, .h = work_height });
         } else {
-            self.prepareFree() catch |err| {
-                self.testing.stop();
-                self.free_text.reset();
-                self.free_failed = true;
-                self.free_pending = false;
-                self.preview.preparation = .failed;
-                self.report(err);
-            };
-            const field = dvui.box(@src(), .{}, .{ .rect = .{ .x = 0, .y = 90, .w = width, .h = 90 }, .padding = .all(12), .background = true, .color_fill = .{ .color = t.control }, .border = .all(if (self.free_focus) 2 else 1), .color_border = .{ .color = if (self.free_focus) color(0x287AF2) else t.border }, .corners = .all(8), .tag = "free.input" });
+            // Device firmware has already processed taps, holds and the layout.
+            // Feed committed OS text directly into the ordinary DVUI widget.
+            if (self.free_text.len < self.free_text.bytes.len) self.free_text.bytes[self.free_text.len] = 0;
+            const field = dvui.widgetAlloc(dvui.TextEntryWidget);
+            field.init(@src(), .{ .text = .{ .buffer = &self.free_text.bytes }, .placeholder = "Type here using your keyboard…" }, .{ .rect = .{ .x = 0, .y = 90, .w = width, .h = 90 }, .padding = .all(12), .font = fonts.font(self.free_text.value(), 30), .background = true, .color_fill = .{ .color = t.control }, .border = .all(1), .color_border = .{ .color = t.border }, .corners = .all(8), .tag = "free.input" });
             {
                 defer field.deinit();
-                for (dvui.events()) |*event| if (!event.handled and event.evt == .mouse and event.evt.mouse.action == .press and field.data().borderRectScale().r.contains(event.evt.mouse.p)) {
-                    self.free_focus = true;
-                    self.free_input_after = self.testing.sequence;
-                    if (self.testing.state == .running) if (self.testing.last) |output| {
-                        self.free_text.mods = @bitCast(output.modifiers);
-                    };
-                    dvui.focusWidget(null, null, null);
-                    event.handle(@src(), field.data());
-                };
-                const font = fonts.font(self.free_text.value(), 30);
-                const caret_width = font.textSize(self.free_text.value()[0..self.free_text.cursor]).w;
-                const offset = @max(0, caret_width - (width - 75));
-                const clip = dvui.clip(field.data().contentRectScale().r);
-                defer dvui.clipSet(clip);
-                dvui.labelNoFmt(@src(), if (self.free_text.len == 0) "Type here using your draft…" else self.free_text.value(), .{}, .{ .rect = .{ .x = -offset, .y = 12, .w = @max(width, font.textSize(self.free_text.value()).w + 20), .h = 50 }, .font = font, .color_text = .{ .color = t.text }, .padding = .{} });
-                if (self.free_focus) {
-                    const caret = dvui.box(@src(), .{}, .{ .rect = .{ .x = caret_width - offset, .y = 10, .w = 2, .h = 40 }, .background = true, .color_fill = .{ .color = color(0x287AF2) } });
-                    caret.deinit();
+                if (self.free_focus_requested) {
+                    dvui.focusWidget(field.data().id, null, null);
+                    self.free_focus_requested = false;
                 }
+                field.processEvents();
+                field.draw();
+                self.free_text.len = field.textGet().len;
+                self.free_text.cursor = field.textLayout.selection.cursor;
+                self.free_focus = dvui.focusedWidgetId() == field.data().id;
             }
             if (button(t, "Reset text", "free.reset", .{ .x = 0, .y = 192, .w = 140, .h = 40 })) self.resetFree();
+            if (button(t, "Connect companion", "free.connect", .{ .x = 155, .y = 192, .w = 225, .h = 40 })) self.live_requested = true;
             _ = dvui.checkbox(@src(), &self.practice_show_keyboard, "Show companion", options(t, .{ .x = width - 220, .y = 192, .w = 220, .h = 40 }, 16));
-            if (self.free_failed and button(t, "Retry", "free.retry", .{ .x = 150, .y = 192, .w = 100, .h = 40 })) {
-                self.testing.stop();
-                self.testing.state = .idle;
-                self.free_failed = false;
-                self.preview.retry();
-                self.free_focus = true;
-                dvui.focusWidget(null, null, null);
-            }
-            const message = if (self.free_failed) (if (std.mem.eql(u8, std.mem.sliceTo(&self.diagnostic, 0), "SelectEurKeyInputSource")) "Select EurKEY in macOS input sources, then Retry." else if (self.diagnostic[0] == 0 or std.mem.eql(u8, std.mem.sliceTo(&self.diagnostic, 0), "DraftPreparationFailed")) "Draft preparation failed · open Diagnostics, correct the draft, then Retry." else std.mem.sliceTo(&self.diagnostic, 0)) else if (self.testing.state == .preparing or self.free_pending) "Preparing draft… input starts when ready" else if (!self.free_focus) "Click the field to focus draft input" else self.preview_notice;
-            label(t, message, .{ .x = 0, .y = 242, .w = width, .h = 28 }, 16);
+            label(t, self.preview_notice, .{ .x = 0, .y = 242, .w = width, .h = 28 }, 16);
             if (self.practice_show_keyboard) try @import("practice_drawer.zig").drawFreeCompanion(self, t, .{ .x = 0, .y = 285, .w = width, .h = work_height - 205 });
         }
         if (button(t, if (self.test_details) "Hide diagnostics" else "Diagnostics", "try.details", .{ .x = 0, .y = bounds.h - 36 - 38 - details_height, .w = 185, .h = 34 })) self.test_details = !self.test_details;
@@ -1306,6 +1222,7 @@ pub const Editor = struct {
 
 pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var open_practice = false;
+    var requested_live = false;
     var fixture = false;
     var light = false;
     var screenshot: ?[]const u8 = null;
@@ -1341,6 +1258,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         } else if (std.mem.eql(u8, args[i], "--compare-golden") and i + 1 < args.len) {
             i += 1;
             golden_path = args[i];
+        } else if (std.mem.eql(u8, args[i], "--live")) {
+            requested_live = true;
         } else if (std.mem.eql(u8, args[i], "--flash-ui-check")) {
             flash_ui_check = true;
         } else if (std.mem.eql(u8, args[i], "--interactions")) {
@@ -1348,6 +1267,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             fixture = true;
         } else return error.Usage;
     }
+    if (requested_live and fixture) return error.IncompatibleModes;
     if (flash_ui_check and (fixture or screenshot != null or interactions)) return error.IncompatibleModes;
     if (density != null and screenshot == null) return error.DensityRequiresScreenshot;
     if (state != .normal and screenshot == null) return error.ScenarioRequiresScreenshot;
@@ -1363,12 +1283,16 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     defer live_check.deinit();
     var reconnect: ?@import("../live_adapter.zig").Driver(@import("../main.zig").Native) = null;
     defer if (reconnect) |*driver| driver.disconnect(driver.transport.now());
+    var reconnect_labels: ?@import("../components/cache.zig").LabelCache = null;
+    defer if (reconnect_labels) |*native_labels| native_labels.deinit();
+    var reconnect_identity: ?@import("device-protocol").Identity = null;
     if (flash_ui_check) {
         editor.model.deinit();
         editor.model = try Model.init(init.gpa, .danish);
         editor.syncRename();
     }
     editor.light = light;
+    editor.live_requested = requested_live;
     editor.window_id = sdl.SDL_GetWindowID(backend.window);
     editor.backend_window = backend.window;
     if (open_practice) {
@@ -1377,6 +1301,10 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     }
     scenario.setup(&editor, state) catch |err| editor.report(err);
     const scenario_history = editor.model.undo_stack.items.len;
+    var native_input_check: @import("native_input_check.zig").Driver = .{};
+    defer native_input_check.deinit(init.gpa);
+    var native_live_check: @import("live_keyboard.zig").NativeDriver = .{};
+    if (state == .native_live_input) try @import("live_keyboard.zig").NativeDriver.setup(&editor);
     var frames: usize = 0;
     var interaction_snapshot: [32]u8 = @splat(0);
     var interaction_originals: [2]?p.Action = .{ null, null };
@@ -1388,6 +1316,8 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
         try @import("events.zig").pump(&backend, &window, &editor);
         if (flash_ui_check) try live_check.beforeDraw(&editor, &window);
         if (state == .free_input) try scenario.freeInteraction(&editor, &window, frames, scenario_history);
+        if (state == .native_free_input) try native_input_check.beforeDraw(&editor, &window, frames);
+        if (state == .native_live_input) try native_live_check.beforeDraw(&editor, &window, frames);
         if (state == .practice_guidance) switch (frames) {
             3 => _ = try window.addEventText(.{ .text = "a" }),
             4 => {
@@ -1639,15 +1569,37 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
             if (err == error.OutOfMemory) return err;
             editor.report(err);
         };
+        if (state == .native_free_input) {
+            native_input_check.drawReference(frames);
+            try native_input_check.afterDraw(&editor, frames);
+        }
+        if (state == .native_live_input) try native_live_check.afterDraw(&editor, frames);
         if (flash_ui_check and try live_check.afterDraw(&editor)) {
             _ = try window.end(.{});
             break;
         }
         if (!fixture) {
+            if (editor.live_requested) {
+                editor.live_requested = false;
+                if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+                var profile = try p.snapshot.clone(init.gpa, editor.model.current.snapshot);
+                defer profile.deinit();
+                const expected = try p.snapshot.identity(init.gpa, profile.snapshot, p.profiles.board);
+                var native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, profile.snapshot.document);
+                errdefer native_labels.deinit();
+                var seed: u32 = undefined;
+                try init.io.randomSecure(std.mem.asBytes(&seed));
+                const driver = try @import("../live_adapter.zig").Driver(@import("../main.zig").Native).init(.{ .io = init.io }, expected, seed, null);
+                if (reconnect) |*old| old.disconnect(old.transport.now());
+                if (reconnect_labels) |*old| old.deinit();
+                reconnect = driver;
+                reconnect_labels = native_labels;
+                reconnect_identity = expected;
+            }
             if (editor.bootloader_requested) if (reconnect) |*driver| driver.disconnect(driver.transport.now());
             editor.pollBootloader(null);
             if (!flash_ui_check and !editor.bootloaderBusy()) {
-                if (editor.firmware.expectedIdentity()) |expected| {
+                if (editor.firmware.expectedIdentity() orelse if (reconnect) |driver| driver.session.expected else null) |expected| {
                     if (reconnect == null) {
                         if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
                         var seed: u32 = undefined;
@@ -1661,7 +1613,18 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                         driver.session = try @import("companion-model").Session.init(expected);
                         driver.retry_at = now;
                     }
+                    if (reconnect_identity == null or !std.meta.eql(reconnect_identity.?, expected)) {
+                        const native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, editor.firmware.frozen.?.snapshot.document);
+                        if (reconnect_labels) |*old| old.deinit();
+                        reconnect_labels = native_labels;
+                        reconnect_identity = expected;
+                    }
                     driver.poll(now);
+                    const verified = driver.session.phase == .live;
+                    editor.practice_live_labels = if (verified) &reconnect_labels.? else null;
+                    editor.practice_live_state = if (verified) driver.session.state else null;
+                    editor.practice_live_profile = expected.profile_id;
+                    editor.practice_live_stale = !verified or driver.session.stale;
                     const coherent = driver.session.phase == .live and !driver.session.stale;
                     editor.firmware.observeRunning(if (coherent) driver.session.expected else null, coherent, now);
                 }
@@ -1701,7 +1664,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 break;
             }
         }
-        const capture_frame: usize = if (state == .free_input) 40 else if (state == .practice_guidance) 17 else if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 84 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
+        const capture_frame: usize = if (state == .native_free_input) @import("native_input_check.zig").Driver.capture_frame else if (state == .native_live_input) @import("live_keyboard.zig").NativeDriver.capture_frame else if (state == .free_input) 40 else if (state == .practice_guidance) 17 else if (state == .practice_input) 33 else if (state == .practice_scroll) 10 else if (interactions) 84 else if (state == .key_search) 12 else if (state == .key_drag) 22 else 5;
         if (screenshot != null and frames == capture_frame) {
             if (density) |expected| if (@abs(window.natural_scale / editor.content_scale - @as(f32, @floatFromInt(expected))) > 0.02) return error.NativeDensityMismatch;
             window.endRendering(.{});

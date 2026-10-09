@@ -133,7 +133,7 @@ pub fn main(init: std.process.Init) !void {
     const editor_start = args.len > 1 and std.mem.eql(u8, args[1], "--editor");
     // Preserve the finite acceptance runner and its full command-line contract.
     if (editor_start) for (args[2..]) |arg| {
-        if (!std.mem.eql(u8, arg, "--light") and !std.mem.eql(u8, arg, "--practice")) return @import("editor/main.zig").run(init, args);
+        if (!std.mem.eql(u8, arg, "--light") and !std.mem.eql(u8, arg, "--practice") and !std.mem.eql(u8, arg, "--live")) return @import("editor/main.zig").run(init, args);
     };
     var editor_light = false;
     var editor_practice = false;
@@ -159,6 +159,7 @@ pub fn main(init: std.process.Init) !void {
         if (editor_start) {
             if (std.mem.eql(u8, arg, "--light")) editor_light = true;
             if (std.mem.eql(u8, arg, "--practice")) editor_practice = true;
+            if (std.mem.eql(u8, arg, "--live")) live = true;
             continue;
         }
         if (std.mem.eql(u8, arg, "--tray-check")) {
@@ -272,6 +273,7 @@ pub fn main(init: std.process.Init) !void {
     defer if (editor) |*draft| draft.deinit();
     if (editor) |*draft| {
         draft.light = editor_light;
+        if (editor_start and live) draft.live_requested = true;
         if (editor_practice) {
             draft.main_view = .try_it_out;
             draft.try_mode = .typing_test;
@@ -306,6 +308,29 @@ pub fn main(init: std.process.Init) !void {
         if (life.editor_visible and editor == null) editor = try @import("editor/main.zig").Editor.init(init, tray_check);
         editor_open = if (life.resident) editor != null else life.editor_visible;
         const now = driver.transport.now();
+        if (editor) |*draft| if (draft.live_requested and !draft.fixture) {
+            draft.live_requested = false;
+            if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
+            // Freeze the selected layout before connecting, then require its
+            // complete device identity before publishing any key positions.
+            const profile = try @import("keymap-project").snapshot.clone(init.gpa, draft.model.current.snapshot);
+            errdefer {
+                var owned = profile;
+                owned.deinit();
+            }
+            const expected = try @import("keymap-project").snapshot.identity(init.gpa, profile.snapshot, @import("keymap-project").profiles.board);
+            var replacement = try cache.buildProjectCache(init.gpa, &source, profile.snapshot.document);
+            errdefer replacement.deinit();
+            try init.io.randomSecure(std.mem.asBytes(&seed));
+            const new_driver = try adapter.Driver(Native).init(.{ .io = init.io }, expected, seed, path);
+            driver.disconnect(now);
+            if (transferred_profile) |*old| old.deinit();
+            transferred_profile = profile;
+            labels.deinit();
+            labels = replacement;
+            driver = new_driver;
+            monitoring = true;
+        };
         // Preserve the editor's existing post-transfer identity verification.
         // Only an explicitly completed flash enables this path in offline mode.
         if (!monitoring) if (editor) |*draft| {

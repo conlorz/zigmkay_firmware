@@ -174,28 +174,20 @@ fn keyboard(self: anytype, t: ui.Theme, bounds: dvui.Rect, focus: usize) !void {
     } else if (self.practice_active and self.practice.state != .complete) caption("Use your layout's composition or custom action for this character", .{ .x = 8, .y = 28, .w = bounds.w - 16, .h = 23 }, 14, t.muted, null);
     try geometry.drawPractice(labels, layer, &pressed, mods, live and self.practice_live_stale, .{ .x = 18, .y = 52, .w = bounds.w - 36, .h = @max(0, bounds.h - 62) }, &guidance.tap, &guidance.hold, hold_source_layer, active);
 }
-/// Free typing displays only the applied draft and the offline runner's actual
-/// state. It deliberately has no exercise target or inferred modifier holds.
+/// Free typing is native host text. Its companion independently observes the
+/// verified running keyboard; it never interprets that text as matrix input.
 pub fn drawFreeCompanion(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
     const panel = dvui.box(@src(), .{}, .{ .rect = bounds, .background = true, .color_fill = .{ .color = t.bg }, .corners = .all(12), .padding = .{}, .tag = "free.keyboard" });
     defer panel.deinit();
-    const labels = try self.practiceLabels();
-    var layer: usize = 0;
-    var active: u16 = 1;
-    var mods: Modifiers = .{};
-    var pressed: [128]bool = @splat(false);
-    if (self.testing.state == .running) {
-        for (self.testing.pressed, 0..) |down, i| pressed[i] = down;
-        if (self.testing.last) |output| {
-            layer = output.highest_layer;
-            active = output.active_layers;
-            mods = @bitCast(output.modifiers);
-        }
-    }
-    layer = @min(layer, labels.layer_count - 1);
-    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "Draft companion · {s} · layer {d}", .{ self.model.document().name, layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, 18, t.text, "free.keyboard.source");
+    const frame = @import("live_keyboard.zig").Frame.select(self.practice_live_labels, self.practice_live_state, self.practice_live_profile, self.practice_live_stale);
+    const labels = frame.labels orelse {
+        caption("Companion · no verified keyboard layout", .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, 18, t.text, "free.keyboard.source");
+        caption("Waiting for matching keyboard telemetry. Native typing remains available.", .{ .x = 8, .y = 38, .w = bounds.w - 16, .h = 48 }, 16, t.muted, "free.keyboard.unavailable");
+        return;
+    };
+    caption(try std.fmt.allocPrint(dvui.currentWindow().arena(), "Live companion · {s} · {s} · layer {d}", .{ std.mem.sliceTo(&frame.profile, 0), if (frame.stale) "stale / reconnecting" else "verified keyboard", frame.layer }), .{ .x = 8, .y = 0, .w = bounds.w - 16, .h = 28 }, 18, t.text, "free.keyboard.source");
     const guidance: guide.Guidance = .{};
-    try geometry.drawPractice(labels, layer, &pressed, mods, false, .{ .x = 18, .y = 34, .w = @max(0, bounds.w - 36), .h = @max(0, bounds.h - 44) }, &guidance.tap, &guidance.hold, layer, active);
+    try geometry.drawPractice(labels, frame.layer, &frame.pressed, frame.modifiers, frame.stale, .{ .x = 18, .y = 34, .w = @max(0, bounds.w - 36), .h = @max(0, bounds.h - 44) }, &guidance.tap, &guidance.hold, frame.layer, frame.active);
 }
 pub fn draw(self: anytype, t: ui.Theme, bounds: dvui.Rect) !void {
     const window = dvui.box(@src(), .{}, .{ .rect = bounds, .padding = .{}, .tag = "practice.inline" });

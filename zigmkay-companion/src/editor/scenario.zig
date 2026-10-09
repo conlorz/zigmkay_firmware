@@ -7,7 +7,7 @@ pub fn setup(editor: anytype, state: State) !void {
     editor.testing.snapshot_id = try editor.model.id();
     editor.firmware.snapshot_id = try editor.model.id();
     switch (state) {
-        .free_input, .free_typing, .free_mac_thumbs, .free_long, .free_error, .test_preparing, .test_running, .test_output, .test_stale, .test_failed => {
+        .native_free_input, .native_live_input, .free_input, .free_typing, .free_mac_thumbs, .free_long, .free_error, .test_preparing, .test_running, .test_output, .test_stale, .test_failed => {
             editor.main_view = .try_it_out;
             editor.try_mode = .free_typing;
             editor.free_focus = true;
@@ -15,7 +15,7 @@ pub fn setup(editor: anytype, state: State) !void {
         else => {},
     }
     switch (state) {
-        .free_input, .free_typing => {},
+        .native_free_input, .native_live_input, .free_input, .free_typing => {},
         .free_mac_thumbs => {
             var loaded = try @import("keymap-project").profiles.create(editor.gpa, .eurmac);
             defer loaded.deinit();
@@ -186,7 +186,8 @@ pub fn freeInteraction(editor: anytype, window: *dvui.Window, frames: usize, his
             _ = try window.addEventText(.{ .text = " " });
         },
         17 => {
-            if (editor.free_text.len != 0 or editor.try_mode != .free_typing) return error.FreeSpaceActivatedControl;
+            if (!std.mem.eql(u8, editor.free_text.value(), " ") or editor.try_mode != .free_typing) return error.FreeSpaceActivatedControl;
+            editor.free_text.clear();
             try editor.free_text.insert("é");
         },
         18 => try click(window, "nav.editor", window.natural_scale, false),
