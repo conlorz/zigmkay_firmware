@@ -289,8 +289,7 @@ pub fn main(init: std.process.Init) !void {
         if (tray.poll()) |action| {
             life.action(action);
             if (action == .open_editor and editor != null) {
-                _ = sdl.SDL_ShowWindow(editor.?.backend_window.?);
-                _ = sdl.SDL_RaiseWindow(editor.?.backend_window.?);
+                @import("editor/window_placement.zig").reveal(editor.?.backend_window.?) catch |err| editor.?.report(err);
             }
         }
         if (life.quit_requested) {
@@ -298,8 +297,7 @@ pub fn main(init: std.process.Init) !void {
             if (editor) |*draft| {
                 life.editor_visible = true;
                 if (draft.backend_window) |native_window| {
-                    _ = sdl.SDL_ShowWindow(native_window);
-                    _ = sdl.SDL_RaiseWindow(native_window);
+                    @import("editor/window_placement.zig").reveal(native_window) catch |err| editor.?.report(err);
                 }
                 try draft.requestQuit();
                 quit_pending = draft.should_close or draft.pending != null or draft.close_requested;
@@ -420,10 +418,11 @@ pub fn main(init: std.process.Init) !void {
         if (show_log) try log.draw(&labels, bounds.w / 2, 140, 0.8);
         if (editor_open) {
             const editor_geometry = @import("editor/geometry.zig");
-            const child = dvui.osWindow(@src(), .{ .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = editor_geometry.initial.w, .h = editor_geometry.initial.h }, .min_size = .{ .w = editor_geometry.minimum.w, .h = editor_geometry.minimum.h } }, .{ .open_flag = &editor_open, .theme = if (editor.?.light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark });
+            const child = dvui.osWindow(@src(), .{ .hidden = true, .title = "Zigmkay — LK7 Keymap Editor", .size = .{ .w = editor_geometry.initial.w, .h = editor_geometry.initial.h }, .min_size = .{ .w = editor_geometry.minimum.w, .h = editor_geometry.minimum.h } }, .{ .open_flag = &editor_open, .theme = if (editor.?.light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark });
             defer child.deinit();
             switch (child.inner) {
                 .os => |os| {
+                    if (editor.?.backend_window != os.backend.window) try @import("editor/window_placement.zig").place(os.backend.window, true);
                     editor.?.backend_window = os.backend.window;
                     editor.?.window_id = sdl.SDL_GetWindowID(os.backend.window);
                     if (sdl.SDL_GetWindowOpacity(os.backend.window) != 1 or sdl.SDL_GetWindowFlags(os.backend.window) & sdl.SDL_WINDOW_ALWAYS_ON_TOP != 0) return error.EditorWindowFlagsInherited;
@@ -478,8 +477,7 @@ pub fn main(init: std.process.Init) !void {
             }
             if (life.resident and !life.editor_visible) _ = sdl.SDL_HideWindow(editor.?.backend_window.?);
             if (life.editor_visible and sdl.SDL_GetWindowFlags(editor.?.backend_window.?) & sdl.SDL_WINDOW_HIDDEN != 0) {
-                _ = sdl.SDL_ShowWindow(editor.?.backend_window.?);
-                _ = sdl.SDL_RaiseWindow(editor.?.backend_window.?);
+                @import("editor/window_placement.zig").reveal(editor.?.backend_window.?) catch |err| editor.?.report(err);
             }
         }
         const end_micros = try win.end(.{});

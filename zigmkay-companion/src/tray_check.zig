@@ -38,6 +38,17 @@ fn closeWindow(window: *sdl.SDL_Window) !void {
 fn expect(condition: bool) !void {
     if (!condition) return error.NativeTrayLifecycleCheckFailed;
 }
+fn windowFitsDisplay(window: *sdl.SDL_Window) !void {
+    var usable: sdl.SDL_Rect = undefined;
+    try expect(sdl.SDL_GetDisplayUsableBounds(sdl.SDL_GetDisplayForWindow(window), &usable));
+    var client: sdl.SDL_Rect = undefined;
+    try expect(sdl.SDL_GetWindowPosition(window, &client.x, &client.y));
+    try expect(sdl.SDL_GetWindowSize(window, &client.w, &client.h));
+    var borders: @import("editor/window_placement.zig").Borders = .{};
+    _ = sdl.SDL_GetWindowBordersSize(window, &borders.top, &borders.left, &borders.bottom, &borders.right);
+    try expect(client.x - borders.left >= usable.x and client.y - borders.top >= usable.y);
+    try expect(client.x + client.w + borders.right <= usable.x + usable.w and client.y + client.h + borders.bottom <= usable.y + usable.h);
+}
 pub const Check = struct {
     window_id: u32 = 0,
     snapshot: [32]u8 = @splat(0),
@@ -54,10 +65,15 @@ pub const Check = struct {
             1 => try nativeAction(.open_editor),
             3 => {
                 self.window_id = editor.?.window_id;
+                try windowFitsDisplay(editor.?.backend_window.?);
                 try nativeAction(.open_editor);
             },
             5 => {
                 try expect(editor.?.window_id == self.window_id);
+                try expect(sdl.SDL_GetKeyboardFocus() == editor.?.backend_window.?);
+                var usable: sdl.SDL_Rect = undefined;
+                try expect(sdl.SDL_GetDisplayUsableBounds(sdl.SDL_GetDisplayForWindow(editor.?.backend_window.?), &usable));
+                try expect(sdl.SDL_SetWindowPosition(editor.?.backend_window.?, usable.x + usable.w + 500, usable.y + usable.h + 500));
                 try editor.?.model.assignChord(.{ .tap_keycode = 5 }, false, 0);
                 self.snapshot = try editor.?.model.id();
                 self.history = editor.?.model.undo_stack.items.len;
@@ -72,6 +88,8 @@ pub const Check = struct {
             },
             9 => {
                 try expect(life.editor_visible and editor.?.window_id == self.window_id);
+                try windowFitsDisplay(editor.?.backend_window.?);
+                try expect(sdl.SDL_GetKeyboardFocus() == editor.?.backend_window.?);
                 try expect(std.mem.eql(u8, &self.snapshot, &try editor.?.model.id()));
                 try expect(self.history == editor.?.model.undo_stack.items.len);
                 try expect(std.mem.eql(u8, editor.?.free_text.value(), "Retained text"));

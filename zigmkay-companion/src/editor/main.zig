@@ -1274,6 +1274,10 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     const window_size = requested_size orelse if (screenshot != null) dvui.Size{ .w = 1536, .h = 1024 } else dvui.Size{ .w = geometry.initial.w, .h = geometry.initial.h };
     var backend = try @import("window.zig").init(.{ .io = init.io, .environ_map = init.environ_map, .size = window_size, .min_size = .{ .w = geometry.minimum.w, .h = geometry.minimum.h }, .title = "Zigmkay — LK7 Keymap Editor", .hidden = screenshot != null, .vsync = true, .persist_window_geometry = false }, density == 1);
     defer backend.deinit();
+    if (screenshot == null) {
+        try @import("window_placement.zig").place(backend.window, true);
+        try @import("window_placement.zig").reveal(backend.window);
+    }
     var open = true;
     var window = try dvui.Window.init(@src(), init.gpa, backend.backend(), .{ .theme = if (light) dvui.Theme.builtin.adwaita_light else dvui.Theme.builtin.adwaita_dark, .open_flag = &open });
     defer window.deinit();
@@ -1703,6 +1707,7 @@ test {
     _ = @import("text.zig");
     _ = @import("host_input.zig");
     _ = @import("try_state.zig");
+    _ = @import("window_placement.zig");
     _ = @import("practice.zig");
     _ = @import("practice_view.zig");
     _ = @import("practice_layout.zig");
