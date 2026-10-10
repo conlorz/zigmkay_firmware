@@ -66,6 +66,7 @@ pub const Editor = struct {
     fixture: bool = false,
     connection_text: []const u8 = "Offline · No device",
     source: ?input.Source = null,
+    source_revision: u64 = 0,
     shift: bool = false,
     option: bool = false,
     drag_chord: ?@import("assignment.zig").Chord = null,
@@ -449,9 +450,14 @@ pub const Editor = struct {
     pub fn practiceTime(self: *Editor) u64 {
         return @intCast(@max(0, std.Io.Clock.awake.now(self.io).toMicroseconds()));
     }
+    pub fn keycap(self: *Editor, action: ?p.Action, buffer: []u8) []const u8 {
+        var fixture_source: @import("practice_layout.zig").Fixture = .{};
+        return if (self.source) |*source| labels.keycapWithLayout(source, action, self.model.document(), .{}, buffer) else labels.keycapWithLayout(&fixture_source, action, self.model.document(), .{}, buffer);
+    }
     pub fn practiceLabels(self: *Editor) !*const @import("../components/cache.zig").LabelCache {
         const id = try self.model.id();
         const source_changed = if (self.source) |*source| source.refresh() else false;
+        if (source_changed) self.source_revision +%= 1;
         if (self.practice_labels == null or source_changed or !std.mem.eql(u8, &id, &self.practice_labels_id)) {
             const cache = @import("../components/cache.zig");
             var fixture_source: @import("practice_layout.zig").Fixture = .{};
@@ -595,6 +601,7 @@ pub const Editor = struct {
     }
     pub fn draw(self: *Editor) !void {
         if (self.source) |*source| if (source.refresh()) {
+            self.source_revision +%= 1;
             if (self.practice_labels) |*old| old.deinit();
             self.practice_labels = null;
         };
@@ -942,7 +949,7 @@ pub const Editor = struct {
                     resolved = self.model.document().layers[layer_index].actions[key.key_index];
                 }
             }
-            const caption = labels.keycap(resolved, self.model.document(), &buffer);
+            const caption = self.keycap(resolved, &buffer);
             opts.padding = .all(2);
             const caption_length = std.unicode.utf8CountCodepoints(caption) catch caption.len;
             opts.font = fonts.font(caption, if (std.mem.indexOfScalar(u8, caption, '\n') != null) 13 else if (caption_length > 9) 9 else if (caption_length >= 4) 13 else 20);
@@ -1290,6 +1297,9 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
     var reconnect_labels: ?@import("../components/cache.zig").LabelCache = null;
     defer if (reconnect_labels) |*native_labels| native_labels.deinit();
     var reconnect_identity: ?@import("device-protocol").Identity = null;
+    var reconnect_profile: ?p.snapshot.Loaded = null;
+    defer if (reconnect_profile) |*profile| profile.deinit();
+    var reconnect_source_revision: u64 = 0;
     if (flash_ui_check) {
         editor.model.deinit();
         editor.model = try Model.init(init.gpa, .danish);
@@ -1587,7 +1597,7 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 editor.live_requested = false;
                 if (!sdl.SDL_SetHint(sdl.SDL_HINT_HIDAPI_ENUMERATE_ONLY_CONTROLLERS, "0")) return error.HidEnumerationHintRejected;
                 var profile = try p.snapshot.clone(init.gpa, editor.model.current.snapshot);
-                defer profile.deinit();
+                errdefer profile.deinit();
                 const expected = try p.snapshot.identity(init.gpa, profile.snapshot, p.profiles.board);
                 var native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, profile.snapshot.document);
                 errdefer native_labels.deinit();
@@ -1599,6 +1609,9 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                 reconnect = driver;
                 reconnect_labels = native_labels;
                 reconnect_identity = expected;
+                if (reconnect_profile) |*old| old.deinit();
+                reconnect_profile = profile;
+                reconnect_source_revision = editor.source_revision;
             }
             if (editor.bootloader_requested) if (reconnect) |*driver| driver.disconnect(driver.transport.now());
             editor.pollBootloader(null);
@@ -1618,10 +1631,20 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                         driver.retry_at = now;
                     }
                     if (reconnect_identity == null or !std.meta.eql(reconnect_identity.?, expected)) {
-                        const native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, editor.firmware.frozen.?.snapshot.document);
+                        var profile = try p.snapshot.clone(init.gpa, editor.firmware.frozen.?.snapshot);
+                        errdefer profile.deinit();
+                        const native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, profile.snapshot.document);
                         if (reconnect_labels) |*old| old.deinit();
                         reconnect_labels = native_labels;
                         reconnect_identity = expected;
+                        if (reconnect_profile) |*old| old.deinit();
+                        reconnect_profile = profile;
+                        reconnect_source_revision = editor.source_revision;
+                    } else if (reconnect_source_revision != editor.source_revision) {
+                        const native_labels = try @import("../components/cache.zig").buildProjectCache(init.gpa, &editor.source.?, reconnect_profile.?.snapshot.document);
+                        if (reconnect_labels) |*old| old.deinit();
+                        reconnect_labels = native_labels;
+                        reconnect_source_revision = editor.source_revision;
                     }
                     driver.poll(now);
                     const verified = driver.session.phase == .live or driver.session.hasCoherentState();

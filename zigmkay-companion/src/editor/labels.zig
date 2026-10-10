@@ -1,5 +1,6 @@
 const p = @import("keymap-project");
 const std = @import("std");
+const Modifiers = @import("zkeymap").zkeycodes.model.Modifiers;
 pub const Host = enum { macos, windows, linux };
 pub const running_host: Host = switch (@import("builtin").os.tag) {
     .macos => .macos,
@@ -170,13 +171,38 @@ pub fn tap(value: p.Tap, buffer: []u8) []const u8 {
     return tapLabel(value, buffer, false);
 }
 fn tapLabel(value: p.Tap, buffer: []u8, compact: bool) []const u8 {
+    return tapLabelWithLayout(null, value, .{}, buffer, compact);
+}
+fn tapLabelWithLayout(km: anytype, value: p.Tap, physical: Modifiers, buffer: []u8, compact: bool) []const u8 {
     var used: usize = 0;
     var scratch: [256]u8 = undefined;
     if (value.key_press) |key| {
         var key_buffer: [64]u8 = undefined;
         var mod_buffer: [192]u8 = undefined;
-        const key_name = if (compact) keycapUsage(running_host, key.tap_keycode, &key_buffer) else hostUsage(running_host, key.tap_keycode, &key_buffer);
-        const name = if (key.tap_modifiers.toByte() == 0) key_name else std.fmt.bufPrint(&scratch, "{s}{s}{s}", .{ if (compact) keycapModifiers(running_host, key.tap_modifiers.toByte(), &mod_buffer) else hostModifierNames(running_host, key.tap_modifiers.toByte(), &mod_buffer), if (compact and running_host == .macos) "" else "+", key_name }) catch "Chord";
+        var key_name = if (compact) keycapUsage(running_host, key.tap_keycode, &key_buffer) else hostUsage(running_host, key.tap_keycode, &key_buffer);
+        var mods = if (@import("zkeymap").isLayoutDependent(key.tap_keycode) and key.tap_keycode != 44) key.tap_modifiers.add(physical) else key.tap_modifiers;
+        if (comptime @TypeOf(km) != @TypeOf(null)) {
+            // Shortcuts retain their modifiers, but their base key follows the
+            // layout. Text-producing modifiers are consumed only on success.
+            const shortcut = mods.left_ctrl or mods.right_ctrl or mods.left_gui or mods.right_gui;
+            const translated = km.keyToText(.{ .tap_keycode = key.tap_keycode, .tap_modifiers = if (shortcut) .{} else mods, .dead = key.dead });
+            const text = translated.slice();
+            if (!translated.isLabel() and text.len > 0 and key.tap_keycode != 44) {
+                var printable = true;
+                for (text) |byte| if (byte < 32) {
+                    printable = false;
+                };
+                if (std.mem.indexOfScalar(u8, text, 127) != null) printable = false;
+                if (printable) {
+                    @memcpy(key_buffer[0..text.len], text);
+                    // Keep conventional uppercase keycaps for plain letters.
+                    if (compact and (shortcut or mods.toByte() == 0) and text.len == 1) key_buffer[0] = std.ascii.toUpper(key_buffer[0]);
+                    key_name = key_buffer[0..text.len];
+                    if (!shortcut) mods = .{};
+                }
+            }
+        }
+        const name = if (mods.toByte() == 0) key_name else std.fmt.bufPrint(&scratch, "{s}{s}{s}", .{ if (compact) keycapModifiers(running_host, mods.toByte(), &mod_buffer) else hostModifierNames(running_host, mods.toByte(), &mod_buffer), if (compact and running_host == .macos) "" else "+", key_name }) catch "Chord";
         appendSummary(buffer, &used, name);
         if (key.dead) appendSummary(buffer, &used, "Dead key");
     }
@@ -219,13 +245,16 @@ pub fn modifierNames(bits: u8, buffer: []u8) []const u8 {
     return buffer[0..used];
 }
 pub fn keycap(value: ?p.Action, doc: p.Document, buffer: []u8) []const u8 {
+    return keycapWithLayout(null, value, doc, .{}, buffer);
+}
+pub fn keycapWithLayout(km: anytype, value: ?p.Action, doc: p.Document, physical: Modifiers, buffer: []u8) []const u8 {
     const a = value orelse return "Inherited";
     var tap_buffer: [128]u8 = undefined;
     var hold_buffer: [128]u8 = undefined;
     return switch (a) {
-        .tap_only => |t| tapLabel(t, buffer, true),
-        .tap_with_autofire => |t| tapLabel(t.tap, buffer, true),
-        .tap_hold => |th| std.fmt.bufPrint(buffer, "{s}\nHold {s}", .{ tapLabel(th.tap, &tap_buffer, true), holdLabel(th.hold, doc, &hold_buffer, true) }) catch "Tap / hold",
+        .tap_only => |t| tapLabelWithLayout(km, t, physical, buffer, true),
+        .tap_with_autofire => |t| tapLabelWithLayout(km, t.tap, physical, buffer, true),
+        .tap_hold => |th| std.fmt.bufPrint(buffer, "{s}\nHold {s}", .{ tapLabelWithLayout(km, th.tap, physical, &tap_buffer, true), holdLabel(th.hold, doc, &hold_buffer, true) }) catch "Tap / hold",
         .hold_only => |h| std.fmt.bufPrint(buffer, "Hold\n{s}", .{holdLabel(h, doc, &hold_buffer, true)}) catch "Hold",
         else => action(value, buffer),
     };
@@ -259,6 +288,36 @@ pub fn action(value: ?p.Action, buffer: []u8) []const u8 {
     };
 }
 pub const HostKey = struct { code: u8, name: []const u8 = "", units: f32 = 1 };
+test "layout captions consume text modifiers and preserve shortcuts holds and fallbacks" {
+    var source: @import("practice_layout.zig").Fixture = .{};
+    var buffer: [256]u8 = undefined;
+    const left: p.Tap = .{ .key_press = .{ .tap_keycode = 38, .tap_modifiers = .{ .left_shift = true } } };
+    try std.testing.expectEqualStrings("(", tapLabelWithLayout(&source, left, .{}, &buffer, true));
+    try std.testing.expectEqualStrings("(", tapLabelWithLayout(&source, left, .{}, &buffer, false));
+    const right: p.Tap = .{ .key_press = .{ .tap_keycode = 39, .tap_modifiers = .{ .right_shift = true } } };
+    try std.testing.expectEqualStrings(")", tapLabelWithLayout(&source, right, .{}, &buffer, true));
+    try std.testing.expectEqualStrings("{", tapLabelWithLayout(&source, .{ .key_press = .{ .tap_keycode = 47 } }, .{ .right_shift = true }, &buffer, true));
+    const shortcut: p.Tap = .{ .key_press = .{ .tap_keycode = 29, .tap_modifiers = .{ .left_gui = true, .left_shift = true } } };
+    try std.testing.expectEqualStrings(if (running_host == .macos) "⇧⌘Z" else if (running_host == .windows) "⇧+Win+Z" else "⇧+Super+Z", tapLabelWithLayout(&source, shortcut, .{}, &buffer, true));
+    const doc: p.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "", .name = "", .key_ids = &.{}, .layers = &.{} };
+    const action_value: p.Action = .{ .tap_hold = .{ .tap = left, .hold = .{ .hold_modifiers = .{ .left_ctrl = true } }, .tapping_term = .{ .ms = 200 } } };
+    try std.testing.expectEqualStrings(if (running_host == .macos) "(\nHold ⌃" else "(\nHold Ctrl", keycapWithLayout(&source, action_value, doc, .{}, &buffer));
+    try std.testing.expectEqualStrings("(", keycapWithLayout(&source, .{ .tap_with_autofire = .{ .tap = left, .initial_delay = .{ .ms = 200 }, .repeat_interval = .{ .ms = 50 } } }, doc, .{}, &buffer));
+    try std.testing.expectEqualStrings(if (running_host == .macos) "⇧↩" else "⇧+↩", tapLabelWithLayout(&source, .{ .key_press = .{ .tap_keycode = 40, .tap_modifiers = .{ .left_shift = true } } }, .{}, &buffer, true));
+    const Translation = struct {
+        output: @import("zkeymap").TextResult,
+        pub fn keyToText(self: *@This(), _: @import("zkeymap").KeyCodeFire) @import("zkeymap").TextResult {
+            return self.output;
+        }
+    };
+    var alternate = Translation{ .output = .{ .data = .{ 0xc3, 0xa4, 0, 0 }, .len = 2 } };
+    try std.testing.expectEqualStrings("ä", tapLabelWithLayout(&alternate, .{ .key_press = .{ .tap_keycode = 52, .tap_modifiers = .{ .right_alt = true } } }, .{}, &buffer, true));
+    try std.testing.expectEqualStrings("ä · Dead key", tapLabelWithLayout(&alternate, .{ .key_press = .{ .tap_keycode = 52, .dead = true } }, .{}, &buffer, true));
+    alternate.output = .{};
+    try std.testing.expectEqualStrings(if (running_host == .macos) "⇧9" else "⇧+9", tapLabelWithLayout(&alternate, left, .{}, &buffer, true));
+    alternate.output = .{ .data = .{ 1, 0, 0, 0 }, .len = 1 };
+    try std.testing.expectEqualStrings(if (running_host == .macos) "⇧9" else "⇧+9", tapLabelWithLayout(&alternate, left, .{}, &buffer, true));
+}
 test "compact keycaps preserve descriptive search labels" {
     var buffer: [256]u8 = undefined;
     for ([_]Host{ .macos, .windows, .linux }) |host| {

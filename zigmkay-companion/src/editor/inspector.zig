@@ -88,7 +88,7 @@ fn card(self: anytype, held: bool) void {
         modifierButtons(self, .hold);
     } else {
         const value = draft.tap;
-        if (value.key_press) |key| chip(self, if (fieldMixed(self, "tap", "key_press")) "Mixed key / chord" else labels.usage(key.tap_keycode, &buffer), "inspector.remove.tap.key", .{ .tap_key = null });
+        if (value.key_press) |key| chip(self, if (fieldMixed(self, "tap", "key_press")) "Mixed key / chord" else self.keycap(.{ .tap_only = .{ .key_press = key } }, &buffer), "inspector.remove.tap.key", .{ .tap_key = null });
         if (value.one_shot) |one| chip(self, if (fieldMixed(self, "tap", "one_shot")) "Mixed one-shot" else std.fmt.allocPrint(dvui.currentWindow().arena(), "One-shot · {s}", .{labels.hold(one, self.model.document(), &buffer)}) catch unreachable, "inspector.remove.tap.one_shot", .{ .tap_one_shot = null });
         if (value.media_key) |media| chip(self, if (fieldMixed(self, "tap", "media_key")) "Mixed media" else @tagName(media), "inspector.remove.tap.media", .{ .tap_media = null });
         if (value.mouse_action) |mouse| chip(self, if (fieldMixed(self, "tap", "mouse_action")) "Mixed mouse" else @tagName(mouse), "inspector.remove.tap.mouse", .{ .tap_mouse = null });
@@ -128,7 +128,7 @@ pub fn draw(self: anytype, t: ui.Theme) !void {
     if (ui.button(t, "Copy", "edit.copy", .{ .x = 284, .y = 14, .w = 62, .h = 34 })) try self.request(.copy);
     if (ui.button(t, "Paste", "edit.paste", .{ .x = 352, .y = 14, .w = 70, .h = 34 })) try self.request(.paste);
     var buffer: [512]u8 = undefined;
-    _ = ui.button(t, labels.keycap(session.first() orelse session.resolved[session.primary], self.model.document(), &buffer), "inspector.preview", .{ .x = 18, .y = 64, .w = 80, .h = 66 });
+    _ = ui.button(t, self.keycap(session.first() orelse session.resolved[session.primary], &buffer), "inspector.preview", .{ .x = 18, .y = 64, .w = 80, .h = 66 });
     ui.label(t, p.profiles.key_ids[self.model.primary], .{ .x = 111, .y = 65, .w = 300, .h = 22 }, 15);
     var count: usize = 0;
     for (session.selected) |selected| if (selected) {

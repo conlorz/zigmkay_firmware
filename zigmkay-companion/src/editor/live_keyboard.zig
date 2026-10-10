@@ -201,9 +201,9 @@ pub const NativeDriver = struct {
         const testing = std.testing;
         const presented = Frame.select(editor.practice_live_labels, editor.practice_live_state, editor.practice_live_profile, editor.practice_live_stale);
         if (presented.labels == null or !std.mem.eql(u8, &presented.profile, &editor.model.document().profile_id)) return error.LiveCompanionLostVerifiedLayout;
-        const source = @import("dvui").tagGet("free.keyboard.source") orelse return error.LiveCompanionSourceMissing;
+        const source_tag = @import("dvui").tagGet("free.keyboard.source") orelse return error.LiveCompanionSourceMissing;
         const keyboard = @import("dvui").tagGet("free.keyboard") orelse return error.LiveCompanionMissing;
-        if (!source.visible or !keyboard.visible or @import("dvui").tagGet("free.keyboard.unavailable") != null) return error.LiveCompanionNotRendered;
+        if (!source_tag.visible or !keyboard.visible or @import("dvui").tagGet("free.keyboard.unavailable") != null) return error.LiveCompanionNotRendered;
         const expected_text: []const u8 = if (frame_number >= 20) "aéΩ" else if (frame_number >= 10) "aé" else if (frame_number >= 5) "aéλ" else if (frame_number >= 4) "aé" else if (frame_number >= 3) "a" else "";
         try testing.expectEqualStrings(expected_text, editor.free_text.value());
         const expected_layer: usize = if ((frame_number >= 6 and frame_number < 8) or frame_number == 18) 1 else if (frame_number >= 14 and frame_number < 16) 3 else 0;
@@ -214,9 +214,12 @@ pub const NativeDriver = struct {
         for (31..34) |index| try testing.expect(!presented.pressed[index]);
         var buffer: [256]u8 = undefined;
         const document = editor.model.document();
-        try testing.expectEqualStrings(@import("labels.zig").keycap(document.layers[0].actions[19], document, &buffer), presented.content(19).?.caption.?);
+        var fixture: @import("practice_layout.zig").Fixture = .{};
+        const caption = if (editor.source) |*source| @import("labels.zig").keycapWithLayout(source, document.layers[0].actions[19], document, @bitCast(presented.modifiers.toByte()), &buffer) else @import("labels.zig").keycapWithLayout(&fixture, document.layers[0].actions[19], document, @bitCast(presented.modifiers.toByte()), &buffer);
+        try testing.expectEqualStrings(caption, presented.content(19).?.caption.?);
         const action_layer: usize = if (expected_layer == 3) 3 else if (expected_layer == 1) 1 else 0;
-        try testing.expectEqualStrings(@import("labels.zig").keycap(document.layers[action_layer].actions[10], document, &buffer), presented.content(10).?.caption.?);
+        const layer_caption = if (editor.source) |*source| @import("labels.zig").keycapWithLayout(source, document.layers[action_layer].actions[10], document, @bitCast(presented.modifiers.toByte()), &buffer) else @import("labels.zig").keycapWithLayout(&fixture, document.layers[action_layer].actions[10], document, @bitCast(presented.modifiers.toByte()), &buffer);
+        try testing.expectEqualStrings(layer_caption, presented.content(10).?.caption.?);
         if (self.trace.failed or editor.testing.sequence != self.sequence or editor.testing.job != null) return error.LiveNativeInputEnteredRunner;
         if (self.output.dequeue() != null) return error.LiveHoldProducedUnexpectedText;
         if (frame_number == capture_frame) std.log.info("Native live keyboard integration passed: physical thumb without OS output, Unicode single Backspace, pinky hold Orange timing, actual captions, stale state and native text independence", .{});

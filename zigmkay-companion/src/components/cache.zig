@@ -276,7 +276,6 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
             const def = keymap.keymap[layer][key_idx];
             const action = if (def) |value| try project.adapter.liftAction(&layers, value) else null;
             var caption_buffer: [256]u8 = undefined;
-            const caption = try cache.arena.allocator().dupe(u8, editor_labels.keycap(action, document, &caption_buffer));
             for (0..256) |mods_byte| {
                 const mods_u8 = @as(u8, @intCast(mods_byte));
                 const mods: Modifiers = @bitCast(mods_u8);
@@ -284,7 +283,7 @@ pub fn buildLabelCache(allocator: std.mem.Allocator, km: anytype) !LabelCache {
                 var label_buf: [64]u8 = undefined;
                 @memset(&label_buf, 0);
                 var entry = computeKeyContent(km, def, mods, &label_buf);
-                entry.caption = caption;
+                entry.caption = try cache.arena.allocator().dupe(u8, editor_labels.keycapWithLayout(km, action, document, @bitCast(mods_u8), &caption_buffer));
                 if (entry.label) |label| {
                     entry.label = try cache.arena.allocator().dupe(u8, label);
                 }
@@ -304,11 +303,10 @@ pub fn buildProjectCache(allocator: std.mem.Allocator, km: anytype, document: @i
         for (layer.actions, 0..) |action, key_index| {
             const def = if (action) |value| try project.lowerAction(document, value) else null;
             var caption_buffer: [256]u8 = undefined;
-            const caption = try result.arena.allocator().dupe(u8, editor_labels.keycap(action, document, &caption_buffer));
             for (0..256) |mods| {
                 var buffer: [64]u8 = @splat(0);
                 var entry = computeKeyContent(km, def, @bitCast(@as(u8, @intCast(mods))), &buffer);
-                entry.caption = caption;
+                entry.caption = try result.arena.allocator().dupe(u8, editor_labels.keycapWithLayout(km, action, document, @bitCast(@as(u8, @intCast(mods))), &caption_buffer));
                 if (entry.label) |text| entry.label = try result.arena.allocator().dupe(u8, text);
                 result.entries[(layer_index * result.key_count + key_index) * 256 + mods] = entry;
             }
@@ -470,7 +468,7 @@ test "LabelCache: lookup returns valid pointer for KC_A" {
 
 const FixtureLabels = struct {
     alternate: bool = false,
-    fn keyToText(self: *FixtureLabels, input: zkeymap.KeyCodeFire) zkeymap.TextResult {
+    pub fn keyToText(self: *FixtureLabels, input: zkeymap.KeyCodeFire) zkeymap.TextResult {
         if (!zkeymap.isLayoutDependent(input.tap_keycode)) {
             var r = zkeymap.TextResult{};
             r.data[0..2].* = @bitCast(@as(u16, input.tap_keycode));
@@ -509,12 +507,15 @@ test "fixture label cache rebuild replaces source while keeping physical metadat
     var second = try buildLabelCache(testing.allocator, &source);
     defer second.deinit();
     var changed: usize = 0;
+    var captions_changed: usize = 0;
     for (first.entries, second.entries) |a, b| {
         try testing.expectEqual(a.hid_code, b.hid_code);
         try testing.expectEqual(a.hold_layer, b.hold_layer);
         if (a.label != null and b.label != null and !std.mem.eql(u8, a.label.?, b.label.?)) changed += 1;
+        if (!std.mem.eql(u8, a.caption.?, b.caption.?)) captions_changed += 1;
     }
     try testing.expect(changed > 0);
+    try testing.expect(captions_changed > 0);
 }
 
 test "practice labels resolve transparent keys only through enabled layers" {
@@ -551,5 +552,27 @@ test "companion captions share Editor thumb holds and preserve translated output
     try testing.expectEqualStrings("A", cache.lookup(0, 2, .{}).caption.?);
     try testing.expectEqualStrings("a", cache.lookup(0, 2, .{}).label.?);
     try testing.expectEqualStrings("@", cache.lookup(0, 2, .{ .left_alt = true }).label.?);
+    try testing.expectEqualStrings("@", cache.lookup(0, 2, .{ .right_alt = true }).caption.?);
     try testing.expectEqualStrings("⌥", editor_labels.keycapModifiers(.macos, 4, &buffer));
+}
+
+test "companion cache displays shifted symbols and physical modifiers in every tap variant" {
+    var source: @import("../editor/practice_layout.zig").Fixture = .{};
+    const tap: project.Tap = .{ .key_press = .{ .tap_keycode = 38, .tap_modifiers = .{ .right_shift = true } } };
+    const actions: []const ?project.Action = &.{
+        .{ .tap_only = tap },
+        .{ .tap_hold = .{ .tap = tap, .hold = .{ .layer_id = 1 }, .tapping_term = .{ .ms = 200 } } },
+        .{ .tap_with_autofire = .{ .tap = tap, .initial_delay = .{ .ms = 200 }, .repeat_interval = .{ .ms = 50 } } },
+        .{ .tap_only = .{ .key_press = .{ .tap_keycode = 39 } } },
+    };
+    const document: project.Document = .{ .schema_version = 1, .board_id = @splat(0), .profile_id = @splat(0), .physical_layout = "fixture", .name = "Symbols", .key_ids = &.{}, .layers = &.{.{ .id = 1, .name = "Base", .actions = actions }} };
+    var cache = try buildProjectCache(testing.allocator, &source, document);
+    defer cache.deinit();
+    try testing.expectEqualStrings("(", cache.lookup(0, 0, .{}).caption.?);
+    try testing.expectEqualStrings("(\nHold L1", cache.lookup(0, 1, .{}).caption.?);
+    try testing.expectEqualStrings("(", cache.lookup(0, 2, .{}).caption.?);
+    try testing.expectEqualStrings("0", cache.lookup(0, 3, .{}).caption.?);
+    try testing.expectEqualStrings(")", cache.lookup(0, 3, .{ .left_shift = true }).caption.?);
+    try testing.expectEqualStrings(")", cache.lookup(0, 3, .{ .right_shift = true }).caption.?);
+    try testing.expectEqualStrings("(", cache.lookup(0, 0, .{}).label.?);
 }
