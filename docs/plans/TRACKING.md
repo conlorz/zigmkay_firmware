@@ -1,5 +1,25 @@
 # Central milestone tracker
 
+## Try it out routine snapshot refresh flicker (2026-10-10)
+
+The user reported repeated connection-like flicker. The physical-input follow-up
+had gated editor telemetry on `phase == live`, overlooking the earlier session
+rule that routine one-second snapshot refreshes preserve coherent state while
+`synchronizing`. This hid the keyboard during every routine refresh.
+
+Checkpoint `90542a7` adds `Session.hasCoherentState()` and uses it in both editor
+entry points, connection captions, tray status and running-state observation.
+Verified keyboard presentation remains available during a healthy refresh;
+initial synchronization, fault recovery, timeout and disconnect remain unavailable
+or stale. No reconnect timing or wire protocol was changed.
+
+The real adapter/session regression test performs four consecutive refreshes and
+checks visible non-stale presentation, held-key state, stable session token and
+no transport close, followed by timeout and disconnect. Zig 0.16.0 package tests,
+build, aggregate `check`, and native live/free input scenarios pass. All checks
+were offline; no hardware operation was performed.
+
+
 ## Editor startup placement and activation (2026-10-10)
 
 The user reported background startup and an editor extending beyond the screen.

@@ -68,7 +68,8 @@ connect vendor HID telemetry. Open the project matching the installed firmware
 first. The connection freezes its layout and requires the complete firmware
 identity to match before displaying physical key positions and layers. An
 unverified or mismatched device shows no guessed draft layout. Stale telemetry
-clears held-key and momentary-layer highlights. A layer-only thumb is visible
+clears held-key and momentary-layer highlights. Routine snapshot refreshes keep
+the last coherent keyboard visible without toggling connection status. A layer-only thumb is visible
 through telemetry even though it produces no OS text. Native typing remains
 available while the companion is disconnected or stale.
 
