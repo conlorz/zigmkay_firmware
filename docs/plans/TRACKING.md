@@ -1,5 +1,23 @@
 # Central milestone tracker
 
+## Editor startup placement and activation (2026-10-10)
+
+The user reported background startup and an editor extending beyond the screen.
+The pinned DVUI secondary-window implementation sets position `(850, 150)`.
+Checkpoint `2db673e` overrides that position before revealing the editor,
+centers new windows on the pointer's display using usable bounds and frame
+borders, and explicitly raises/activates the window. Reopening retains valid
+positions, clamps off-screen geometry and restores minimized windows. The
+standalone editor entry point follows the same policy; hidden captures remain
+hidden. No upstream dependency or native interoperability bridge was changed.
+
+Zig 0.16.0 package tests, aggregate `check` and the real offline macOS tray check
+pass. Tests cover negative display origins, oversized windows, title-bar space,
+preserved valid placement, actual keyboard focus and recovery after moving the
+native editor outside usable bounds before hide/reopen. No keyboard or firmware
+operation was performed.
+
+
 ## Physical LK7 native input correction (2026-10-09)
 
 The user clarified the affected input is the physical LK7 on macOS, whose

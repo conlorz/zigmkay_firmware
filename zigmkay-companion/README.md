@@ -48,6 +48,10 @@ The editor opens at 1152 × 768 and resizes down to 900 × 600. Its complete
 layout, dialogs and click targets scale automatically to fit the window, without
 scrolling the whole canvas. Individual long lists/forms retain their own scrolling.
 Use `--window-size <width> <height>` with `--editor` to choose an initial size.
+New editor windows open centered on the display under the pointer, within usable
+bounds including window borders, the menu bar and Dock. Opening or restoring the
+editor activates it; reopening preserves valid positions and repairs off-screen
+geometry. This overrides the pinned UI backend’s fixed secondary-window position.
 
 ## Try it out
 
