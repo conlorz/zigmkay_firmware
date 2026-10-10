@@ -1624,12 +1624,12 @@ pub fn run(init: std.process.Init, args: []const []const u8) !void {
                         reconnect_identity = expected;
                     }
                     driver.poll(now);
-                    const verified = driver.session.phase == .live;
+                    const verified = driver.session.phase == .live or driver.session.hasCoherentState();
                     editor.practice_live_labels = if (verified) &reconnect_labels.? else null;
                     editor.practice_live_state = if (verified) driver.session.state else null;
                     editor.practice_live_profile = expected.profile_id;
                     editor.practice_live_stale = !verified or driver.session.stale;
-                    const coherent = driver.session.phase == .live and !driver.session.stale;
+                    const coherent = driver.session.hasCoherentState();
                     editor.firmware.observeRunning(if (coherent) driver.session.expected else null, coherent, now);
                 }
             }

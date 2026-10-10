@@ -547,3 +547,35 @@ test "bootloader rejection stale acknowledgments and timeout never resend the co
         try std.testing.expectEqual(count, attempt.driver.transport.write_count);
     }
 }
+
+test "routine snapshot refresh keeps Try it out keyboard visible without reconnecting" {
+    var driver = try Driver(Fake).init(.{}, fixture(), 900, null);
+    try attach(&driver, fixture(), true);
+    const token = driver.session.token;
+    const cache = @import("components/cache.zig");
+    var labels = try cache.LabelCache.init(std.testing.allocator, 2, 4);
+    defer labels.deinit();
+    const Frame = @import("editor/live_keyboard.zig").Frame;
+    for (0..4) |_| {
+        const now = driver.session.refresh_at;
+        driver.poll(now);
+        try std.testing.expectEqual(companion.Phase.synchronizing, driver.session.phase);
+        try std.testing.expect(driver.session.hasCoherentState());
+        const frame = Frame.select(if (driver.session.hasCoherentState()) &labels else null, driver.session.state, fixture().profile_id, !driver.session.hasCoherentState());
+        try std.testing.expect(frame.labels != null and !frame.stale and frame.pressed[0]);
+        try std.testing.expectEqual(token, driver.session.token);
+        try std.testing.expect(!driver.transport.closed);
+        const snapshot = protocol.Snapshot{ .pressed = .{1} ++ @as([15]u8, @splat(0)), .active_layers = 3, .highest_layer = 1, .modifiers = .{} };
+        for (try protocol.snapshotPackets(snapshot, fixture().dimensions, token, driver.session.request, driver.session.state.last_sequence.?)) |packet| try driver.transport.queue(packet, fixture().dimensions);
+        driver.poll(now + 1);
+        try std.testing.expect(driver.session.hasCoherentState() and driver.session.state.pressed[0]);
+        try std.testing.expectEqual(@as(u8, 1), driver.session.state.highest_layer);
+    }
+    driver.poll(driver.session.refresh_at);
+    driver.poll(driver.session.deadline);
+    try std.testing.expect(!driver.session.hasCoherentState());
+    const stale_frame = Frame.select(&labels, driver.session.state, fixture().profile_id, true);
+    try std.testing.expect(stale_frame.stale and !stale_frame.pressed[0]);
+    driver.disconnect(driver.session.deadline + 1);
+    try std.testing.expect(!driver.session.hasCoherentState());
+}

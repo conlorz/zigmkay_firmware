@@ -143,6 +143,11 @@ pub const Session = struct {
     bootloader_request: u16 = 0,
     bootloader_deadline: u64 = 0,
 
+    /// Routine snapshot refreshes preserve the last verified coherent state.
+    /// Initial synchronization, recovery and expired refreshes do not.
+    pub fn hasCoherentState(self: *const Session) bool {
+        return (self.phase == .live or self.phase == .synchronizing) and !self.stale and !self.state.needs_resync;
+    }
     pub fn bootloaderAvailable(self: *const Session) bool {
         return self.phase == .live and !self.stale and self.capabilities & protocol.capability_bootloader != 0 and self.bootloader_status == .idle;
     }

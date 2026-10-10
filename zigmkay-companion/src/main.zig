@@ -446,18 +446,18 @@ pub fn main(init: std.process.Init) !void {
                         driver.session = try @import("companion-model").Session.init(expected);
                         driver.retry_at = now;
                     }
-                    editor.?.firmware.observeRunning(if (driver.session.phase == .live and !driver.session.stale) driver.session.expected else null, driver.session.phase == .live and !driver.session.stale, now);
+                    editor.?.firmware.observeRunning(if (driver.session.hasCoherentState()) driver.session.expected else null, driver.session.hasCoherentState(), now);
                 }
-                editor.?.connection_text = if (driver.session.phase == .incompatible) "Device identity differs" else if (driver.status != .connected) "No device · draft only" else if (driver.session.phase != .live or driver.session.stale) "Device · verifying" else blk: {
+                editor.?.connection_text = if (driver.session.phase == .incompatible) "Device identity differs" else if (driver.status != .connected) "No device · draft only" else if (!driver.session.hasCoherentState()) "Device · verifying" else blk: {
                     const draft_identity = try @import("keymap-project").snapshot.identity(init.gpa, editor.?.model.current.snapshot, @import("keymap-project").profiles.board);
                     break :blk if (std.meta.eql(draft_identity, driver.session.expected)) "Live · draft matches" else "Live · draft differs";
                 };
             }
-            const practice_live = monitoring and driver.session.phase == .live;
+            const practice_live = monitoring and (driver.session.phase == .live or driver.session.hasCoherentState());
             editor.?.practice_live_labels = if (practice_live) &labels else null;
             editor.?.practice_live_state = if (practice_live) state else null;
             editor.?.practice_live_profile = driver.session.expected.profile_id;
-            editor.?.practice_live_stale = !monitoring or stale or driver.session.phase != .live;
+            editor.?.practice_live_stale = !monitoring or !driver.session.hasCoherentState();
             if (tray_check) try check.beforeEditorDraw(frames);
             editor.?.draw() catch |err| editor.?.report(err);
             if (editor.?.bootloader_requested) {
@@ -492,7 +492,7 @@ pub fn main(init: std.process.Init) !void {
                 _ = sdl.SDL_RaiseWindow(backend.window);
             }
         } else _ = sdl.SDL_HideWindow(backend.window);
-        tray.update(.{ .live_mode = monitoring, .companion_visible = life.companion_visible, .status = if (!monitoring) .offline else if (driver.session.phase == .incompatible) .incompatible else if (driver.status == .searching) .connecting else if (driver.status != .connected) .disconnected else if (driver.session.stale) .stale else if (driver.session.phase == .live) .live else .connecting });
+        tray.update(.{ .live_mode = monitoring, .companion_visible = life.companion_visible, .status = if (!monitoring) .offline else if (driver.session.phase == .incompatible) .incompatible else if (driver.status == .searching) .connecting else if (driver.status != .connected) .disconnected else if (driver.session.stale) .stale else if (driver.session.hasCoherentState()) .live else .connecting });
         if (life.resident and !tray.installed) {
             life.resident = false;
             life.companion_visible = true;
